@@ -7,7 +7,11 @@ export default defineConfig({
     assetsInlineLimit: 0,
   },
   optimizeDeps: {
-    include: ['maplibre-gl'],
+    // MapLibre v6 worker can break if pre-bundled
+    exclude: ['maplibre-gl'],
+  },
+  worker: {
+    format: 'es',
   },
   server: {
     port: 5173,

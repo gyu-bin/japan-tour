@@ -1,7 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { MapView } from './components/MapView'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { DAYS, TRIP, mapsDirUrl, streetViewUrl } from './data/itinerary'
 import './App.css'
+
+const MapView = lazy(() =>
+  import('./components/MapView').then((m) => ({ default: m.MapView })),
+)
 
 const HERO =
   'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=900&q=80'
@@ -204,18 +207,26 @@ export default function App() {
               </div>
             )}
 
-            <MapView
-              day={day}
-              place={place}
-              placeIndex={placeIdx}
-              mode3d={mode3d}
-              orbit={orbit}
-              fitRouteKey={fitKey}
-              focusToken={focusToken}
-              onSelectPlace={selectPlace}
-              onStatus={onStatus}
-              reduceMotion={reduceMotion}
-            />
+            <Suspense
+              fallback={
+                <div className="map-shell map-shell-fallback">
+                  <p>지도 엔진 준비 중…</p>
+                </div>
+              }
+            >
+              <MapView
+                day={day}
+                place={place}
+                placeIndex={placeIdx}
+                mode3d={mode3d}
+                orbit={orbit}
+                fitRouteKey={fitKey}
+                focusToken={focusToken}
+                onSelectPlace={selectPlace}
+                onStatus={onStatus}
+                reduceMotion={reduceMotion}
+              />
+            </Suspense>
           </div>
         </section>
 

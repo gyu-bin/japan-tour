@@ -539,14 +539,63 @@ function drawChar(ctx, sx, sy, dir, frame, p, tag) {
     ctx.closePath(); ctx.fill();
   }
 }
+/* 고슴도치 친구 — 규빈·규원 뒤를 따라온다.
+ * 진짜 고슴도치 실루엣: 등을 덮은 가시, 앞으로 나온 작은 얼굴, 동그란 코, 짧은 다리.
+ * 봉제인형 느낌을 남기려고 목에 꽃무늬 반다나를 둘렀다. */
+function drawPet(ctx, sx, sy, dir, frame, p) {
+  const u = Math.max(4, SCALE + 1);
+  const r = (x, y, w, h, col) => { ctx.fillStyle = col; ctx.fillRect(sx + x * u, sy + (y - 6) * u, w * u, h * u); };
+  r(3, 18, 10, 2, 'rgba(0,0,0,.26)');
+
+  // 짧은 다리 — 걸을 때 엇갈린다
+  if (frame === 0) { r(5, 16, 2, 2, p.paw); r(9, 16, 2, 2, p.paw); }
+  else { r(4, 16, 2, 2, p.paw); r(10, 16, 2, 2, p.paw); }
+
+  // 몸통 (배 쪽 부드러운 털)
+  r(4, 12, 8, 4, p.fur);
+  r(5, 14, 6, 2, p.belly);
+
+  // 등을 덮은 가시 — 위로 갈수록 밝아지게 세 겹
+  r(3, 6, 10, 6, p.quill);
+  r(4, 5, 8, 2, p.quillMid);
+  r(5, 4, 6, 1, p.quillTip);
+  // 삐죽삐죽한 윤곽
+  r(3, 5, 1, 2, p.quill); r(12, 5, 1, 2, p.quill);
+  r(5, 3, 1, 1, p.quillTip); r(7, 3, 1, 1, p.quillTip); r(9, 3, 1, 1, p.quillTip);
+  r(2, 8, 1, 3, p.quill); r(13, 8, 1, 3, p.quill);
+
+  // 목 반다나 (봉제인형에서 가져온 꽃무늬)
+  r(4, 11, 8, 1, p.scarf);
+  r(6, 11, 1, 1, p.petal); r(9, 11, 1, 1, p.petal);
+
+  // 얼굴 — 가시 아래로 앞으로 나온다
+  r(5, 8, 6, 4, p.face);
+  r(4, 7, 2, 2, p.ear); r(10, 7, 2, 2, p.ear);
+
+  // 눈·코 — 바라보는 방향에 따라
+  if (dir === 'down') {
+    r(6, 9, 1, 2, p.eye); r(9, 9, 1, 2, p.eye);
+    r(7, 11, 2, 1, p.nose);
+  } else if (dir === 'left') {
+    r(5, 9, 1, 2, p.eye); r(8, 9, 1, 2, p.eye);
+    r(4, 10, 2, 1, p.nose);
+  } else if (dir === 'right') {
+    r(7, 9, 1, 2, p.eye); r(10, 9, 1, 2, p.eye);
+    r(10, 10, 2, 1, p.nose);
+  } else {
+    r(6, 6, 1, 1, p.quillTip); r(9, 6, 1, 1, p.quillTip);   // 뒤에서 보면 가시만
+  }
+}
+
 const PAL_ME = { cap: '#d84038', hair: '#3a2618', skin: '#f8c896', shirt: '#f0f0f4', pants: '#3a58a8' };
+const PAL_PET = { quill: '#3a5aa8', quillMid: '#5578c8', quillTip: '#8fa8e0', fur: '#e8dcc4', belly: '#f4ece0', face: '#efe2ca', ear: '#d8c6a8', paw: '#c9b795', scarf: '#5aa04a', petal: '#f4f0d8', eye: '#22303f', nose: '#3a2c22' };
 const PAL_WIFE = { hair: '#5a3a20', skin: '#f8cfa0', shirt: '#fff', dress: '#e88098', pants: '#e88098', long: true };
 
 /* ═══ 엔티티 ═══ */
 function makeEnt(x, y) {
   return { x, y, fx: x, fy: y, px: x * TS, py: y * TS, dir: 'down', frame: 0, moving: false, t: 0 };
 }
-const me = makeEnt(2, 2), wife = makeEnt(3, 2);
+const me = makeEnt(2, 2), wife = makeEnt(3, 2), pet = makeEnt(4, 2);
 
 function step(ent, nx, ny) {
   if (ent.moving) return false;
@@ -559,8 +608,10 @@ function step(ent, nx, ny) {
 function tryMove(dx, dy) {
   const px = me.x, py = me.y;
   me.dir = dx > 0 ? 'right' : dx < 0 ? 'left' : dy > 0 ? 'down' : 'up';
+  const wx0 = wife.x, wy0 = wife.y;
   if (step(me, me.x + dx, me.y + dy)) {
     if (wife.x !== px || wife.y !== py) step(wife, px, py);
+    if (pet.x !== wx0 || pet.y !== wy0) step(pet, wx0, wy0);
     return true;
   }
   return false;
@@ -571,6 +622,10 @@ function teleport(x, y) {
   const wx = walkable(x + 1, y) ? x + 1 : (walkable(x - 1, y) ? x - 1 : x);
   wife.x = wife.fx = wx; wife.y = wife.fy = y;
   wife.px = wx * TS; wife.py = y * TS; wife.moving = false;
+  const tx = walkable(wx + 1, y) ? wx + 1 : (walkable(x, y + 1) ? x : wx);
+  const ty = (tx === x) ? y + 1 : y;
+  pet.x = pet.fx = tx; pet.y = pet.fy = ty;
+  pet.px = tx * TS; pet.py = ty * TS; pet.moving = false;
 }
 
 function findPath(sx, sy, tx, ty) {
@@ -904,7 +959,7 @@ function loop(now) {
   bounce += dt;
 
   const wasMoving = me.moving;
-  updateEnt(me, dt); updateEnt(wife, dt);
+  updateEnt(me, dt); updateEnt(wife, dt); updateEnt(pet, dt);
 
   if (wasMoving && !me.moving) {
     const ti = TRIG.findIndex(([x, y]) => x === me.x && y === me.y);
@@ -999,7 +1054,8 @@ function draw() {
   // y 정렬 (건물 + 캐릭터)
   const items = [];
   BLD.forEach(b => items.push({ y: (b.y + b.h) * TS, d: () => ctx.drawImage(bldCache.get(b), b.x * TS - camX, b.y * TS - camY, b.w * TS, b.h * TS) }));
-  items.push({ y: wife.py + TS, d: () => drawChar(ctx, wife.px - camX, wife.py - camY, wife.dir, wife.frame, PAL_WIFE, null) });
+  items.push({ y: pet.py + TS - 2, d: () => drawPet(ctx, pet.px - camX, pet.py - camY, pet.dir, pet.frame, PAL_PET) });
+  items.push({ y: wife.py + TS, d: () => drawChar(ctx, wife.px - camX, wife.py - camY, wife.dir, wife.frame, PAL_WIFE, '규원') });
   items.push({ y: me.py + TS + 2, d: () => drawChar(ctx, me.px - camX, me.py - camY, me.dir, me.frame, PAL_ME, '규빈') });
   items.sort((a, b) => a.y - b.y).forEach(it => it.d());
 

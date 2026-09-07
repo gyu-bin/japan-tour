@@ -37,7 +37,7 @@ function edgeAlpha(x, z, R) {
 }
 
 /** 폭 있는 리본으로 선을 만든다 (도로·철도 공용) */
-function ribbon(points, width, y, R) {
+export function ribbon(points, width, y, R) {
   if (points.length < 2) return null;
   const pos = [], idx = [], col = [];
   const half = width / 2;

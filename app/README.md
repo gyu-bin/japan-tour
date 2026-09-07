@@ -1,32 +1,25 @@
-# React + TypeScript + Vite
+# Tokyo Walk · React MapLibre
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+도쿄 여행(2026.10.17–22, 5박 6일) 인터랙티브 **3D 지도** 앱.
 
-Currently, two official plugins are available:
+## 실행
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+cd app
+npm install
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+http://localhost:5173
+
+## 기능
+
+- 날짜/장소 클릭 → MapLibre 카메라 이동
+- 오늘 동선 · 3D/2D · 둘러보기 · Street View
+- OpenFreeMap 건물 높이 입체 (실사 메쉬 아님)
+- 후지(Day 05–06) Terrarium DEM 지형
+- 일정 데이터: `src/data/itinerary.ts`
+
+## 배포
+
+루트 `vercel.json`이 `app/dist`를 빌드합니다.

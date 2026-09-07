@@ -303,6 +303,8 @@ def _query_once(t, host):
   way["leisure"~"^(park|garden)$"]({box});
   way["landuse"~"^(grass|forest|meadow|recreation_ground)$"]({box});
   way["railway"="rail"]({box});
+  way["railway"~"^(subway|light_rail|monorail)$"]({box});
+  node["railway"="station"]({box});
   rel["natural"="water"]({box});
   rel["leisure"~"^(park|garden)$"]({box});
   rel["landuse"~"^(grass|forest)$"]({box});
@@ -333,10 +335,25 @@ def convert(t, raw):
             elements.append(el)
 
     for el in elements:
+        tags = el.get('tags', {})
+
+        # 역은 점 하나다. 도쿄 지하철은 지하라 노선만으로는 어디가 역인지 알 수 없다.
+        if el.get('type') == 'node' and tags.get('railway') == 'station':
+            x, z = to_local(el['lat'], el['lon'], t['lat'], t['lng'])
+            if x * x + z * z > r * r:
+                continue
+            feats.append({
+                'k': 'station',
+                'p': [round(x, 1), round(z, 1)],
+                'n': tags.get('name', ''),
+                'en': tags.get('name:en', ''),
+                'sub': 1 if tags.get('station') == 'subway' else 0,
+            })
+            continue
+
         geom = el.get('geometry')
         if not geom or len(geom) < 2:
             continue
-        tags = el.get('tags', {})
         pts = [to_local(g['lat'], g['lon'], t['lat'], t['lng']) for g in geom]
 
         hw = tags.get('highway')
@@ -352,11 +369,15 @@ def convert(t, raw):
                                   'p': [[round(x, 1), round(z, 1)] for x, z in seg]})
             continue
 
-        if tags.get('railway') == 'rail':
+        rw = tags.get('railway')
+        if rw in ('rail', 'subway', 'light_rail', 'monorail'):
+            # 지상 철도와 지하철을 구분해 둔다 — 렌더링에서 지하는 점선으로 깐다
+            kind = 'rail' if rw == 'rail' else 'subway'
             for seg in clip_line(pts, r):
                 seg = simplify(seg, 3.0)
                 if len(seg) >= 2:
-                    feats.append({'k': 'rail', 'p': [[round(x, 1), round(z, 1)] for x, z in seg]})
+                    feats.append({'k': kind, 'line': tags.get('name', ''),
+                                  'p': [[round(x, 1), round(z, 1)] for x, z in seg]})
             continue
 
         if tags.get('natural') == 'coastline':

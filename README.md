@@ -7,11 +7,14 @@
 
 ```bash
 cd "Japen tour"
-python3 -m http.server 8080
+python3 tools/serve.py
 ```
 
 브라우저: [http://localhost:8080](http://localhost:8080)  
 (`three`·모듈 때문에 `file://` 대신 로컬 서버 필요)
+
+`python3 -m http.server` 를 쓰면 **브라우저가 `js/*.js` 를 캐시해서 고친 코드가 반영되지 않는다.**
+`tools/serve.py` 는 같은 정적 서버에 no-cache 헤더만 붙인 것이다.
 
 ## 조작
 
