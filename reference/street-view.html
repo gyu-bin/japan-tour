@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>도쿄 산책 · 규빈 &amp; 아내 10.17–22</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&family=Shippori+Mincho:wght@600;800&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden;background:#0d1526;font-family:'Zen Maru Gothic',sans-serif;color:#f4eede}
+#street{position:fixed;inset:0;width:100%;height:100%}
+#street .gm-iv-address,#street .gm-style-cc,#street a[href^="https://maps.google.com"]{display:none!important}
+#streetFade{position:fixed;inset:0;z-index:5;pointer-events:none;background:#0d1526;
+  opacity:0;transition:opacity .18s ease}
+#streetFade.on{opacity:.28}
+#street.moving canvas,#street.moving .widget-scene-canvas{
+  filter:blur(2px);transform:scale(1.035);transition:filter .22s ease,transform .45s ease}
+#street canvas,#street .widget-scene-canvas{transition:filter .35s ease,transform .55s ease}
+
+#intro{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:radial-gradient(120% 90% at 50% 25%,#22355c 0%,#0d1526 70%);text-align:center;padding:24px;
+  transition:opacity .7s ease;overflow-y:auto}
+#intro.gone{opacity:0;pointer-events:none}
+#intro .seal{width:66px;height:66px;border:2.5px solid #c0392b;color:#c0392b;border-radius:9px;
+  display:flex;align-items:center;justify-content:center;font-family:'Shippori Mincho',serif;font-weight:800;
+  font-size:14px;line-height:1.15;transform:rotate(-6deg);margin-bottom:26px}
+#intro h1{font-family:'Shippori Mincho',serif;font-size:clamp(30px,6vw,58px);letter-spacing:.05em;margin-bottom:10px}
+#intro .sub{color:#8fb4d9;letter-spacing:.26em;font-size:clamp(12px,2vw,15px);margin-bottom:4px}
+#intro .dates{color:#c9a24b;letter-spacing:.18em;font-size:13px;margin-bottom:28px}
+.keys{display:flex;gap:22px;flex-wrap:wrap;justify-content:center;margin-bottom:24px;color:rgba(244,238,222,.72);font-size:13px}
+.keys div{display:flex;align-items:center;gap:8px}
+kbd{background:rgba(244,238,222,.12);border:1px solid rgba(244,238,222,.28);border-bottom-width:3px;
+  border-radius:6px;padding:5px 9px;font-family:inherit;font-size:12px;font-weight:700}
+
+#keyBox{width:min(420px,92vw);margin-bottom:22px;text-align:left}
+#keyBox label{display:block;font-size:12px;color:#8fb4d9;letter-spacing:.08em;margin-bottom:8px}
+#keyBox input{width:100%;background:rgba(244,238,222,.08);border:1px solid rgba(244,238,222,.22);
+  border-radius:12px;padding:13px 14px;color:#f4eede;font-family:inherit;font-size:14px;outline:none}
+#keyBox input:focus{border-color:#c9a24b}
+#keyBox .hint{margin-top:8px;font-size:11px;color:rgba(244,238,222,.45);line-height:1.5}
+#keyErr{display:none;margin-top:8px;font-size:12px;color:#f0a99b}
+
+#startBtn{cursor:pointer;border:none;background:#c0392b;color:#fff;font-family:inherit;font-weight:700;
+  font-size:16px;letter-spacing:.08em;padding:16px 44px;border-radius:40px;box-shadow:0 12px 34px rgba(192,57,43,.45);
+  transition:transform .2s,box-shadow .2s}
+#startBtn:hover{transform:translateY(-3px);box-shadow:0 18px 44px rgba(192,57,43,.6)}
+#startBtn:disabled{opacity:.45;cursor:wait;transform:none;box-shadow:none}
+#loadNote{margin-top:18px;font-size:12px;color:rgba(244,238,222,.45);letter-spacing:.1em}
+
+#hud{position:fixed;inset:0;z-index:10;pointer-events:none;opacity:0;transition:opacity .6s ease}
+#hud.on{opacity:1}
+#days{position:absolute;top:16px;left:50%;transform:translateX(-50%);display:flex;gap:6px;pointer-events:auto;
+  background:rgba(13,21,38,.72);backdrop-filter:blur(10px);padding:7px;border-radius:16px;
+  border:1px solid rgba(244,238,222,.14);max-width:94vw;overflow-x:auto}
+.dbtn{cursor:pointer;background:transparent;border:none;color:#f4eede;font-family:inherit;
+  padding:9px 13px;border-radius:11px;transition:.2s;white-space:nowrap;text-align:center}
+.dbtn .dd{font-size:10.5px;color:#8fb4d9;letter-spacing:.06em}
+.dbtn .tt{font-size:13px;font-weight:700;margin-top:2px}
+.dbtn.on{background:#c0392b}.dbtn.on .dd{color:rgba(255,255,255,.85)}
+#spots{position:absolute;left:16px;top:88px;width:250px;max-height:64vh;overflow-y:auto;pointer-events:auto;
+  background:rgba(13,21,38,.7);backdrop-filter:blur(10px);border:1px solid rgba(244,238,222,.13);
+  border-radius:16px;padding:13px}
+#spots h3{font-family:'Shippori Mincho',serif;font-size:14px;color:#c9a24b;margin-bottom:2px;letter-spacing:.06em}
+#spots .rg{font-size:11px;color:rgba(244,238,222,.5);margin-bottom:10px}
+.sp{display:flex;gap:9px;padding:8px 7px;border-radius:9px;cursor:pointer;transition:.18s;align-items:flex-start}
+.sp:hover{background:rgba(244,238,222,.09)}
+.sp.near{background:rgba(201,162,75,.18)}
+.sp .tm{font-size:11px;color:#8fb4d9;min-width:38px;padding-top:2px}
+.sp .nm{font-size:12.5px;font-weight:700;line-height:1.35}
+.sp .nt{font-size:11px;color:rgba(244,238,222,.55);margin-top:2px;line-height:1.4}
+.sp.eat .nm::after{content:'먹기';font-size:9px;background:rgba(192,57,43,.3);color:#f0a99b;
+  padding:1px 6px;border-radius:9px;margin-left:6px;vertical-align:middle;font-weight:400}
+#ctrl{position:absolute;right:16px;bottom:16px;pointer-events:none;background:rgba(13,21,38,.7);
+  backdrop-filter:blur(10px);border:1px solid rgba(244,238,222,.13);border-radius:14px;padding:11px 14px;
+  font-size:11.5px;color:rgba(244,238,222,.72);line-height:1.9}
+#ctrl b{color:#c9a24b}
+#pop{position:absolute;bottom:78px;left:50%;transform:translateX(-50%) translateY(16px);
+  background:rgba(13,21,38,.9);backdrop-filter:blur(14px);border:1px solid rgba(201,162,75,.55);
+  border-radius:18px;padding:15px 24px;max-width:min(560px,90vw);text-align:center;
+  opacity:0;transition:.35s;pointer-events:none}
+#pop.on{opacity:1;transform:translateX(-50%) translateY(0)}
+#pop .pt{font-size:12px;color:#c9a24b;letter-spacing:.1em;margin-bottom:4px}
+#pop .pn{font-family:'Shippori Mincho',serif;font-size:19px;font-weight:800;margin-bottom:5px}
+#pop .pd{font-size:12.5px;color:rgba(244,238,222,.7);line-height:1.55}
+#compass{position:absolute;top:16px;right:16px;background:rgba(13,21,38,.72);backdrop-filter:blur(10px);
+  border:1px solid rgba(244,238,222,.14);border-radius:14px;padding:11px 15px;font-size:12px;text-align:center}
+#compass .big{font-family:'Shippori Mincho',serif;font-size:21px;color:#c9a24b;font-weight:800}
+#compass .sm{font-size:10.5px;color:rgba(244,238,222,.55);margin-top:2px;letter-spacing:.08em}
+#status{position:absolute;top:16px;left:16px;pointer-events:auto;background:rgba(13,21,38,.72);
+  backdrop-filter:blur(10px);border:1px solid rgba(244,238,222,.14);border-radius:14px;padding:10px 13px;
+  font-size:11px;color:rgba(244,238,222,.65);max-width:200px;line-height:1.45}
+#stick{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);display:none;pointer-events:auto;
+  width:132px;height:132px;border-radius:50%;background:rgba(244,238,222,.09);
+  border:1px solid rgba(244,238,222,.2);touch-action:none}
+#knob{position:absolute;left:50%;top:50%;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;
+  background:rgba(201,162,75,.65);border:2px solid rgba(244,238,222,.5)}
+@media(max-width:860px){
+  #spots{width:200px;top:80px;max-height:40vh}
+  #ctrl,#status{display:none}
+  #stick{display:block}
+  #pop{bottom:180px}
+}
+</style>
+</head>
+<body>
+<div id="street"></div>
+<div id="streetFade"></div>
+
+<div id="intro">
+  <div class="seal">東京<br>散歩</div>
+  <h1>도쿄를 걸어봅니다</h1>
+  <div class="sub">규빈 &amp; 아내의 5박 6일</div>
+  <div class="dates">2026 · 10 · 17 — 10 · 22</div>
+  <div class="keys">
+    <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 이동·시선</div>
+    <div><kbd>마우스</kbd> 둘러보기</div>
+    <div><kbd>목록</kbd> 순간이동</div>
+  </div>
+  <div id="keyBox">
+    <label for="apiKey">Google Maps API 키</label>
+    <input id="apiKey" type="password" autocomplete="off" placeholder="AIza... 로 시작하는 키" spellcheck="false">
+    <div class="hint">키는 이 브라우저에만 저장됩니다. Cloud Console에서 Maps JavaScript API를 켠 뒤 사용하세요. 로컬 테스트는 HTTP 리퍼러에 <code>http://localhost/*</code> 를 추가하세요.</div>
+    <div id="keyErr"></div>
+  </div>
+  <button id="startBtn" type="button">거리로 나가기</button>
+  <div id="loadNote">Google Street View 실사 · 날짜를 바꾸면 그날의 첫 스팟으로 이동합니다</div>
+</div>
+
+<div id="hud">
+  <div id="status">실사 Street View<br>스팟 근처면 자동 체크</div>
+  <div id="days"></div>
+  <div id="spots"><h3 id="spotTitle"></h3><div class="rg" id="spotRegion"></div><div id="spotList"></div></div>
+  <div id="compass"><div class="big" id="cDir">北</div><div class="sm" id="cInfo">0 / 0 방문</div></div>
+  <div id="pop"><div class="pt" id="popTime"></div><div class="pn" id="popName"></div><div class="pd" id="popDesc"></div></div>
+  <div id="ctrl">
+    <b>W / S</b> 앞·뒤 걷기 · <b>A / D</b> 부드럽게 좌우<br>
+    <b>마우스 드래그</b> 시선 · <b>목록 클릭</b> 순간이동
+  </div>
+  <div id="stick"><div id="knob"></div></div>
+</div>
+
+<script>
+/* ============ 여행 데이터 (실좌표) ============ */
+const DAYS = [
+{d:'토 10/17', t:'도착', region:'하네다 → 핫초보리',
+ stops:[
+  {time:'23:30', name:'하네다공항 도착', note:'입국심사 후 자정 무렵', lat:35.5494, lng:139.7798},
+  {time:'00:10', name:'정액 택시', note:'1층 2번 레인 · 5,000~7,000엔', lat:35.5487, lng:139.7853},
+  {time:'00:45', name:'Section L 핫초보리', note:'24시간 프런트 · 체크인', lat:35.6748, lng:139.7820}]},
+{d:'일 10/18', t:'아사쿠사', region:'아사쿠사 · 우에노 · 아키하바라',
+ stops:[
+  {time:'10:00', name:'센소지 · 나카미세', note:'가미나리몬 · 오미쿠지', lat:35.7111, lng:139.7966},
+  {time:'12:00', name:'아사쿠사 몬자 젠야', note:'첫 몬자야키 · 평점 4.8', eat:1, lat:35.7116, lng:139.7935},
+  {time:'13:15', name:'스즈키엔', note:'세계에서 가장 진한 말차 젤라토', eat:1, lat:35.7142, lng:139.7948},
+  {time:'15:00', name:'우에노 공원', note:'가볍게 산책', lat:35.7147, lng:139.7714},
+  {time:'16:00', name:'아메요코', note:'길거리 간식 골목', lat:35.7096, lng:139.7747},
+  {time:'17:00', name:'아키하바라', note:'전자상가 · 가차폰 · 4시간 여유', lat:35.6984, lng:139.7731},
+  {time:'21:00', name:'야키니쿠 토도로키', note:'체험단 확정 · 아사쿠사바시', eat:1, lat:35.6970, lng:139.7856}]},
+{d:'월 10/19', t:'오다이바', region:'도요스 · 오다이바 베이',
+ stops:[
+  {time:'10:00', name:'teamLab Planets', note:'맨발로 물길 · 예약 완료', lat:35.6491, lng:139.7895},
+  {time:'13:00', name:'점심 · 아쿠아시티', note:'가볍게 (저녁이 스시)', eat:1, lat:35.6285, lng:139.7738},
+  {time:'14:00', name:'조이폴리스', note:'패스포트로 6시간 확보', lat:35.6287, lng:139.7755},
+  {time:'19:00', name:'오다이바 해변공원', note:'레인보우브릿지 야경', lat:35.6295, lng:139.7750},
+  {time:'21:00', name:'스시토코로 잇세키산쵸우', note:'체험단 대기중 · 신바시', eat:1, lat:35.6655, lng:139.7568}]},
+{d:'화 10/20', t:'롯폰기', region:'황거 · 메구로 · 롯폰기',
+ stops:[
+  {time:'07:30', name:'황거 러닝', note:'외곽 5km · 컨디션 보고 결정', lat:35.6823, lng:139.7531},
+  {time:'11:00', name:'가조엔 도쿄', note:'용왕의 궁전 · 1층 카페', lat:35.6328, lng:139.7136},
+  {time:'13:30', name:'AFURI 아자부주반', note:'닭 시오 라멘 (유자 아닌 메뉴)', eat:1, lat:35.6555, lng:139.7366},
+  {time:'14:30', name:'모리미술관', note:'53층 · 화요일 17시 마감', lat:35.6605, lng:139.7292},
+  {time:'17:00', name:'히로키야 롯폰기', note:'체험단 확정 · 야키니쿠', eat:1, lat:35.6628, lng:139.7314},
+  {time:'19:00', name:'도쿄 시티뷰', note:'52층 전망대 · 저녁 후 야경', lat:35.6606, lng:139.7293}]},
+{d:'수 10/21', t:'카와구치코', region:'후지 5호 · 온천',
+ stops:[
+  {time:'09:00', name:'신주쿠 → 카와구치코', note:'고속버스 1시간 45분', lat:35.6896, lng:139.7006},
+  {time:'12:00', name:'로손 후지산 편의점', note:'지붕 위 후지산 · 무단횡단 금지', lat:35.4985, lng:138.7660},
+  {time:'12:40', name:'점심 · 호토', note:'된장 국물 향토 국수', eat:1, lat:35.4978, lng:138.7685},
+  {time:'16:30', name:'후지산 로프웨이', note:'일몰엔 대기 거의 없음', lat:35.5168, lng:138.7565},
+  {time:'19:30', name:'온천 · 가이세키', note:'숙박 포함 · 옥상 전망대', eat:1, lat:35.5035, lng:138.7648}]},
+{d:'목 10/22', t:'귀국', region:'후지산 아침 → 신주쿠',
+ stops:[
+  {time:'06:30', name:'일출 후지산 조망', note:'이번 여행 최대 승부처', lat:35.5038, lng:138.7645},
+  {time:'09:00', name:'로손 재도전', note:'아침 빛이 가장 선명', lat:35.4985, lng:138.7660},
+  {time:'10:30', name:'카와구치코 → 신주쿠', note:'복귀 버스 · 예약 필수', lat:35.4984, lng:138.7688},
+  {time:'17:00', name:'스시하츠메 신주쿠', note:'체험단 대기중', eat:1, lat:35.6917, lng:139.7040},
+  {time:'19:00', name:'신주쿠 쇼핑', note:'이세탄 · 돈키호테', lat:35.6912, lng:139.7048},
+  {time:'02:00', name:'하네다 출발', note:'금 04:50 인천 도착', lat:35.5494, lng:139.7798}]}
+];
+
+const KEY_STORAGE = 'tokyo_walk_gmaps_key';
+const apiKeyInput = document.getElementById('apiKey');
+const keyErr = document.getElementById('keyErr');
+const startBtn = document.getElementById('startBtn');
+apiKeyInput.value = localStorage.getItem(KEY_STORAGE) || new URLSearchParams(location.search).get('key') || '';
+
+let panorama = null;
+let streetViewService = null;
+let dayIdx = 1;
+let visited = new Set();
+let curNear = -1;
+let mapsReady = false;
+let walkBusy = false;
+let lookDrag = false;
+let lastX = 0, lastY = 0;
+const keys = {};
+const stickVec = {x:0, y:0};
+const look = {heading: 20, pitch: 0};
+const streetEl = document.getElementById('street');
+const streetFade = document.getElementById('streetFade');
+let lastWalkAt = 0;
+let lastFrame = performance.now();
+let compassTimer = 0;
+
+const daysEl = document.getElementById('days');
+DAYS.forEach((d, i) => {
+  const b = document.createElement('button');
+  b.className = 'dbtn';
+  b.type = 'button';
+  b.innerHTML = `<div class="dd">${d.d}</div><div class="tt">${d.t}</div>`;
+  b.onclick = () => loadDay(i);
+  daysEl.appendChild(b);
+});
+
+function showKeyError(msg) {
+  keyErr.style.display = 'block';
+  keyErr.textContent = msg;
+}
+
+function headingDiff(a, b) {
+  let d = Math.abs(((a % 360) + 360) % 360 - ((b % 360) + 360) % 360);
+  return d > 180 ? 360 - d : d;
+}
+
+function haversineM(a, b) {
+  const R = 6371000;
+  const toR = x => x * Math.PI / 180;
+  const dLat = toR(b.lat - a.lat);
+  const dLng = toR(b.lng - a.lng);
+  const s = Math.sin(dLat/2)**2 + Math.cos(toR(a.lat)) * Math.cos(toR(b.lat)) * Math.sin(dLng/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+
+function updateCompass() {
+  const dirs = ['北','北東','東','南東','南','南西','西','北西'];
+  const a = ((look.heading % 360) + 360) % 360;
+  document.getElementById('cDir').textContent = dirs[Math.round(a / 45) % 8];
+  document.getElementById('cInfo').textContent = `${visited.size} / ${DAYS[dayIdx].stops.length} 방문`;
+}
+
+function normHeading(h) {
+  return ((h % 360) + 360) % 360;
+}
+
+function shortestDelta(from, to) {
+  return ((to - from + 540) % 360) - 180;
+}
+
+function applyLook() {
+  if (!panorama) return;
+  panorama.setPov({heading: look.heading, pitch: look.pitch, zoom: 1});
+}
+
+function flashMove() {
+  streetEl.classList.add('moving');
+  streetFade.classList.add('on');
+  setTimeout(() => streetFade.classList.remove('on'), 200);
+  setTimeout(() => streetEl.classList.remove('moving'), 520);
+}
+
+function waitPanoSettled(timeoutMs = 780) {
+  return new Promise(resolve => {
+    if (!panorama) { resolve(); return; }
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      try { google.maps.event.removeListener(l1); } catch (_) {}
+      try { google.maps.event.removeListener(l2); } catch (_) {}
+      resolve();
+    };
+    const l1 = panorama.addListener('status_changed', () => setTimeout(finish, 160));
+    const l2 = panorama.addListener('pano_changed', () => setTimeout(finish, 320));
+    setTimeout(finish, timeoutMs);
+  });
+}
+
+function easeHeadingToward(target, ms = 160) {
+  return new Promise(resolve => {
+    const from = look.heading;
+    const delta = shortestDelta(from, target);
+    if (Math.abs(delta) < 4) { resolve(); return; }
+    const t0 = performance.now();
+    const step = now => {
+      const u = Math.min(1, (now - t0) / ms);
+      const e = u * u * (3 - 2 * u);
+      look.heading = from + delta * e;
+      applyLook();
+      if (u < 1) requestAnimationFrame(step);
+      else resolve();
+    };
+    requestAnimationFrame(step);
+  });
+}
+
+function pickLink(forward) {
+  const links = panorama?.getLinks?.();
+  if (!links?.length) return null;
+  const target = forward ? look.heading : look.heading + 180;
+  let best = null, bestDiff = 999;
+  for (const link of links) {
+    const diff = headingDiff(link.heading, target);
+    if (diff < bestDiff) { bestDiff = diff; best = link; }
+  }
+  return best && bestDiff < 100 ? best : null;
+}
+
+async function moveAlong(forward) {
+  if (!panorama || walkBusy) return false;
+  const best = pickLink(forward);
+  if (!best) return false;
+  walkBusy = true;
+  lastWalkAt = performance.now();
+  try {
+    // 시선이 링크 방향과 많이 어긋날 때만 짧게 맞춤
+    if (headingDiff(look.heading, best.heading) > 18) {
+      await easeHeadingToward(best.heading, 110);
+    }
+    flashMove();
+    panorama.setPano(best.pano);
+    await waitPanoSettled(760);
+    const pov = panorama.getPov();
+    if (pov) {
+      look.heading = pov.heading;
+      look.pitch = pov.pitch;
+    }
+  } finally {
+    walkBusy = false;
+  }
+  return true;
+}
+
+function showNearPopup(stop, idx) {
+  document.getElementById('popTime').textContent = stop.time;
+  document.getElementById('popName').textContent = stop.name;
+  document.getElementById('popDesc').textContent = stop.note;
+  document.getElementById('pop').classList.add('on');
+  if (!visited.has(idx)) {
+    visited.add(idx);
+    document.querySelectorAll('.sp')[idx]?.classList.add('near');
+    updateCompass();
+  }
+}
+
+function checkProximity() {
+  if (!panorama) return;
+  const pos = panorama.getPosition();
+  if (!pos) return;
+  const here = {lat: pos.lat(), lng: pos.lng()};
+  const stops = DAYS[dayIdx].stops;
+  let near = -1, best = 1e9;
+  stops.forEach((s, i) => {
+    const d = haversineM(here, s);
+    if (d < best) { best = d; near = i; }
+  });
+  if (best < 55 && near >= 0) {
+    if (curNear !== near) {
+      curNear = near;
+      showNearPopup(stops[near], near);
+    }
+  } else if (best > 90 && curNear !== -1) {
+    curNear = -1;
+    document.getElementById('pop').classList.remove('on');
+  }
+}
+
+function goToStop(stop, facingNext) {
+  if (!streetViewService || !panorama) return;
+  streetViewService.getPanorama(
+    {location: {lat: stop.lat, lng: stop.lng}, radius: 120, preference: 'nearest', source: 'outdoor'},
+    (data, status) => {
+      if (status !== 'OK' || !data?.location) {
+        streetViewService.getPanorama(
+          {location: {lat: stop.lat, lng: stop.lng}, radius: 200},
+          (data2, status2) => {
+            if (status2 === 'OK' && data2?.location) applyPano(data2, stop, facingNext);
+            else document.getElementById('status').textContent = '이 스팟 근처 Street View 없음';
+          }
+        );
+        return;
+      }
+      applyPano(data, stop, facingNext);
+    }
+  );
+}
+
+function applyPano(data, stop, facingNext) {
+  panorama.setPano(data.location.pano);
+  let heading = data.tiles?.centerHeading ?? look.heading;
+  if (facingNext && stop) {
+    const day = DAYS[dayIdx];
+    const idx = day.stops.indexOf(stop);
+    const next = day.stops[idx + 1];
+    if (next) {
+      const y = Math.sin((next.lng - stop.lng) * Math.PI / 180) * Math.cos(next.lat * Math.PI / 180);
+      const x = Math.cos(stop.lat * Math.PI / 180) * Math.sin(next.lat * Math.PI / 180)
+        - Math.sin(stop.lat * Math.PI / 180) * Math.cos(next.lat * Math.PI / 180) * Math.cos((next.lng - stop.lng) * Math.PI / 180);
+      heading = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+    }
+  }
+  look.heading = heading;
+  look.pitch = 0;
+  panorama.setPov({heading, pitch: 0, zoom: 1});
+  document.getElementById('status').textContent = `${stop.name} 근처 실사`;
+  updateCompass();
+}
+
+function loadDay(i) {
+  dayIdx = i;
+  visited = new Set();
+  curNear = -1;
+  document.getElementById('pop').classList.remove('on');
+  const day = DAYS[i];
+  document.querySelectorAll('.dbtn').forEach((b, k) => b.classList.toggle('on', k === i));
+  document.getElementById('spotTitle').textContent = day.d + ' · ' + day.t;
+  document.getElementById('spotRegion').textContent = day.region;
+  document.getElementById('spotList').innerHTML = day.stops.map((s, k) =>
+    `<div class="sp ${s.eat ? 'eat' : ''}" data-k="${k}">
+      <div class="tm">${s.time}</div>
+      <div><div class="nm">${s.name}</div><div class="nt">${s.note}</div></div>
+    </div>`
+  ).join('');
+  document.querySelectorAll('.sp').forEach(el => {
+    el.onclick = () => {
+      const s = day.stops[+el.dataset.k];
+      goToStop(s, true);
+      showNearPopup(s, +el.dataset.k);
+      curNear = +el.dataset.k;
+    };
+  });
+  updateCompass();
+  if (mapsReady) goToStop(day.stops[0], true);
+}
+
+function initStreetView() {
+  const el = document.getElementById('street');
+  panorama = new google.maps.StreetViewPanorama(el, {
+    position: {lat: DAYS[1].stops[0].lat, lng: DAYS[1].stops[0].lng},
+    pov: {heading: look.heading, pitch: 0},
+    zoom: 1,
+    addressControl: false,
+    linksControl: true,
+    panControl: false,
+    enableCloseButton: false,
+    fullscreenControl: false,
+    motionTracking: false,
+    motionTrackingControl: false,
+    showRoadLabels: true,
+    clickToGo: true,
+    scrollwheel: false,
+    disableDefaultUI: false
+  });
+  streetViewService = new google.maps.StreetViewService();
+  panorama.addListener('position_changed', checkProximity);
+  // 사용자가 Street View 화살표/드래그로 돌린 경우 look 동기화
+  panorama.addListener('pov_changed', () => {
+    if (lookDrag || keys['KeyA'] || keys['KeyD'] || keys['ArrowLeft'] || keys['ArrowRight']) return;
+    if (Math.abs(stickVec.x) > 0.2) return;
+    const pov = panorama.getPov();
+    if (!pov) return;
+    look.heading = pov.heading;
+    look.pitch = pov.pitch;
+  });
+  mapsReady = true;
+  loadDay(dayIdx);
+  requestAnimationFrame(gameLoop);
+}
+
+function loadMapsScript(key) {
+  return new Promise((resolve, reject) => {
+    if (window.google?.maps?.StreetViewPanorama) {
+      resolve();
+      return;
+    }
+    const existing = document.getElementById('gmaps-sdk');
+    if (existing) existing.remove();
+    let settled = false;
+    window.__tokyoMapsCb = () => {
+      if (settled) return;
+      settled = true;
+      resolve();
+    };
+    const s = document.createElement('script');
+    s.id = 'gmaps-sdk';
+    s.async = true;
+    s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&callback=__tokyoMapsCb&v=weekly`;
+    s.onerror = () => reject(new Error('Maps 스크립트 로드 실패'));
+    document.head.appendChild(s);
+    setTimeout(() => {
+      if (!settled && !window.google?.maps) reject(new Error('Maps API 로드 시간 초과 — 키·결제·API 활성화를 확인하세요'));
+    }, 12000);
+  });
+}
+
+startBtn.onclick = async () => {
+  const key = apiKeyInput.value.trim();
+  if (!key.startsWith('AIza')) {
+    showKeyError('올바른 Google Maps API 키를 입력하세요 (AIza…).');
+    return;
+  }
+  keyErr.style.display = 'none';
+  startBtn.disabled = true;
+  startBtn.textContent = 'Street View 불러오는 중…';
+  try {
+    localStorage.setItem(KEY_STORAGE, key);
+    await loadMapsScript(key);
+    initStreetView();
+    document.getElementById('intro').classList.add('gone');
+    document.getElementById('hud').classList.add('on');
+  } catch (e) {
+    showKeyError(e.message || String(e));
+    startBtn.disabled = false;
+    startBtn.textContent = '거리로 나가기';
+  }
+};
+
+addEventListener('keydown', e => {
+  if (e.repeat) return;
+  keys[e.code] = true;
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
+});
+addEventListener('keyup', e => { keys[e.code] = false; });
+
+streetEl.addEventListener('mousedown', e => {
+  if (e.button !== 0) return;
+  lookDrag = true;
+  lastX = e.clientX;
+  lastY = e.clientY;
+});
+addEventListener('mouseup', () => { lookDrag = false; });
+addEventListener('mousemove', e => {
+  if (!lookDrag || !panorama) return;
+  const dx = e.clientX - lastX;
+  const dy = e.clientY - lastY;
+  lastX = e.clientX;
+  lastY = e.clientY;
+  look.heading = normHeading(look.heading - dx * 0.18);
+  look.pitch = Math.max(-35, Math.min(35, look.pitch - dy * 0.12));
+  applyLook();
+});
+
+/* 모바일 조이스틱 */
+const stick = document.getElementById('stick');
+const knob = document.getElementById('knob');
+let stickId = null;
+stick.addEventListener('touchstart', e => {
+  stickId = e.changedTouches[0].identifier;
+}, {passive: true});
+stick.addEventListener('touchmove', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) {
+    if (t.identifier !== stickId) continue;
+    const r = stick.getBoundingClientRect();
+    let dx = t.clientX - (r.left + r.width / 2);
+    let dy = t.clientY - (r.top + r.height / 2);
+    const len = Math.hypot(dx, dy), max = 44;
+    if (len > max) { dx = dx / len * max; dy = dy / len * max; }
+    knob.style.transform = `translate(${dx}px,${dy}px)`;
+    stickVec.x = dx / max;
+    stickVec.y = dy / max;
+  }
+}, {passive: false});
+stick.addEventListener('touchend', () => {
+  stickId = null;
+  stickVec.x = 0;
+  stickVec.y = 0;
+  knob.style.transform = '';
+}, {passive: true});
+
+function wantsForward() {
+  return keys['KeyW'] || keys['ArrowUp'] || stickVec.y < -0.45;
+}
+function wantsBack() {
+  return keys['KeyS'] || keys['ArrowDown'] || stickVec.y > 0.45;
+}
+
+function gameLoop(now) {
+  const dt = Math.min(0.05, (now - lastFrame) / 1000);
+  lastFrame = now;
+
+  if (mapsReady && panorama && !walkBusy) {
+    let turn = 0;
+    if (keys['KeyA'] || keys['ArrowLeft']) turn -= 1;
+    if (keys['KeyD'] || keys['ArrowRight']) turn += 1;
+    turn += stickVec.x;
+    if (Math.abs(turn) > 0.05) {
+      // deg/sec — 연속 회전이라 끊김 없음
+      const speed = (keys['ShiftLeft'] || keys['ShiftRight']) ? 140 : 85;
+      look.heading = normHeading(look.heading + turn * speed * dt);
+      applyLook();
+    }
+
+    // 걷기는 Google 전환(~0.6~0.8s)이 끝난 뒤에만 다음 스텝
+    if (now - lastWalkAt > 620) {
+      if (wantsForward()) moveAlong(true);
+      else if (wantsBack()) moveAlong(false);
+    }
+  }
+
+  if (now - compassTimer > 200) {
+    compassTimer = now;
+    updateCompass();
+  }
+  requestAnimationFrame(gameLoop);
+}
+
+/* 날짜 UI만 먼저 그려둠 */
+loadDay(1);
+</script>
+</body>
+</html>

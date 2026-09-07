@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>도쿄 산책 · 규빈 &amp; 아내 10.17–22</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&family=Shippori+Mincho:wght@600;800&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --ink:#3a352e; --ink2:#7a7266; --cream:#faf7f0; --card:#ffffff;
+  --acc:#e8734a; --acc2:#c0392b; --leaf:#7fb069; --sky:#8fb4d9; --gold:#c9a24b;
+}
+html,body{height:100%;overflow:hidden;background:var(--cream);
+  font-family:'Zen Maru Gothic',sans-serif;color:var(--ink)}
+canvas{display:block}
+#scene{position:fixed;inset:0}
+#labels{position:fixed;inset:0;pointer-events:none;z-index:3;overflow:hidden}
+
+/* ---------- 스팟 라벨 칩 ---------- */
+.pinChip{pointer-events:auto;cursor:pointer;transform:translate(-50%,-130%);white-space:nowrap;
+  background:#fff;border-radius:20px;padding:5px 12px 5px 6px;display:flex;align-items:center;gap:7px;
+  font-size:12px;font-weight:700;color:var(--ink);box-shadow:0 4px 14px rgba(58,53,46,.18);
+  border:1.5px solid rgba(58,53,46,.06);transition:transform .15s, box-shadow .15s}
+.pinChip:hover{box-shadow:0 6px 18px rgba(58,53,46,.28)}
+.pinChip .no{width:20px;height:20px;border-radius:50%;background:var(--acc);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:11px}
+.pinChip.eat .no{background:var(--acc2)}
+.pinChip.sel{background:var(--ink);color:#fff}
+.pinChip.sel .no{background:var(--gold)}
+.lmChip{pointer-events:none;transform:translate(-50%,-140%);white-space:nowrap;
+  background:var(--ink);color:#fff;border-radius:18px;padding:6px 14px;font-size:12px;font-weight:700;
+  box-shadow:0 4px 14px rgba(58,53,46,.3)}
+
+/* ---------- 좌상단 타이틀 카드 ---------- */
+#head{position:fixed;top:20px;left:20px;z-index:10;width:min(420px,calc(100vw - 40px));
+  background:rgba(255,255,255,.94);backdrop-filter:blur(10px);border-radius:20px;
+  padding:20px 22px 16px;box-shadow:0 10px 34px rgba(58,53,46,.12)}
+#head .eyebrow{font-size:11px;letter-spacing:.22em;color:var(--ink2);margin-bottom:8px}
+#head .titleRow{display:flex;align-items:baseline;gap:14px;margin-bottom:4px}
+#head .dayNo{font-family:'Shippori Mincho',serif;font-size:40px;font-weight:800;color:var(--acc);line-height:1}
+#head h1{font-family:'Shippori Mincho',serif;font-size:21px;font-weight:800;letter-spacing:.02em}
+#head .region{font-size:12px;color:var(--ink2);margin-bottom:12px}
+#chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{cursor:pointer;border:1.5px solid rgba(58,53,46,.14);background:#fff;border-radius:16px;
+  padding:5px 11px;font-family:inherit;font-size:11.5px;font-weight:700;color:var(--ink);transition:.15s}
+.chip:hover{border-color:var(--acc);color:var(--acc)}
+.chip.sel{background:var(--ink);border-color:var(--ink);color:#fff}
+.chip .t{color:var(--ink2);font-weight:400;margin-right:4px}
+.chip.sel .t{color:rgba(255,255,255,.6)}
+
+/* ---------- 우측 상세 패널 ---------- */
+#panel{position:fixed;top:20px;right:20px;bottom:86px;z-index:10;width:min(320px,calc(100vw - 40px));
+  background:rgba(255,255,255,.96);backdrop-filter:blur(10px);border-radius:20px;
+  box-shadow:0 10px 34px rgba(58,53,46,.12);display:flex;flex-direction:column;overflow:hidden}
+#panel .ph{padding:16px 20px 12px;border-bottom:1px solid rgba(58,53,46,.08);
+  display:flex;align-items:center;justify-content:space-between}
+#panel .ph b{font-family:'Shippori Mincho',serif;font-size:15px}
+#panel .ph span{font-size:11px;color:var(--ink2)}
+#panel .body{padding:18px 20px;overflow-y:auto;flex:1}
+#panel .plno{font-size:11px;letter-spacing:.18em;color:var(--acc);margin-bottom:6px}
+#panel h2{font-family:'Shippori Mincho',serif;font-size:22px;font-weight:800;margin-bottom:4px}
+#panel .meta{font-size:12px;color:var(--ink2);margin-bottom:14px;display:flex;gap:8px;align-items:center}
+#panel .tag{font-size:10px;background:rgba(192,57,43,.12);color:var(--acc2);border-radius:10px;padding:2px 8px;font-weight:700}
+#panel .desc{font-size:13px;line-height:1.8;color:var(--ink);background:var(--cream);
+  border-radius:14px;padding:14px 15px;margin-bottom:14px}
+#panel .list{border-top:1px dashed rgba(58,53,46,.15);padding-top:12px}
+#panel .list .lt{font-size:11px;letter-spacing:.14em;color:var(--ink2);margin-bottom:8px}
+.row{display:flex;gap:9px;padding:7px 8px;border-radius:10px;cursor:pointer;align-items:baseline;transition:.15s}
+.row:hover{background:var(--cream)}
+.row.sel{background:rgba(232,115,74,.12)}
+.row .tm{font-size:11px;color:var(--sky);min-width:36px;font-weight:700}
+.row .nm{font-size:12.5px;font-weight:700}
+.row.eat .nm::after{content:'먹기';font-size:9px;background:rgba(192,57,43,.12);color:var(--acc2);
+  padding:1px 6px;border-radius:8px;margin-left:6px;font-weight:700}
+
+/* ---------- 하단 일차 페이지네이션 ---------- */
+#pager{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:10;
+  background:rgba(255,255,255,.94);backdrop-filter:blur(10px);border-radius:40px;
+  padding:8px 14px;display:flex;gap:4px;align-items:center;box-shadow:0 10px 30px rgba(58,53,46,.14);
+  max-width:94vw;overflow-x:auto}
+.pbtn{cursor:pointer;border:none;background:transparent;font-family:'Shippori Mincho',serif;
+  font-size:13px;font-weight:800;color:var(--ink2);width:40px;height:40px;border-radius:50%;
+  transition:.18s;flex:none}
+.pbtn:hover{color:var(--acc)}
+.pbtn.on{background:var(--ink);color:#fff}
+#pager .sep{width:1px;height:18px;background:rgba(58,53,46,.14);margin:0 4px;flex:none}
+#pager .lbl{font-size:10.5px;color:var(--ink2);white-space:nowrap;padding:0 6px}
+
+/* ---------- 미니맵 (실측) ---------- */
+#mini{position:fixed;left:20px;bottom:20px;z-index:10;width:196px;
+  background:rgba(255,255,255,.95);backdrop-filter:blur(10px);border-radius:16px;
+  padding:12px 14px 10px;box-shadow:0 10px 30px rgba(58,53,46,.14)}
+#mini .mh{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+#mini .mt{font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--ink)}
+#mini .north{width:22px;height:22px;display:flex;align-items:center;justify-content:center}
+#mini .north svg{display:block;transition:transform .1s linear}
+#mini svg.map{display:block;width:100%;height:auto;background:var(--cream);border-radius:10px}
+#mini .ms{font-size:10px;color:var(--ink2);margin-top:6px;text-align:right}
+#mini .mdot{cursor:pointer}
+@media(max-width:900px){#mini{display:none}}
+
+/* ---------- 안내 ---------- */
+#hint{position:fixed;right:20px;bottom:20px;z-index:9;font-size:11px;color:var(--ink2);
+  background:rgba(255,255,255,.85);border-radius:12px;padding:8px 12px;line-height:1.7;
+  box-shadow:0 6px 20px rgba(58,53,46,.1)}
+#hint b{color:var(--ink)}
+
+@media(max-width:900px){
+  #head{top:12px;left:12px;padding:14px 16px 12px;width:min(320px,calc(100vw - 24px))}
+  #head .dayNo{font-size:30px}
+  #head h1{font-size:16px}
+  #chips{display:none}
+  #panel{display:none}
+  #hint{display:none}
+  #pager{bottom:12px}
+}
+</style>
+</head>
+<body>
+<div id="scene"></div>
+<div id="labels"></div>
+
+<div id="head">
+  <div class="eyebrow">TOKYO / 5 NIGHTS 6 DAYS · 규빈 &amp; 아내</div>
+  <div class="titleRow"><div class="dayNo" id="hNo">02</div><h1 id="hTitle"></h1></div>
+  <div class="region" id="hRegion"></div>
+  <div id="chips"></div>
+</div>
+
+<div id="panel">
+  <div class="ph"><b>여행 명소</b><span id="pCount"></span></div>
+  <div class="body">
+    <div class="plno" id="pNo"></div>
+    <h2 id="pName"></h2>
+    <div class="meta"><span id="pTime"></span><span id="pDist"></span><span class="tag" id="pTag" style="display:none">먹기</span></div>
+    <div class="desc" id="pDesc"></div>
+    <div class="list">
+      <div class="lt">오늘의 일정</div>
+      <div id="pList"></div>
+    </div>
+  </div>
+</div>
+
+<div id="pager"></div>
+
+<div id="mini">
+  <div class="mh">
+    <div class="mt">실제 지도 배치</div>
+    <div class="north"><svg id="northArrow" width="18" height="18" viewBox="0 0 18 18">
+      <polygon points="9,1 12,10 9,8 6,10" fill="#c0392b"/>
+      <polygon points="9,17 12,10 9,12 6,10" fill="#b8b0a2"/>
+    </svg></div>
+  </div>
+  <svg class="map" id="miniSvg" viewBox="0 0 168 118"></svg>
+  <div class="ms" id="miniScale"></div>
+</div>
+
+<div id="hint"><b>드래그</b> 회전 · <b>휠</b> 확대 · <b>핀 클릭</b> 상세</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+/* ============ 여행 데이터 ============ */
+const DAYS = [
+{no:'01', d:'토 10/17', t:'자정의 도쿄에 내리다', region:'하네다 공항 → 핫초보리 숙소', landmark:'plane', lmName:'하네다공항',
+ stops:[
+  {time:'23:30', name:'하네다공항 도착', note:'입국심사를 마치면 자정 무렵. 심야의 공항은 의외로 고요합니다.'},
+  {time:'00:10', name:'정액 택시', note:'1층 2번 레인에서 탑승. 도심까지 5,000~7,000엔 정액제라 안심.'},
+  {time:'00:45', name:'Section L 핫초보리', note:'24시간 프런트라 새벽 체크인도 문제없음. 바로 취침.'}]},
+{no:'02', d:'일 10/18', t:'옛 도쿄의 골목을 걷다', region:'아사쿠사 · 우에노 · 아키하바라', landmark:'pagoda', lmName:'센소지 오층탑',
+ stops:[
+  {time:'10:00', name:'센소지 · 나카미세', note:'가미나리몬에서 사진 한 장, 나카미세 거리를 지나 본당까지. 오미쿠지 뽑기.'},
+  {time:'12:00', name:'아사쿠사 몬자 젠야', eat:1, note:'여행 첫 몬자야키. 평점 4.8의 현지 맛집으로 오픈 직후 방문 추천.'},
+  {time:'13:15', name:'스즈키엔', eat:1, note:'세계에서 가장 진한 말차 젤라토 7단계. 진하기 도전.'},
+  {time:'15:00', name:'우에노 공원', note:'가볍게 산책하며 소화 시간. 미술관 앞 분수 광장이 포인트.'},
+  {time:'16:00', name:'아메요코', note:'길거리 간식 골목. 과일 꼬치와 크로켓 구경.'},
+  {time:'17:00', name:'아키하바라', note:'전자상가와 가차폰 회관. 4시간 여유롭게.'},
+  {time:'21:00', name:'야키니쿠 토도로키', eat:1, note:'체험단 확정. 아사쿠사바시의 명물 야키니쿠로 하루 마무리.'}]},
+{no:'03', d:'월 10/19', t:'미래 도시의 바다를 만나다', region:'도요스 · 오다이바 베이', landmark:'wheel', lmName:'오다이바 대관람차',
+ stops:[
+  {time:'10:00', name:'teamLab Planets', note:'맨발로 물길을 걷는 몰입형 미디어아트. 예약 완료.'},
+  {time:'13:00', name:'점심 · 아쿠아시티', eat:1, note:'저녁이 스시 오마카세라 점심은 가볍게.'},
+  {time:'14:00', name:'조이폴리스', note:'실내 테마파크. 패스포트로 6시간 확보.'},
+  {time:'19:00', name:'오다이바 해변공원', note:'레인보우브릿지 야경 최고의 자리. 자유의 여신상 포토스팟.'},
+  {time:'21:00', name:'스시토코로 잇세키산쵸우', eat:1, note:'체험단 대기중 · 신바시. 확정되면 오마카세 코스.'}]},
+{no:'04', d:'화 10/20', t:'도쿄의 하늘 위에 서다', region:'황거 · 메구로 · 롯폰기', landmark:'tower', lmName:'모리타워',
+ stops:[
+  {time:'07:30', name:'황거 러닝', note:'황거 외곽 5km 코스. 컨디션 보고 결정.'},
+  {time:'11:00', name:'가조엔 도쿄', note:'\u201c용왕의 궁전\u201d이라 불리는 호텔. 1층 카페에서 티타임.'},
+  {time:'13:30', name:'AFURI 아자부주반', eat:1, note:'닭 시오 라멘. 유자 말고 기본 시오로.'},
+  {time:'14:30', name:'모리미술관', note:'53층. 화요일은 17시 마감이라 서두르기.'},
+  {time:'17:00', name:'히로키야 롯폰기', eat:1, note:'체험단 확정. 롯폰기 야키니쿠.'},
+  {time:'19:00', name:'도쿄 시티뷰', note:'52층 전망대에서 도쿄타워 야경.'}]},
+{no:'05', d:'수 10/21', t:'후지산 아래 잠들다', region:'카와구치코 · 온천 료칸', landmark:'fuji', lmName:'후지산',
+ stops:[
+  {time:'09:00', name:'신주쿠 → 카와구치코', note:'고속버스 1시간 45분. 오른쪽 창가가 후지산 뷰.'},
+  {time:'12:00', name:'로손 후지산 편의점', note:'지붕 위로 후지산이 걸리는 그 사진. 무단횡단 금지!'},
+  {time:'12:40', name:'점심 · 호토', eat:1, note:'된장 국물에 넓적한 면. 카와구치코 향토 국수.'},
+  {time:'16:30', name:'후지산 로프웨이', note:'일몰 시간대엔 대기 거의 없음. 카치카치산 전망대.'},
+  {time:'19:30', name:'온천 · 가이세키', eat:1, note:'숙박 포함. 옥상 전망대에서 밤 후지산.'}]},
+{no:'06', d:'목 10/22', t:'아침 후지에게 인사하고', region:'카와구치코 → 신주쿠 → 하네다', landmark:'fuji', lmName:'후지산',
+ stops:[
+  {time:'06:30', name:'일출 후지산 조망', note:'이번 여행 최대 승부처. 호수 북쪽 기슭이 명당.'},
+  {time:'09:00', name:'로손 재도전', note:'아침 빛이 가장 선명한 시간대.'},
+  {time:'10:30', name:'카와구치코 → 신주쿠', note:'복귀 버스는 예약 필수.'},
+  {time:'17:00', name:'스시하츠메 신주쿠', eat:1, note:'체험단 대기중. 신주쿠의 스시.'},
+  {time:'19:00', name:'신주쿠 쇼핑', note:'이세탄 · 돈키호테에서 선물 쇼핑.'},
+  {time:'02:00', name:'하네다 출발', note:'금요일 04:50 인천 도착. 여행 끝!'}]}
+];
+
+/* ============ three 기본 ============ */
+const sceneEl = document.getElementById('scene');
+const scene = new THREE.Scene();
+const BG = 0xf3ecdd;
+scene.background = new THREE.Color(BG);
+scene.fog = new THREE.Fog(BG, 95, 175);
+
+const renderer = new THREE.WebGLRenderer({antialias: true, powerPreference: 'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+sceneEl.appendChild(renderer.domElement);
+
+const labelRenderer = new CSS2DRenderer({element: document.getElementById('labels')});
+labelRenderer.setSize(innerWidth, innerHeight);
+
+const AR = () => innerWidth / innerHeight;
+let viewSize = 30;
+const camera = new THREE.OrthographicCamera(-viewSize * AR(), viewSize * AR(), viewSize, -viewSize, 0.1, 400);
+
+/* 조명: 밝은 낮 */
+scene.add(new THREE.HemisphereLight(0xeaf4ff, 0xd8cbb0, 0.95));
+const sun = new THREE.DirectionalLight(0xfff2dc, 1.5);
+sun.position.set(-34, 48, 22);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = -55; sun.shadow.camera.right = 55;
+sun.shadow.camera.top = 55; sun.shadow.camera.bottom = -55;
+sun.shadow.camera.far = 160;
+sun.shadow.bias = -0.0004;
+scene.add(sun);
+
+const world = new THREE.Group();
+scene.add(world);
+
+/* ============ 팔레트 & 지오메트리 ============ */
+const WALLS = [0xf5ead6, 0xece0cc, 0xdfe6da, 0xf3dcc8, 0xe8e2d0, 0xf0e4e0];
+const ROOFS = [0xe8734a, 0xd96b45, 0xe98a5a, 0xc95f3f, 0xb0563c];
+const GREENS = [0x7fb069, 0x6a9c5f, 0x8fc48a, 0x5d8f57];
+const G = {
+  box: new THREE.BoxGeometry(1, 1, 1),
+  cyl: new THREE.CylinderGeometry(1, 1, 1, 10),
+  cone4: new THREE.ConeGeometry(1, 1, 4),
+  cone: new THREE.ConeGeometry(1, 1, 14),
+  sph: new THREE.SphereGeometry(1, 12, 10),
+  ico: new THREE.IcosahedronGeometry(1, 0),
+  torus: new THREE.TorusGeometry(1, 0.09, 8, 40)
+};
+const rnd = (a, b) => a + Math.random() * (b - a);
+const pick = a => a[(Math.random() * a.length) | 0];
+const mat = (c, opts = {}) => new THREE.MeshStandardMaterial({color: c, roughness: 0.95, metalness: 0, ...opts});
+
+function mesh(geo, m, sx, sy, sz, x, y, z, cast = true) {
+  const o = new THREE.Mesh(geo, m);
+  o.scale.set(sx, sy, sz);
+  o.position.set(x, y, z);
+  o.castShadow = cast;
+  o.receiveShadow = true;
+  return o;
+}
+
+/* ============ 실제 좌표 (일차별 · 스팟 순서 동일) ============ */
+const GEO = [
+  [[35.5494,139.7798],[35.5487,139.7853],[35.6748,139.7820]],
+  [[35.7111,139.7966],[35.7116,139.7935],[35.7142,139.7948],[35.7147,139.7714],[35.7096,139.7747],[35.6984,139.7731],[35.6970,139.7856]],
+  [[35.6491,139.7895],[35.6285,139.7738],[35.6287,139.7755],[35.6295,139.7750],[35.6655,139.7568]],
+  [[35.6823,139.7531],[35.6328,139.7136],[35.6555,139.7366],[35.6605,139.7292],[35.6628,139.7314],[35.6606,139.7293]],
+  [[35.6896,139.7006],[35.4985,138.7660],[35.4978,138.7685],[35.5168,138.7565],[35.5035,138.7648]],
+  [[35.5038,138.7645],[35.4985,138.7660],[35.4984,138.7688],[35.6917,139.7040],[35.6912,139.7048],[35.5494,139.7798]]
+];
+
+function haversineKm(a, b) {
+  const R = 6371, toR = x => x * Math.PI / 180;
+  const dLat = toR(b[0] - a[0]), dLng = toR(b[1] - a[1]);
+  const s = Math.sin(dLat/2)**2 + Math.cos(toR(a[0])) * Math.cos(toR(b[0])) * Math.sin(dLng/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+
+/* 위경도 → 디오라마 평면 (북=-z, 동=+x). 장거리는 sqrt 압축 + 겹침 방지 */
+function layoutStopsGeo(di) {
+  const geo = GEO[di];
+  const cLat = geo.reduce((s, g) => s + g[0], 0) / geo.length;
+  const cLng = geo.reduce((s, g) => s + g[1], 0) / geo.length;
+  const kx = 111.32 * Math.cos(cLat * Math.PI / 180), kz = 110.54;
+  let pts = geo.map(g => ({x: (g[1] - cLng) * kx, z: -(g[0] - cLat) * kz}));
+  const maxR = Math.max(...pts.map(p => Math.hypot(p.x, p.z)), 1e-6);
+  // 방향 유지 + 거리 sqrt 압축 → 반경 22 안으로
+  pts = pts.map(p => {
+    const r = Math.hypot(p.x, p.z);
+    if (r < 1e-9) return {x: 0, z: 0};
+    const nr = Math.sqrt(r / maxR) * 22;
+    return {x: p.x / r * nr, z: p.z / r * nr};
+  });
+  // 최소 간격 확보 (실제 방향은 유지하며 살짝 밀어냄)
+  const MIN = 5.2;
+  for (let it = 0; it < 80; it++) {
+    for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
+      let dx = pts[j].x - pts[i].x, dz = pts[j].z - pts[i].z;
+      let d = Math.hypot(dx, dz);
+      if (d >= MIN) continue;
+      if (d < 1e-6) { dx = Math.cos(i + j); dz = Math.sin(i + j); d = 1; }
+      const push = (MIN - d) / 2 / d;
+      pts[i].x -= dx * push; pts[i].z -= dz * push;
+      pts[j].x += dx * push; pts[j].z += dz * push;
+    }
+  }
+  // 중심 재정렬
+  const mx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
+  const mz = pts.reduce((s, p) => s + p.z, 0) / pts.length;
+  return pts.map(p => new THREE.Vector3(p.x - mx, 0, p.z - mz));
+}
+
+/* ============ 디오라마 빌더 ============ */
+let markers = [];   // {group, chipEl, stop, idx, pos}
+let peoples = [];
+let roadCurve = null;
+let landmarkGroup = null;
+
+function disposeWorld() {
+  world.traverse(n => {
+    if (n.isCSS2DObject) n.element.remove();
+    if (n.geometry && !Object.values(G).includes(n.geometry)) n.geometry.dispose();
+    if (n.material) (Array.isArray(n.material) ? n.material : [n.material]).forEach(m => m.dispose());
+  });
+  world.clear();
+  markers = [];
+  peoples = [];
+  landmarkGroup = null;
+}
+
+/* 랜드마크 자리: 스팟들과 가장 먼 방향 자동 선택 */
+function findLandmarkPos(stopPts, radius) {
+  let best = null, bestScore = -1;
+  for (let k = 0; k < 16; k++) {
+    const a = (k / 16) * Math.PI * 2;
+    const x = Math.cos(a) * radius, z = Math.sin(a) * radius;
+    const score = Math.min(...stopPts.map(p => Math.hypot(x - p.x, z - p.z)));
+    if (score > bestScore) { bestScore = score; best = new THREE.Vector3(x, 0, z); }
+  }
+  return best;
+}
+
+function buildRoad(points) {
+  const curve = new THREE.CatmullRomCurve3(points.map(p => p.clone()));
+  const samples = curve.getPoints(220);
+  const W = 2.4;
+  const pos = [], idx = [];
+  for (let i = 0; i < samples.length; i++) {
+    const p = samples[i];
+    const t2 = samples[Math.min(i + 1, samples.length - 1)].clone().sub(samples[Math.max(i - 1, 0)]).normalize();
+    const nx = -t2.z, nz = t2.x;
+    pos.push(p.x + nx * W, 0.06, p.z + nz * W, p.x - nx * W, 0.06, p.z - nz * W);
+  }
+  for (let i = 0; i < samples.length - 1; i++) {
+    const a = i * 2;
+    idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  const road = new THREE.Mesh(g, mat(0xf8f4ea));
+  road.receiveShadow = true;
+  world.add(road);
+  return curve;
+}
+
+function addTree(x, z, s = 1) {
+  const g = new THREE.Group();
+  g.add(mesh(G.cyl, mat(0x9a7350), 0.16 * s, 0.9 * s, 0.16 * s, 0, 0.45 * s, 0));
+  const fol = mesh(G.ico, mat(pick(GREENS), {flatShading: true}), 0.95 * s, 1.15 * s, 0.95 * s, 0, 1.55 * s, 0);
+  g.add(fol);
+  g.position.set(x, 0, z);
+  g.rotation.y = rnd(0, Math.PI * 2);
+  world.add(g);
+}
+
+function addBuilding(x, z, big = false) {
+  const w = rnd(2.4, 4.2) * (big ? 1.4 : 1);
+  const d = rnd(2.4, 4.2) * (big ? 1.4 : 1);
+  const h = big ? rnd(4, 9) : rnd(1.6, 4.2);
+  const wall = pick(WALLS);
+  const b = mesh(G.box, mat(wall), w, h, d, x, h / 2, z);
+  world.add(b);
+  if (Math.random() < 0.68) {
+    const rh = rnd(0.8, 1.6);
+    const roof = mesh(G.cone4, mat(pick(ROOFS), {flatShading: true}),
+      Math.hypot(w, d) * 0.62, rh, Math.hypot(w, d) * 0.62, x, h + rh / 2, z);
+    roof.rotation.y = Math.PI / 4;
+    world.add(roof);
+  } else {
+    world.add(mesh(G.box, mat(0xcfc6b4), w + 0.25, 0.22, d + 0.25, x, h + 0.11, z));
+  }
+}
+
+function addPerson(curve) {
+  const g = new THREE.Group();
+  const cols = [0xe8734a, 0x5b8fb9, 0x7fb069, 0xc9a24b, 0xb06a8f];
+  g.add(mesh(G.cyl, mat(pick(cols)), 0.16, 0.42, 0.16, 0, 0.21, 0));
+  g.add(mesh(G.sph, mat(0xf4d8c2), 0.13, 0.13, 0.13, 0, 0.52, 0));
+  world.add(g);
+  peoples.push({g, t: Math.random(), spd: rnd(0.008, 0.02) * (Math.random() < 0.5 ? 1 : -1), off: rnd(-1.4, 1.4)});
+}
+
+/* ---- 랜드마크 ---- */
+function lmPagoda(g) {
+  const red = mat(0xc0392b), dark = mat(0x8e2b20), goldM = mat(0xc9a24b);
+  for (let i = 0; i < 5; i++) {
+    const s = 1 - i * 0.13;
+    g.add(mesh(G.box, mat(0xf5ead6), 3.6 * s, 1.5, 3.6 * s, 0, 1 + i * 2.1, 0));
+    const roof = mesh(G.cone4, red, 3.4 * s, 1.0, 3.4 * s, 0, 2.05 + i * 2.1, 0);
+    roof.rotation.y = Math.PI / 4;
+    g.add(roof);
+  }
+  g.add(mesh(G.cyl, goldM, 0.12, 2.2, 0.12, 0, 12.3, 0));
+  // 도리이
+  const t = new THREE.Group();
+  [-1.5, 1.5].forEach(dx => t.add(mesh(G.cyl, dark, 0.22, 3.4, 0.22, dx, 1.7, 0)));
+  t.add(mesh(G.box, red, 4.6, 0.4, 0.5, 0, 3.5, 0));
+  t.add(mesh(G.box, red, 3.6, 0.3, 0.4, 0, 2.8, 0));
+  t.position.set(0, 0, 5.5);
+  g.add(t);
+}
+function lmWheel(g) {
+  const frame = mat(0x5b8fb9, {metalness: 0.2, roughness: 0.6});
+  const wheel = new THREE.Group();
+  const ring = new THREE.Mesh(G.torus, frame);
+  ring.scale.setScalar(5);
+  ring.castShadow = true;
+  wheel.add(ring);
+  for (let i = 0; i < 8; i++) {
+    const sp = mesh(G.cyl, frame, 0.08, 10, 0.08, 0, 0, 0);
+    sp.rotation.z = (i / 8) * Math.PI;
+    wheel.add(sp);
+  }
+  const cols = [0xe8734a, 0xc9a24b, 0x7fb069, 0xb06a8f];
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    wheel.add(mesh(G.box, mat(cols[i % 4]), 0.8, 0.9, 0.8, Math.cos(a) * 5, Math.sin(a) * 5, 0));
+  }
+  wheel.position.y = 6.4;
+  wheel.name = 'wheelSpin';
+  g.add(wheel);
+  [-2.4, 2.4].forEach(dx => {
+    const leg = mesh(G.cyl, frame, 0.18, 7.2, 0.18, dx, 3.2, 0);
+    leg.rotation.z = dx > 0 ? -0.32 : 0.32;
+    g.add(leg);
+  });
+}
+function lmTower(g) {
+  g.add(mesh(G.cyl, mat(0xdfe6da), 3.4, 2, 3.4, 0, 1, 0));
+  g.add(mesh(G.cyl, mat(0xcdd8e4, {metalness: 0.25, roughness: 0.5}), 2.6, 11, 2.6, 0, 7.5, 0));
+  for (let i = 0; i < 6; i++) {
+    g.add(mesh(G.cyl, mat(0xb9c8d8), 2.62, 0.12, 2.62, 0, 2.6 + i * 1.8, 0, false));
+  }
+  g.add(mesh(G.cyl, mat(0xf5ead6), 2.9, 1.2, 2.9, 0, 13.6, 0));
+  g.add(mesh(G.cyl, mat(0x8e9bab), 0.1, 2.4, 0.1, 0, 15.4, 0));
+}
+function lmFuji(g) {
+  const body = mesh(G.cone, mat(0x6d87a8, {flatShading: true}), 14, 10, 14, 0, 5, 0);
+  g.add(body);
+  const snow = mesh(G.cone, mat(0xffffff, {flatShading: true}), 5.6, 4.2, 5.6, 0, 7.9, 0);
+  g.add(snow);
+  const lake = new THREE.Mesh(new THREE.CircleGeometry(7, 30), mat(0x9cc6d8, {roughness: 0.25, metalness: 0.15}));
+  lake.rotation.x = -Math.PI / 2;
+  lake.position.set(0, 0.05, 10.5);
+  lake.receiveShadow = true;
+  g.add(lake);
+}
+function lmPlane(g) {
+  const white = mat(0xf7f7f4), acc = mat(0xe8734a);
+  const body = mesh(G.cyl, white, 0.9, 7, 0.9, 0, 2.6, 0);
+  body.rotation.x = Math.PI / 2;
+  g.add(body);
+  g.add(mesh(G.sph, white, 0.9, 0.9, 1.3, 0, 2.6, 3.6));
+  const wing = mesh(G.box, white, 8.5, 0.16, 1.6, 0, 2.6, 0.3);
+  g.add(wing);
+  const tail = mesh(G.box, acc, 0.14, 1.8, 1.2, 0, 3.5, -3.2);
+  g.add(tail);
+  const tw = mesh(G.box, acc, 3.2, 0.12, 0.9, 0, 2.7, -3.2);
+  g.add(tw);
+  // 활주로
+  const rw = new THREE.Mesh(new THREE.PlaneGeometry(5, 26), mat(0xb8b4a8));
+  rw.rotation.x = -Math.PI / 2;
+  rw.position.set(0, 0.04, 2);
+  rw.receiveShadow = true;
+  g.add(rw);
+  for (let i = 0; i < 8; i++) {
+    const dash = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 1.4), mat(0xffffff));
+    dash.rotation.x = -Math.PI / 2;
+    dash.position.set(0, 0.05, -9 + i * 3);
+    g.add(dash);
+  }
+}
+const LM = {pagoda: lmPagoda, wheel: lmWheel, tower: lmTower, fuji: lmFuji, plane: lmPlane};
+
+/* ---- 마커(핀 + 칩) ---- */
+function addMarker(stop, i, p, total) {
+  const g = new THREE.Group();
+  const col = stop.eat ? 0xc0392b : 0xe8734a;
+  const pin = new THREE.Group();
+  const head = mesh(G.sph, mat(col, {roughness: 0.55}), 0.55, 0.55, 0.55, 0, 2.15, 0);
+  const tip = mesh(G.cone, mat(col, {roughness: 0.55}), 0.34, 1.0, 0.34, 0, 1.35, 0);
+  tip.rotation.x = Math.PI;
+  pin.add(head, tip);
+  pin.name = 'pin';
+  g.add(pin);
+  const disc = new THREE.Mesh(new THREE.CircleGeometry(1.15, 26),
+    new THREE.MeshBasicMaterial({color: col, transparent: true, opacity: 0.22, depthWrite: false}));
+  disc.rotation.x = -Math.PI / 2;
+  disc.position.y = 0.08;
+  g.add(disc);
+
+  const el = document.createElement('div');
+  el.className = 'pinChip' + (stop.eat ? ' eat' : '');
+  el.innerHTML = `<span class="no">${i + 1}</span>${stop.name}`;
+  el.addEventListener('click', e => { e.stopPropagation(); selectStop(i, true); });
+  const lbl = new CSS2DObject(el);
+  lbl.position.set(0, 3.1, 0);
+  g.add(lbl);
+
+  g.position.copy(p);
+  world.add(g);
+  markers.push({group: g, chipEl: el, stop, idx: i, pos: p.clone(), pin});
+}
+
+function buildDiorama(day) {
+  disposeWorld();
+
+  // 대지
+  const ground = new THREE.Mesh(new THREE.CircleGeometry(85, 48), mat(0xcfe0c0));
+  ground.rotation.x = -Math.PI / 2;
+  ground.receiveShadow = true;
+  world.add(ground);
+  for (let i = 0; i < 10; i++) {
+    const patch = new THREE.Mesh(new THREE.CircleGeometry(rnd(5, 12), 22),
+      mat(Math.random() < 0.5 ? 0xc4d8b2 : 0xd8e6c8));
+    patch.rotation.x = -Math.PI / 2;
+    patch.position.set(rnd(-55, 55), 0.02, rnd(-55, 55));
+    patch.receiveShadow = true;
+    world.add(patch);
+  }
+
+  const stopPts = layoutStopsGeo(dayIdx);
+  roadCurve = buildRoad(stopPts);
+
+  // 랜드마크 (후지산은 크기가 커서 더 멀리 · 스팟과 안 겹치는 방향 자동)
+  landmarkGroup = new THREE.Group();
+  LM[day.landmark](landmarkGroup);
+  const isFuji = day.landmark === 'fuji';
+  const lmPos = findLandmarkPos(stopPts, isFuji ? 34 : 21);
+  const lmClear = isFuji ? 22 : 13;
+  landmarkGroup.position.copy(lmPos);
+  world.add(landmarkGroup);
+  const lmEl = document.createElement('div');
+  lmEl.className = 'lmChip';
+  lmEl.textContent = day.lmName;
+  const lmLbl = new CSS2DObject(lmEl);
+  lmLbl.position.set(0, day.landmark === 'fuji' ? 11.5 : 14, 0);
+  landmarkGroup.add(lmLbl);
+
+  // 건물: 도로/랜드마크 피해서
+  const roadSamples = roadCurve.getPoints(60);
+  const clearOf = (x, z, r) => {
+    if (Math.hypot(x - lmPos.x, z - lmPos.z) < lmClear) return false;
+    for (const s of roadSamples) if (Math.hypot(x - s.x, z - s.z) < r) return false;
+    return true;
+  };
+  for (let gx = -46; gx <= 46; gx += 6.2) {
+    for (let gz = -46; gz <= 46; gz += 6.2) {
+      const x = gx + rnd(-1.6, 1.6), z = gz + rnd(-1.6, 1.6);
+      if (Math.hypot(x, z) > 62) continue;
+      if (!clearOf(x, z, 5.4)) continue;
+      const roll = Math.random();
+      if (roll < 0.52) addBuilding(x, z, Math.random() < 0.12);
+      else if (roll < 0.8) addTree(x, z, rnd(0.8, 1.5));
+    }
+  }
+  // 도로변 나무
+  for (let i = 0; i < 14; i++) {
+    const s = roadSamples[(Math.random() * roadSamples.length) | 0];
+    const a = rnd(0, Math.PI * 2);
+    addTree(s.x + Math.cos(a) * rnd(3.4, 4.6), s.z + Math.sin(a) * rnd(3.4, 4.6), rnd(0.7, 1.1));
+  }
+
+  // 사람들
+  for (let i = 0; i < 16; i++) addPerson(roadCurve);
+
+  // 구름
+  for (let i = 0; i < 6; i++) {
+    const c = new THREE.Group();
+    const n = 3 + (Math.random() * 3 | 0);
+    for (let k = 0; k < n; k++) {
+      c.add(mesh(G.sph, mat(0xffffff, {roughness: 1}), rnd(1.6, 2.8), rnd(1, 1.5), rnd(1.4, 2.2),
+        k * rnd(1.4, 2.2) - n, rnd(-0.3, 0.3), rnd(-0.6, 0.6), false));
+    }
+    c.position.set(rnd(-45, 45), rnd(24, 34), rnd(-45, 45));
+    c.name = 'cloud';
+    c.userData.spd = rnd(0.3, 0.8);
+    world.add(c);
+  }
+
+  // 마커
+  day.stops.forEach((s, i) => addMarker(s, i, stopPts[i].clone().add(new THREE.Vector3(rnd(-0.5, 0.5), 0, 0)), day.stops.length));
+}
+
+/* ============ 카메라 ============ */
+const cam = {az: Math.PI * 0.28, el: 0.62, zoom: 1, focus: new THREE.Vector3(), focusTarget: new THREE.Vector3()};
+function updateCamera() {
+  const d = 90;
+  const y = Math.sin(cam.el) * d;
+  const r = Math.cos(cam.el) * d;
+  camera.position.set(
+    cam.focus.x + Math.cos(cam.az) * r,
+    y,
+    cam.focus.z + Math.sin(cam.az) * r
+  );
+  camera.lookAt(cam.focus.x, 0, cam.focus.z);
+  camera.left = -viewSize * AR(); camera.right = viewSize * AR();
+  camera.top = viewSize; camera.bottom = -viewSize;
+  camera.zoom = cam.zoom;
+  camera.updateProjectionMatrix();
+}
+
+let dragging = false, moved = 0, px = 0, py = 0;
+sceneEl.addEventListener('pointerdown', e => { dragging = true; moved = 0; px = e.clientX; py = e.clientY; });
+addEventListener('pointerup', () => { dragging = false; });
+addEventListener('pointermove', e => {
+  if (!dragging) return;
+  const dx = e.clientX - px, dy = e.clientY - py;
+  moved += Math.abs(dx) + Math.abs(dy);
+  px = e.clientX; py = e.clientY;
+  cam.az -= dx * 0.005;
+  cam.el = Math.max(0.3, Math.min(1.15, cam.el + dy * 0.004));
+});
+addEventListener('wheel', e => {
+  cam.zoom = Math.max(0.55, Math.min(2.6, cam.zoom * (1 - e.deltaY * 0.0011)));
+}, {passive: true});
+
+/* ============ UI ============ */
+let dayIdx = 1, selIdx = 0;
+
+const pager = document.getElementById('pager');
+DAYS.forEach((d, i) => {
+  const b = document.createElement('button');
+  b.className = 'pbtn';
+  b.textContent = d.no;
+  b.onclick = () => loadDay(i);
+  pager.appendChild(b);
+});
+const sep = document.createElement('div');
+sep.className = 'sep';
+pager.appendChild(sep);
+const plbl = document.createElement('div');
+plbl.className = 'lbl';
+pager.appendChild(plbl);
+
+function selectStop(i, focusCam = false) {
+  selIdx = i;
+  const day = DAYS[dayIdx];
+  const s = day.stops[i];
+  const geo = GEO[dayIdx];
+  document.getElementById('pNo').textContent = `PLACE ${String(i + 1).padStart(2, '0')} / ${day.region.split('·')[0].trim()}`;
+  document.getElementById('pName').textContent = s.name;
+  document.getElementById('pTime').textContent = s.time + ' 예정';
+  document.getElementById('pDist').textContent = i === 0
+    ? '오늘의 시작'
+    : `이전에서 ${haversineKm(geo[i - 1], geo[i]).toFixed(1)}km`;
+  document.getElementById('pTag').style.display = s.eat ? '' : 'none';
+  document.getElementById('pDesc').textContent = s.note;
+  document.querySelectorAll('#pList .row').forEach((r, k) => r.classList.toggle('sel', k === i));
+  document.querySelectorAll('#chips .chip').forEach((c, k) => c.classList.toggle('sel', k === i));
+  markers.forEach((m, k) => m.chipEl.classList.toggle('sel', k === i));
+  document.querySelectorAll('#miniSvg .mdot').forEach((c, k) => {
+    c.setAttribute('fill', k === i ? '#3a352e' : (day.stops[k].eat ? '#c0392b' : '#e8734a'));
+    c.setAttribute('r', k === i ? 8 : 6.5);
+  });
+  if (focusCam && markers[i]) cam.focusTarget.copy(markers[i].pos);
+}
+
+/* 실측 미니맵 (선형 축척 = 진짜 지도 비율) */
+function buildMinimap(di) {
+  const geo = GEO[di];
+  const cLat = geo.reduce((s, g) => s + g[0], 0) / geo.length;
+  const kx = 111.32 * Math.cos(cLat * Math.PI / 180), kz = 110.54;
+  const cLng = geo.reduce((s, g) => s + g[1], 0) / geo.length;
+  const pts = geo.map(g => ({x: (g[1] - cLng) * kx, y: -(g[0] - cLat) * kz}));
+  const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  const spanX = Math.max(maxX - minX, 0.001), spanY = Math.max(maxY - minY, 0.001);
+  const W = 168, H = 118, pad = 16;
+  const sc = Math.min((W - pad * 2) / spanX, (H - pad * 2) / spanY);
+  const ox = (W - spanX * sc) / 2, oy = (H - spanY * sc) / 2;
+  const P = pts.map(p => ({x: ox + (p.x - minX) * sc, y: oy + (p.y - minY) * sc}));
+
+  let svg = `<polyline points="${P.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')}"
+    fill="none" stroke="#d8ccb8" stroke-width="2.5" stroke-dasharray="4 3" stroke-linecap="round"/>`;
+  P.forEach((p, k) => {
+    svg += `<circle class="mdot" data-k="${k}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="6.5" fill="#e8734a"/>
+      <text x="${p.x.toFixed(1)}" y="${(p.y + 3).toFixed(1)}" text-anchor="middle" font-size="8.5"
+        font-weight="700" fill="#fff" pointer-events="none">${k + 1}</text>`;
+  });
+  document.getElementById('miniSvg').innerHTML = svg;
+  document.querySelectorAll('#miniSvg .mdot').forEach(c =>
+    c.addEventListener('click', () => selectStop(+c.dataset.k, true)));
+
+  let total = 0;
+  for (let k = 1; k < geo.length; k++) total += haversineKm(geo[k - 1], geo[k]);
+  document.getElementById('miniScale').textContent =
+    total >= 10 ? `하루 이동 약 ${Math.round(total)} km` : `하루 이동 약 ${total.toFixed(1)} km`;
+}
+
+function loadDay(i) {
+  dayIdx = i;
+  const day = DAYS[i];
+  buildDiorama(day);
+
+  document.getElementById('hNo').textContent = day.no;
+  document.getElementById('hTitle').textContent = day.t;
+  document.getElementById('hRegion').textContent = `${day.d} · ${day.region}`;
+  document.getElementById('pCount').textContent = `${day.stops.length}곳`;
+  plbl.textContent = day.d;
+
+  document.getElementById('chips').innerHTML = day.stops.map((s, k) =>
+    `<button class="chip" type="button"><span class="t">${s.time}</span>${s.name}</button>`).join('');
+  document.querySelectorAll('#chips .chip').forEach((c, k) => c.onclick = () => selectStop(k, true));
+
+  document.getElementById('pList').innerHTML = day.stops.map((s, k) =>
+    `<div class="row ${s.eat ? 'eat' : ''}"><div class="tm">${s.time}</div><div class="nm">${s.name}</div></div>`).join('');
+  document.querySelectorAll('#pList .row').forEach((r, k) => r.onclick = () => selectStop(k, true));
+
+  document.querySelectorAll('.pbtn').forEach((b, k) => b.classList.toggle('on', k === i));
+
+  buildMinimap(i);
+
+  cam.focus.set(0, 0, 0);
+  cam.focusTarget.set(0, 0, 0);
+  cam.zoom = 1;
+  selectStop(0, false);
+}
+
+addEventListener('keydown', e => {
+  if (e.code === 'ArrowRight') selectStop(Math.min(selIdx + 1, DAYS[dayIdx].stops.length - 1), true);
+  if (e.code === 'ArrowLeft') selectStop(Math.max(selIdx - 1, 0), true);
+  if (e.code === 'ArrowUp') loadDay(Math.max(dayIdx - 1, 0));
+  if (e.code === 'ArrowDown') loadDay(Math.min(dayIdx + 1, DAYS.length - 1));
+});
+
+/* ============ 루프 ============ */
+const clock = new THREE.Clock();
+const northArrow = document.getElementById('northArrow');
+const _pa = new THREE.Vector3(), _pb = new THREE.Vector3();
+function tick() {
+  const t = clock.getElapsedTime();
+  const dt = Math.min(clock.getDelta ? 0.016 : 0.016, 0.05);
+
+  cam.focus.lerp(cam.focusTarget, 0.06);
+  updateCamera();
+
+  // 나침반: 화면상 북쪽 방향
+  _pa.set(cam.focus.x, 0, cam.focus.z).project(camera);
+  _pb.set(cam.focus.x, 0, cam.focus.z - 1).project(camera);
+  northArrow.style.transform = `rotate(${Math.atan2(_pb.x - _pa.x, _pb.y - _pa.y)}rad)`;
+
+  // 핀 바운스
+  markers.forEach((m, i) => {
+    const isSel = i === selIdx;
+    const bounce = isSel ? Math.abs(Math.sin(t * 3.2)) * 0.5 : Math.sin(t * 1.8 + i) * 0.08;
+    m.pin.position.y = bounce;
+    const s = isSel ? 1.25 : 1;
+    m.pin.scale.set(s, s, s);
+  });
+
+  // 사람들 산책
+  if (roadCurve) {
+    peoples.forEach(p => {
+      p.t = (p.t + p.spd * 0.016 + 1) % 1;
+      const pos = roadCurve.getPointAt(p.t);
+      const tan = roadCurve.getTangentAt(p.t);
+      p.g.position.set(pos.x - tan.z * p.off * 0.5, 0, pos.z + tan.x * p.off * 0.5);
+      p.g.rotation.y = Math.atan2(tan.x * Math.sign(p.spd), tan.z * Math.sign(p.spd));
+      p.g.position.y = Math.abs(Math.sin(t * 9 + p.off * 10)) * 0.05;
+    });
+  }
+
+  // 구름 & 관람차
+  world.children.forEach(c => {
+    if (c.name === 'cloud') {
+      c.position.x += c.userData.spd * 0.016;
+      if (c.position.x > 55) c.position.x = -55;
+    }
+  });
+  if (landmarkGroup) {
+    const w = landmarkGroup.getObjectByName('wheelSpin');
+    if (w) w.rotation.z = t * 0.25;
+  }
+
+  renderer.render(scene, camera);
+  labelRenderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+
+addEventListener('resize', () => {
+  renderer.setSize(innerWidth, innerHeight);
+  labelRenderer.setSize(innerWidth, innerHeight);
+  updateCamera();
+});
+
+loadDay(1);
+updateCamera();
+tick();
+</script>
+</body>
+</html>

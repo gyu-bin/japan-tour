@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>샘플 · 02 아사쿠사 · 도쿄 산책</title>
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&family=Shippori+Mincho:wght@600;800&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --ink:#3a352e; --ink2:#7a7266; --cream:#faf7f0;
+  --acc:#e8734a; --acc2:#c0392b; --sky:#8fb4d9;
+}
+html,body{height:100%;overflow:hidden;background:var(--cream);
+  font-family:'Zen Maru Gothic',sans-serif;color:var(--ink)}
+#map{position:fixed;inset:0}
+.maplibregl-ctrl-attrib{font-size:9px!important;opacity:.5}
+.maplibregl-ctrl-top-right{top:12px;right:12px}
+@media(min-width:901px){
+  .maplibregl-ctrl-top-right{top:20px;right:min(340px, calc(28vw + 28px))}
+}
+
+/* 핀 */
+.mpin{cursor:pointer;display:flex;flex-direction:column;align-items:center;
+  transform:translate(-50%,-100%);filter:drop-shadow(0 4px 12px rgba(58,53,46,.22));
+  opacity:0;animation:pinIn .45s ease forwards}
+.mpin .dot{width:28px;height:28px;border-radius:50%;background:var(--acc);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;
+  border:2.5px solid #fff;transition:transform .15s}
+.mpin.eat .dot{background:var(--acc2)}
+.mpin.sel .dot{background:var(--ink);transform:scale(1.15)}
+.mpin .lab{margin-top:5px;background:#fff;border-radius:14px;padding:4px 10px;
+  font-size:11px;font-weight:700;white-space:nowrap;max-width:130px;
+  overflow:hidden;text-overflow:ellipsis;box-shadow:0 3px 12px rgba(58,53,46,.12)}
+.mpin.sel .lab{background:var(--ink);color:#fff}
+@keyframes pinIn{from{opacity:0;transform:translate(-50%,-120%)}to{opacity:1;transform:translate(-50%,-100%)}}
+
+/* α 랜드마크 칩 */
+.lm{transform:translate(-50%,-120%);pointer-events:none;
+  background:var(--ink);color:#fff;border-radius:16px;padding:7px 12px;
+  font-size:11px;font-weight:800;letter-spacing:.02em;
+  box-shadow:0 6px 18px rgba(58,53,46,.28);white-space:nowrap;
+  opacity:0;animation:pinIn .6s .3s ease forwards}
+.lm span{opacity:.55;margin-right:6px;font-weight:500}
+
+#badge{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:30;
+  background:rgba(58,53,46,.88);color:#fff;font-size:11px;letter-spacing:.12em;
+  padding:7px 14px;border-radius:20px;font-weight:700}
+#badge em{font-style:normal;color:#ffc14a;margin-left:6px}
+
+#head{position:fixed;top:20px;left:20px;z-index:20;width:min(400px,calc(100vw - 40px));
+  background:rgba(255,255,255,.95);backdrop-filter:blur(12px);border-radius:20px;
+  padding:18px 20px 14px;box-shadow:0 10px 34px rgba(58,53,46,.12)}
+#head .eyebrow{font-size:10.5px;letter-spacing:.2em;color:var(--ink2);margin-bottom:8px}
+#head .titleRow{display:flex;align-items:baseline;gap:12px;margin-bottom:4px}
+#head .dayNo{font-family:'Shippori Mincho',serif;font-size:38px;font-weight:800;color:var(--acc);line-height:1}
+#head h1{font-family:'Shippori Mincho',serif;font-size:20px;font-weight:800}
+#head .region{font-size:12px;color:var(--ink2);margin-bottom:12px}
+#chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{cursor:pointer;border:1.5px solid rgba(58,53,46,.14);background:#fff;border-radius:16px;
+  padding:5px 10px;font-family:inherit;font-size:11px;font-weight:700;color:var(--ink);transition:.15s}
+.chip:hover{border-color:var(--acc);color:var(--acc)}
+.chip.sel{background:var(--ink);border-color:var(--ink);color:#fff}
+.chip .t{color:var(--ink2);font-weight:400;margin-right:4px}
+.chip.sel .t{color:rgba(255,255,255,.55)}
+
+#panel{position:fixed;top:20px;right:20px;bottom:24px;z-index:20;width:min(300px,calc(100vw - 40px));
+  background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-radius:20px;
+  box-shadow:0 10px 34px rgba(58,53,46,.12);display:flex;flex-direction:column;overflow:hidden}
+#panel .ph{padding:14px 18px 10px;border-bottom:1px solid rgba(58,53,46,.08);
+  display:flex;justify-content:space-between;align-items:center}
+#panel .ph b{font-family:'Shippori Mincho',serif;font-size:14px}
+#panel .ph span{font-size:11px;color:var(--ink2)}
+#panel .body{padding:16px 18px;overflow-y:auto;flex:1}
+#panel .plno{font-size:11px;letter-spacing:.16em;color:var(--acc);margin-bottom:6px}
+#panel h2{font-family:'Shippori Mincho',serif;font-size:21px;font-weight:800;margin-bottom:4px}
+#panel .meta{font-size:12px;color:var(--ink2);margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+#panel .tag{font-size:10px;background:rgba(192,57,43,.12);color:var(--acc2);border-radius:10px;padding:2px 8px;font-weight:700}
+#panel .desc{font-size:13px;line-height:1.75;background:var(--cream);border-radius:14px;padding:13px 14px;margin-bottom:10px}
+#panel .via{font-size:12px;line-height:1.6;color:#3a6a9a;background:rgba(143,180,217,.18);
+  border-radius:12px;padding:10px 12px;margin-bottom:14px}
+#panel .via b{color:var(--ink);font-weight:700}
+#panel .lt{font-size:11px;letter-spacing:.12em;color:var(--ink2);margin-bottom:8px;
+  border-top:1px dashed rgba(58,53,46,.15);padding-top:12px}
+.row{display:flex;gap:8px;padding:7px 8px;border-radius:10px;cursor:pointer;align-items:baseline;transition:.15s}
+.row:hover{background:var(--cream)}
+.row.sel{background:rgba(232,115,74,.12)}
+.row .tm{font-size:11px;color:var(--sky);min-width:36px;font-weight:700}
+.row .nm{font-size:12.5px;font-weight:700}
+.row.eat .nm::after{content:'먹기';font-size:9px;background:rgba(192,57,43,.12);color:var(--acc2);
+  padding:1px 6px;border-radius:8px;margin-left:6px;font-weight:700}
+
+#mini{position:fixed;left:20px;bottom:20px;z-index:20;width:188px;
+  background:rgba(255,255,255,.95);backdrop-filter:blur(12px);border-radius:16px;
+  padding:11px 13px 9px;box-shadow:0 10px 28px rgba(58,53,46,.12)}
+#mini .mt{font-size:10.5px;font-weight:700;letter-spacing:.08em;margin-bottom:7px}
+#mini svg{display:block;width:100%;background:var(--cream);border-radius:10px}
+#mini .ms{font-size:10px;color:var(--ink2);margin-top:6px;text-align:right}
+#mini .mdot{cursor:pointer}
+
+#hint{position:fixed;right:20px;bottom:20px;z-index:19;font-size:11px;color:var(--ink2);
+  background:rgba(255,255,255,.9);border-radius:12px;padding:8px 12px;line-height:1.65;
+  box-shadow:0 6px 18px rgba(58,53,46,.1);max-width:200px}
+#hint b{color:var(--ink)}
+
+#load{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;
+  background:var(--cream);color:var(--ink2);letter-spacing:.1em;font-size:13px;transition:opacity .45s}
+#load.gone{opacity:0;pointer-events:none}
+
+/* 모바일 시트 */
+#sheetHandle{display:none}
+@media(max-width:900px){
+  #badge{top:8px;font-size:10px;padding:6px 11px}
+  #head{top:44px;left:12px;right:12px;width:auto;padding:12px 14px}
+  #head .dayNo{font-size:28px}
+  #head h1{font-size:16px}
+  #chips{display:none}
+  #mini,#hint{display:none}
+  #panel{top:auto;left:0;right:0;bottom:0;width:100%;max-height:42vh;border-radius:20px 20px 0 0;
+    box-shadow:0 -8px 30px rgba(58,53,46,.15)}
+  #panel .ph{padding-top:18px}
+  #sheetHandle{display:block;width:40px;height:4px;background:rgba(58,53,46,.18);border-radius:4px;
+    margin:8px auto 0}
+  .maplibregl-ctrl-top-right{top:auto;bottom:46vh;right:10px}
+}
+</style>
+</head>
+<body>
+<div id="load">2일차 샘플 불러오는 중…</div>
+<div id="badge">실측 지도 샘플<em>DAY 02</em> · <a href="./" style="color:#8fd0ff;text-decoration:none">디오라마 ↗</a> · <a href="./pokemon.html" style="color:#8fd0ff;text-decoration:none">픽셀 ↗</a></div>
+<div id="map"></div>
+
+<div id="head">
+  <div class="eyebrow">TOKYO / 5 NIGHTS 6 DAYS · 규빈 &amp; 아내</div>
+  <div class="titleRow"><div class="dayNo">02</div><h1>옛 도쿄의 골목을 걷다</h1></div>
+  <div class="region">일 10/18 · 핫초보리 · 아사쿠사 · 우에노 · 아키하바라</div>
+  <div id="chips"></div>
+</div>
+
+<div id="panel">
+  <div id="sheetHandle"></div>
+  <div class="ph"><b>여행 명소</b><span id="pCount"></span></div>
+  <div class="body">
+    <div class="plno" id="pNo"></div>
+    <h2 id="pName"></h2>
+    <div class="meta"><span id="pTime"></span><span id="pDist"></span><span class="tag" id="pTag" hidden>먹기</span></div>
+    <div class="desc" id="pDesc"></div>
+    <div class="via" id="pVia"></div>
+    <div class="lt">오늘의 일정</div>
+    <div id="pList"></div>
+  </div>
+</div>
+
+<div id="mini">
+  <div class="mt">실제 지도 배치</div>
+  <svg id="miniSvg" viewBox="0 0 164 112"></svg>
+  <div class="ms" id="miniScale"></div>
+</div>
+
+<div id="hint"><b>핀·목록 클릭</b> 상세 · 카메라는 실측 좌표로 이동합니다</div>
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script type="module">
+import { DAYS, haversineKm } from './js/data.js';
+
+const DAY = DAYS[1]; // 02 아사쿠사만
+const LANDMARK = { name: '센소지', lat: 35.7148, lng: 139.7967 };
+
+let sel = 0;
+let markers = [];
+let animToken = 0;
+
+const map = new maplibregl.Map({
+  container: 'map',
+  style: 'https://tiles.openfreemap.org/styles/positron',
+  center: [139.785, 35.708],
+  zoom: 13,
+  pitch: 48,
+  bearing: -22,
+  attributionControl: true
+});
+map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
+
+function emptyLine() {
+  return { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [] } };
+}
+function lineFeat(coords) {
+  return { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords } };
+}
+
+function selectStop(i, fly = true) {
+  sel = i;
+  const s = DAY.stops[i];
+  document.getElementById('pNo').textContent = `PLACE ${String(i + 1).padStart(2, '0')} / ${s.stay ? '핫초보리' : 'DAY 02'}`;
+  document.getElementById('pName').textContent = s.name;
+  document.getElementById('pTime').textContent = s.time + ' 예정';
+  document.getElementById('pDist').textContent = i === 0
+    ? '오늘의 시작'
+    : `이전에서 ${haversineKm(DAY.stops[i - 1], s).toFixed(1)}km`;
+  const tag = document.getElementById('pTag');
+  tag.hidden = !s.eat;
+
+  document.getElementById('pDesc').textContent = s.note;
+  const via = document.getElementById('pVia');
+  if (s.via) { via.innerHTML = `<b>이동</b> · ${s.via}`; via.hidden = false; }
+  else { via.hidden = true; }
+  document.querySelectorAll('#chips .chip').forEach((c, k) => c.classList.toggle('sel', k === i));
+  document.querySelectorAll('#pList .row').forEach((r, k) => r.classList.toggle('sel', k === i));
+  markers.forEach((m, k) => m.getElement().classList.toggle('sel', k === i));
+  document.querySelectorAll('#miniSvg .mdot').forEach((c, k) => {
+    c.setAttribute('fill', k === i ? '#3a352e' : (DAY.stops[k].eat ? '#c0392b' : '#e8734a'));
+    c.setAttribute('r', k === i ? 7.5 : 6);
+  });
+
+  if (fly) {
+    map.easeTo({
+      center: [s.lng, s.lat],
+      zoom: Math.max(map.getZoom(), 14.4),
+      duration: 900,
+      essential: true
+    });
+  }
+}
+
+function buildMinimap() {
+  const geo = DAY.stops;
+  const cLat = geo.reduce((s, g) => s + g.lat, 0) / geo.length;
+  const cLng = geo.reduce((s, g) => s + g.lng, 0) / geo.length;
+  const kx = 111.32 * Math.cos(cLat * Math.PI / 180), kz = 110.54;
+  const pts = geo.map(g => ({ x: (g.lng - cLng) * kx, y: -(g.lat - cLat) * kz }));
+  const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  const spanX = Math.max(maxX - minX, 1e-3), spanY = Math.max(maxY - minY, 1e-3);
+  const W = 164, H = 112, pad = 16;
+  const sc = Math.min((W - pad * 2) / spanX, (H - pad * 2) / spanY);
+  const ox = (W - spanX * sc) / 2, oy = (H - spanY * sc) / 2;
+  const P = pts.map(p => ({ x: ox + (p.x - minX) * sc, y: oy + (p.y - minY) * sc }));
+
+  let svg = `<polyline points="${P.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')}"
+    fill="none" stroke="#d8ccb8" stroke-width="2.5" stroke-dasharray="4 3" stroke-linecap="round"/>`;
+  P.forEach((p, k) => {
+    svg += `<circle class="mdot" data-k="${k}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="6" fill="#e8734a"/>
+      <text x="${p.x.toFixed(1)}" y="${(p.y + 3).toFixed(1)}" text-anchor="middle" font-size="8"
+        font-weight="700" fill="#fff" pointer-events="none">${k + 1}</text>`;
+  });
+  document.getElementById('miniSvg').innerHTML = svg;
+  document.querySelectorAll('#miniSvg .mdot').forEach(c =>
+    c.addEventListener('click', () => selectStop(+c.dataset.k)));
+
+  let total = 0;
+  for (let k = 1; k < geo.length; k++) total += haversineKm(geo[k - 1], geo[k]);
+  document.getElementById('miniScale').textContent = `하루 이동 약 ${total.toFixed(1)} km`;
+}
+
+function animateRoute(coords, token) {
+  map.getSource('route-bg').setData(lineFeat(coords));
+  map.getSource('route-fg').setData(emptyLine());
+  if (coords.length < 2) return;
+  const dense = [];
+  for (let i = 0; i < coords.length - 1; i++) {
+    const a = coords[i], b = coords[i + 1];
+    for (let s = 0; s < 28; s++) {
+      const u = s / 28;
+      dense.push([a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u]);
+    }
+  }
+  dense.push(coords.at(-1));
+  let i = 2;
+  const step = () => {
+    if (token !== animToken) return;
+    map.getSource('route-fg').setData(lineFeat(dense.slice(0, i)));
+    i += 3;
+    if (i <= dense.length) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+map.on('load', () => {
+  document.getElementById('load').classList.add('gone');
+  document.getElementById('pCount').textContent = `${DAY.stops.length}곳`;
+
+  map.addSource('route-bg', { type: 'geojson', data: emptyLine() });
+  map.addSource('route-fg', { type: 'geojson', data: emptyLine() });
+  map.addLayer({
+    id: 'route-glow', type: 'line', source: 'route-fg',
+    layout: { 'line-cap': 'round', 'line-join': 'round' },
+    paint: { 'line-color': '#e8734a', 'line-width': 14, 'line-opacity': 0.18, 'line-blur': 6 }
+  });
+  map.addLayer({
+    id: 'route-bg', type: 'line', source: 'route-bg',
+    layout: { 'line-cap': 'round', 'line-join': 'round' },
+    paint: { 'line-color': '#d8ccb8', 'line-width': 6, 'line-opacity': 0.85 }
+  });
+  map.addLayer({
+    id: 'route-fg', type: 'line', source: 'route-fg',
+    layout: { 'line-cap': 'round', 'line-join': 'round' },
+    paint: { 'line-color': '#e8734a', 'line-width': 5.5, 'line-opacity': 0.95 }
+  });
+
+  // UI chips + list
+  document.getElementById('chips').innerHTML = DAY.stops.map((s, k) =>
+    `<button class="chip" type="button"><span class="t">${s.time}</span>${s.name}</button>`).join('');
+  document.querySelectorAll('#chips .chip').forEach((c, k) => c.onclick = () => selectStop(k));
+
+  document.getElementById('pList').innerHTML = DAY.stops.map((s, k) =>
+    `<div class="row ${s.eat ? 'eat' : ''}"><div class="tm">${s.time}</div><div class="nm">${s.name}</div></div>`).join('');
+  document.querySelectorAll('#pList .row').forEach((r, k) => r.onclick = () => selectStop(k));
+
+  // markers with staggered delay
+  DAY.stops.forEach((s, k) => {
+    const el = document.createElement('div');
+    el.className = 'mpin' + (s.eat ? ' eat' : '');
+    el.style.animationDelay = `${0.15 + k * 0.08}s`;
+    el.innerHTML = `<div class="dot">${k + 1}</div><div class="lab">${s.name}</div>`;
+    el.onclick = e => { e.stopPropagation(); selectStop(k); };
+    markers.push(new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat([s.lng, s.lat]).addTo(map));
+  });
+
+  // α landmark chip at Senso-ji
+  const lm = document.createElement('div');
+  lm.className = 'lm';
+  lm.innerHTML = `<span>🏯</span>센소지`;
+  new maplibregl.Marker({ element: lm, anchor: 'bottom' })
+    .setLngLat([LANDMARK.lng, LANDMARK.lat])
+    .addTo(map);
+
+  const coords = DAY.stops.map(s => [s.lng, s.lat]);
+  const lats = DAY.stops.map(s => s.lat);
+  const lngs = DAY.stops.map(s => s.lng);
+  map.fitBounds(
+    [[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]],
+    {
+      padding: window.innerWidth > 900
+        ? { top: 100, bottom: 80, left: 280, right: 340 }
+        : { top: 160, bottom: window.innerHeight * 0.42, left: 28, right: 28 },
+      duration: 1100,
+      maxZoom: 14.2,
+      pitch: 48
+    }
+  );
+
+  animToken++;
+  setTimeout(() => animateRoute(coords, animToken), 450);
+  buildMinimap();
+  selectStop(0, false);
+});
+
+map.on('error', () => {
+  document.getElementById('load').textContent = '지도 로드 실패 · 네트워크를 확인해 주세요';
+});
+
+addEventListener('keydown', e => {
+  if (e.code === 'ArrowRight') selectStop(Math.min(sel + 1, DAY.stops.length - 1));
+  if (e.code === 'ArrowLeft') selectStop(Math.max(sel - 1, 0));
+});
+</script>
+</body>
+</html>

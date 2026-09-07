@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>도쿄 산책 · 규빈 &amp; 아내 10.17–22</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&family=Shippori+Mincho:wght@600;800&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden;background:#0d1526;font-family:'Zen Maru Gothic',sans-serif;color:#f4eede}
+canvas{display:block;position:fixed;inset:0;width:100%;height:100%}
+
+/* ---------- 로딩/시작 ---------- */
+#intro{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:radial-gradient(120% 90% at 50% 25%,#22355c 0%,#0d1526 70%);text-align:center;padding:24px;
+  transition:opacity .7s ease}
+#intro.gone{opacity:0;pointer-events:none}
+#intro .seal{width:66px;height:66px;border:2.5px solid #c0392b;color:#c0392b;border-radius:9px;
+  display:flex;align-items:center;justify-content:center;font-family:'Shippori Mincho',serif;font-weight:800;
+  font-size:14px;line-height:1.15;transform:rotate(-6deg);margin-bottom:26px}
+#intro h1{font-family:'Shippori Mincho',serif;font-size:clamp(30px,6vw,58px);letter-spacing:.05em;margin-bottom:10px}
+#intro .sub{color:#8fb4d9;letter-spacing:.26em;font-size:clamp(12px,2vw,15px);margin-bottom:4px}
+#intro .dates{color:#c9a24b;letter-spacing:.18em;font-size:13px;margin-bottom:34px}
+.keys{display:flex;gap:22px;flex-wrap:wrap;justify-content:center;margin-bottom:32px;color:rgba(244,238,222,.72);font-size:13px}
+.keys div{display:flex;align-items:center;gap:8px}
+kbd{background:rgba(244,238,222,.12);border:1px solid rgba(244,238,222,.28);border-bottom-width:3px;
+  border-radius:6px;padding:5px 9px;font-family:inherit;font-size:12px;font-weight:700}
+#startBtn{cursor:pointer;border:none;background:#c0392b;color:#fff;font-family:inherit;font-weight:700;
+  font-size:16px;letter-spacing:.08em;padding:16px 44px;border-radius:40px;box-shadow:0 12px 34px rgba(192,57,43,.45);
+  transition:transform .2s,box-shadow .2s}
+#startBtn:hover{transform:translateY(-3px);box-shadow:0 18px 44px rgba(192,57,43,.6)}
+#loadNote{margin-top:18px;font-size:12px;color:rgba(244,238,222,.45);letter-spacing:.1em}
+
+/* ---------- HUD ---------- */
+#hud{position:fixed;inset:0;z-index:10;pointer-events:none;opacity:0;transition:opacity .6s ease}
+#hud.on{opacity:1}
+#days{position:absolute;top:16px;left:50%;transform:translateX(-50%);display:flex;gap:6px;pointer-events:auto;
+  background:rgba(13,21,38,.72);backdrop-filter:blur(10px);padding:7px;border-radius:16px;
+  border:1px solid rgba(244,238,222,.14);max-width:94vw;overflow-x:auto}
+.dbtn{cursor:pointer;background:transparent;border:none;color:#f4eede;font-family:inherit;
+  padding:9px 13px;border-radius:11px;transition:.2s;white-space:nowrap;text-align:center}
+.dbtn .dd{font-size:10.5px;color:#8fb4d9;letter-spacing:.06em}
+.dbtn .tt{font-size:13px;font-weight:700;margin-top:2px}
+.dbtn.on{background:#c0392b}.dbtn.on .dd{color:rgba(255,255,255,.85)}
+#spots{position:absolute;left:16px;top:88px;width:250px;max-height:64vh;overflow-y:auto;pointer-events:auto;
+  background:rgba(13,21,38,.7);backdrop-filter:blur(10px);border:1px solid rgba(244,238,222,.13);
+  border-radius:16px;padding:13px}
+#spots h3{font-family:'Shippori Mincho',serif;font-size:14px;color:#c9a24b;margin-bottom:2px;letter-spacing:.06em}
+#spots .rg{font-size:11px;color:rgba(244,238,222,.5);margin-bottom:10px}
+.sp{display:flex;gap:9px;padding:8px 7px;border-radius:9px;cursor:pointer;transition:.18s;align-items:flex-start}
+.sp:hover{background:rgba(244,238,222,.09)}
+.sp.near{background:rgba(201,162,75,.18)}
+.sp .tm{font-size:11px;color:#8fb4d9;min-width:38px;padding-top:2px}
+.sp .nm{font-size:12.5px;font-weight:700;line-height:1.35}
+.sp .nt{font-size:11px;color:rgba(244,238,222,.55);margin-top:2px;line-height:1.4}
+.sp.eat .nm::after{content:'먹기';font-size:9px;background:rgba(192,57,43,.3);color:#f0a99b;
+  padding:1px 6px;border-radius:9px;margin-left:6px;vertical-align:middle;font-weight:400}
+#ctrl{position:absolute;right:16px;bottom:16px;pointer-events:none;background:rgba(13,21,38,.7);
+  backdrop-filter:blur(10px);border:1px solid rgba(244,238,222,.13);border-radius:14px;padding:11px 14px;
+  font-size:11.5px;color:rgba(244,238,222,.72);line-height:1.9}
+#ctrl b{color:#c9a24b}
+#pop{position:absolute;bottom:78px;left:50%;transform:translateX(-50%) translateY(16px);
+  background:rgba(13,21,38,.9);backdrop-filter:blur(14px);border:1px solid rgba(201,162,75,.55);
+  border-radius:18px;padding:15px 24px;max-width:min(560px,90vw);text-align:center;
+  opacity:0;transition:.35s;pointer-events:none}
+#pop.on{opacity:1;transform:translateX(-50%) translateY(0)}
+#pop .pt{font-size:12px;color:#c9a24b;letter-spacing:.1em;margin-bottom:4px}
+#pop .pn{font-family:'Shippori Mincho',serif;font-size:19px;font-weight:800;margin-bottom:5px}
+#pop .pd{font-size:12.5px;color:rgba(244,238,222,.7);line-height:1.55}
+#compass{position:absolute;top:16px;right:16px;background:rgba(13,21,38,.72);backdrop-filter:blur(10px);
+  border:1px solid rgba(244,238,222,.14);border-radius:14px;padding:11px 15px;font-size:12px;text-align:center}
+#compass .big{font-family:'Shippori Mincho',serif;font-size:21px;color:#c9a24b;font-weight:800}
+#compass .sm{font-size:10.5px;color:rgba(244,238,222,.55);margin-top:2px;letter-spacing:.08em}
+#stick{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);display:none;pointer-events:auto;
+  width:132px;height:132px;border-radius:50%;background:rgba(244,238,222,.09);
+  border:1px solid rgba(244,238,222,.2);touch-action:none}
+#knob{position:absolute;left:50%;top:50%;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;
+  background:rgba(201,162,75,.65);border:2px solid rgba(244,238,222,.5)}
+@media(max-width:860px){
+  #spots{width:200px;top:80px;max-height:44vh}
+  #ctrl{display:none}
+  #stick{display:block}
+  #pop{bottom:180px}
+}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="intro">
+  <div class="seal">東京<br>散歩</div>
+  <h1>도쿄를 걸어봅니다</h1>
+  <div class="sub">규빈 &amp; 아내의 5박 6일</div>
+  <div class="dates">2026 · 10 · 17 — 10 · 22</div>
+  <div class="keys">
+    <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 이동</div>
+    <div><kbd>마우스</kbd> 둘러보기</div>
+    <div><kbd>Shift</kbd> 달리기</div>
+  </div>
+  <button id="startBtn">거리로 나가기</button>
+  <div id="loadNote">날짜를 바꾸면 그날의 거리로 이동합니다 · Three.js 원본 프로토타입</div>
+</div>
+<div id="hud">
+  <div id="days"></div>
+  <div id="spots"><h3 id="spotTitle"></h3><div class="rg" id="spotRegion"></div><div id="spotList"></div></div>
+  <div id="compass"><div class="big" id="cDir">北</div><div class="sm" id="cInfo">0 / 0 방문</div></div>
+  <div id="pop"><div class="pt" id="popTime"></div><div class="pn" id="popName"></div><div class="pd" id="popDesc"></div></div>
+  <div id="ctrl"><b>W A S D</b> 걷기 · <b>Shift</b> 달리기<br><b>마우스 드래그</b> 시선 · <b>목록 클릭</b> 순간이동</div>
+  <div id="stick"><div id="knob"></div></div>
+</div>
+<script type="importmap">
+{ "imports": { "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+const DAYS=[
+{d:'토 10/17',t:'도착',region:'하네다 → 핫초보리',theme:'night',
+ stops:[
+  {time:'23:30',name:'하네다공항 도착',note:'입국심사 후 자정 무렵',x:0,z:-26},
+  {time:'00:10',name:'정액 택시',note:'1층 2번 레인 · 5,000~7,000엔',x:6,z:-8},
+  {time:'00:45',name:'Section L 핫초보리',note:'24시간 프런트 · 체크인',x:-4,z:14}]},
+{d:'일 10/18',t:'아사쿠사',region:'아사쿠사 · 우에노 · 아키하바라',theme:'asakusa',
+ stops:[
+  {time:'10:00',name:'센소지 · 나카미세',note:'가미나리몬 · 오미쿠지',x:0,z:-30},
+  {time:'12:00',name:'아사쿠사 몬자 젠야',note:'첫 몬자야키 · 평점 4.8',eat:1,x:8,z:-16},
+  {time:'13:15',name:'스즈키엔',note:'세계에서 가장 진한 말차 젤라토',eat:1,x:-7,z:-6},
+  {time:'15:00',name:'우에노 공원',note:'가볍게 산책',x:6,z:4},
+  {time:'16:00',name:'아메요코',note:'길거리 간식 골목',x:-6,z:14},
+  {time:'17:00',name:'아키하바라',note:'전자상가 · 가차폰 · 4시간 여유',x:7,z:24},
+  {time:'21:00',name:'야키니쿠 토도로키',note:'체험단 확정 · 아사쿠사바시',eat:1,x:-5,z:34}]},
+{d:'월 10/19',t:'오다이바',theme:'odaiba',region:'도요스 · 오다이바 베이',
+ stops:[
+  {time:'10:00',name:'teamLab Planets',note:'맨발로 물길 · 예약 완료',x:0,z:-28},
+  {time:'13:00',name:'점심 · 아쿠아시티',note:'가볍게 (저녁이 스시)',eat:1,x:7,z:-12},
+  {time:'14:00',name:'조이폴리스',note:'패스포트로 6시간 확보',x:-7,z:2},
+  {time:'19:00',name:'오다이바 해변공원',note:'레인보우브릿지 야경',x:5,z:18},
+  {time:'21:00',name:'스시토코로 잇세키산쵸우',note:'체험단 대기중 · 신바시',eat:1,x:-4,z:32}]},
+{d:'화 10/20',t:'롯폰기',theme:'roppongi',region:'황거 · 메구로 · 롯폰기',
+ stops:[
+  {time:'07:30',name:'황거 러닝',note:'외곽 5km · 컨디션 보고 결정',x:0,z:-30},
+  {time:'11:00',name:'가조엔 도쿄',note:'용왕의 궁전 · 1층 카페',x:7,z:-14},
+  {time:'13:30',name:'AFURI 아자부주반',note:'닭 시오 라멘 (유자 아닌 메뉴)',eat:1,x:-7,z:0},
+  {time:'14:30',name:'모리미술관',note:'53층 · 화요일 17시 마감',x:6,z:14},
+  {time:'17:00',name:'히로키야 롯폰기',note:'체험단 확정 · 야키니쿠',eat:1,x:-6,z:26},
+  {time:'19:00',name:'도쿄 시티뷰',note:'52층 전망대 · 저녁 후 야경',x:4,z:36}]},
+{d:'수 10/21',t:'카와구치코',theme:'fuji',region:'후지 5호 · 온천',
+ stops:[
+  {time:'09:00',name:'신주쿠 → 카와구치코',note:'고속버스 1시간 45분',x:0,z:-30},
+  {time:'12:00',name:'로손 후지산 편의점',note:'지붕 위 후지산 · 무단횡단 금지',x:7,z:-14},
+  {time:'12:40',name:'점심 · 호토',note:'된장 국물 향토 국수',eat:1,x:-7,z:-2},
+  {time:'16:30',name:'후지산 로프웨이',note:'일몰엔 대기 거의 없음',x:5,z:14},
+  {time:'19:30',name:'온천 · 가이세키',note:'숙박 포함 · 옥상 전망대',eat:1,x:-5,z:30}]},
+{d:'목 10/22',t:'귀국',theme:'fuji',region:'후지산 아침 → 신주쿠',
+ stops:[
+  {time:'06:30',name:'일출 후지산 조망',note:'이번 여행 최대 승부처',x:0,z:-30},
+  {time:'09:00',name:'로손 재도전',note:'아침 빛이 가장 선명',x:6,z:-16},
+  {time:'10:30',name:'카와구치코 → 신주쿠',note:'복귀 버스 · 예약 필수',x:-6,z:-2},
+  {time:'17:00',name:'스시하츠메 신주쿠',note:'체험단 대기중',eat:1,x:6,z:16},
+  {time:'19:00',name:'신주쿠 쇼핑',note:'이세탄 · 돈키호테',x:-5,z:28},
+  {time:'02:00',name:'하네다 출발',note:'금 04:50 인천 도착',x:3,z:38}]}
+];
+const THEME={
+ night:  {sky:0x0d1526,fog:0x131d33,ground:0x2a3450,bld:[0x475678,0x3d4c6e,0x52638a],neon:[0xc0392b,0xc9a24b],amb:.5},
+ asakusa:{sky:0x1a2744,fog:0x223052,ground:0x453a34,bld:[0x8a5a48,0x9c6a52,0x74483a],neon:[0xd9534f,0xe8b64c],amb:.75},
+ odaiba: {sky:0x0f1b33,fog:0x18274a,ground:0x2a3a5c,bld:[0x3d5a86,0x46689a,0x2f4a72],neon:[0x4fc3f7,0xe94f8a],amb:.6},
+ roppongi:{sky:0x141c2e,fog:0x1e2840,ground:0x30374a,bld:[0x4a5470,0x565f7d,0x3e4762],neon:[0xc9a24b,0xf4eede],amb:.55},
+ fuji:   {sky:0x2a4468,fog:0x5a7ba3,ground:0x4a6b52,bld:[0x5e8a68,0x6d9a76,0x527a5c],neon:[0xf4eede,0xc9a24b],amb:1.0}
+};
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.1,300);
+const renderer=new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+const hemi=new THREE.HemisphereLight(0xbcd4ee,0x1a1a2e,.6); scene.add(hemi);
+const sun=new THREE.DirectionalLight(0xffe8c8,.8); sun.position.set(-20,34,12); scene.add(sun);
+const world=new THREE.Group(); scene.add(world);
+let markers=[], fujiMesh=null;
+const G={box:new THREE.BoxGeometry(1,1,1),cyl:new THREE.CylinderGeometry(1,1,1,12),
+ sph:new THREE.SphereGeometry(1,16,16),cone:new THREE.ConeGeometry(1,1,20), plane:new THREE.PlaneGeometry(1,1)};
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+function clearWorld(){
+  while(world.children.length){const o=world.children.pop();
+    o.traverse(n=>{if(n.geometry&&!Object.values(G).includes(n.geometry))n.geometry.dispose();
+      if(n.material)(Array.isArray(n.material)?n.material:[n.material]).forEach(m=>m.dispose());});
+    world.remove(o);}
+  markers=[];fujiMesh=null;
+}
+function buildStreet(day){
+  clearWorld();
+  const T=THEME[day.theme];
+  scene.background=new THREE.Color(T.sky);
+  scene.fog=new THREE.Fog(T.fog,45,150);
+  hemi.intensity=T.amb*1.9;
+  sun.intensity=day.theme==='fuji'?1.3:.85;
+  const zMin=-42,zMax=46;
+  const road=new THREE.Mesh(new THREE.PlaneGeometry(15,zMax-zMin), new THREE.MeshStandardMaterial({color:T.ground,roughness:.95}));
+  road.rotation.x=-Math.PI/2; road.position.z=(zMin+zMax)/2; world.add(road);
+  [-9.2,9.2].forEach(x=>{
+    const sw=new THREE.Mesh(new THREE.BoxGeometry(3.6,.28,zMax-zMin), new THREE.MeshStandardMaterial({color:0x3a4358,roughness:.9}));
+    sw.position.set(x,.14,(zMin+zMax)/2); world.add(sw);
+  });
+  for(let z=zMin;z<zMax;z+=4){
+    const l=new THREE.Mesh(new THREE.PlaneGeometry(.22,2), new THREE.MeshBasicMaterial({color:0xf4eede,transparent:true,opacity:.28}));
+    l.rotation.x=-Math.PI/2; l.position.set(0,.02,z); world.add(l);
+  }
+  const winData=[];
+  for(let z=zMin;z<zMax;z+=rnd(5,8)){
+    [-1,1].forEach(side=>{
+      const w=rnd(4,7),h=day.theme==='fuji'?rnd(3,6):rnd(7,22),d=rnd(5,9);
+      const b=new THREE.Mesh(G.box,new THREE.MeshStandardMaterial({color:pick(T.bld),roughness:.85}));
+      b.scale.set(w,h,d); b.position.set(side*(12+w/2),h/2,z+rnd(-1,1)); world.add(b);
+      if(day.theme!=='fuji'){
+        const rows=Math.floor(h/2.4),cols=Math.floor(w/1.6), bz=b.position.z;
+        for(let r=0;r<rows;r++)for(let cI=0;cI<cols;cI++){
+          if(Math.random()<.42)continue;
+          winData.push({x:side*(12-.02),y:1.6+r*2.4,z:bz-d/2+1.2+cI*1.6, side:side, lit:(Math.random()<.15?pick(T.neon):0xffe9b8)});
+        }
+      }
+      if(day.theme!=='fuji'&&Math.random()<.55){
+        const sh=rnd(2.5,5);
+        const sg=new THREE.Mesh(G.box,new THREE.MeshBasicMaterial({color:pick(T.neon)}));
+        sg.scale.set(.28,sh,1.0); sg.position.set(side*11.3,rnd(3,h-1),z+rnd(-2,2)); world.add(sg);
+      }
+    });
+  }
+  if(winData.length){
+    const im=new THREE.InstancedMesh(G.plane, new THREE.MeshBasicMaterial({transparent:true,opacity:.7,side:THREE.DoubleSide}),winData.length);
+    const dm=new THREE.Object3D(),cl=new THREE.Color();
+    winData.forEach((w,i)=>{
+      dm.position.set(w.x,w.y,w.z); dm.rotation.set(0,w.side>0?-Math.PI/2:Math.PI/2,0); dm.scale.set(.75,1.0,1);
+      dm.updateMatrix(); im.setMatrixAt(i,dm.matrix); cl.setHex(w.lit); im.setColorAt(i,cl);
+    });
+    im.instanceMatrix.needsUpdate=true; if(im.instanceColor)im.instanceColor.needsUpdate=true; world.add(im);
+  }
+  for(let z=zMin+3;z<zMax;z+=9){
+    [-1,1].forEach(side=>{
+      const pole=new THREE.Mesh(G.cyl,new THREE.MeshStandardMaterial({color:0x2b3244,roughness:.7}));
+      pole.scale.set(.09,5,.09); pole.position.set(side*9.6,2.5,z); world.add(pole);
+      const lamp=new THREE.Mesh(G.sph,new THREE.MeshBasicMaterial({color:0xffe9b8}));
+      lamp.scale.setScalar(.28); lamp.position.set(side*9.6,5.1,z); world.add(lamp);
+      const halo=new THREE.Mesh(G.sph,new THREE.MeshBasicMaterial({color:0xffd9a0,transparent:true,opacity:.13}));
+      halo.scale.setScalar(1.1); halo.position.set(side*9.6,5.1,z); world.add(halo);
+    });
+  }
+  if(day.theme!=='fuji'){
+    for(let k=0;k<3;k++){
+      const pts=[]; for(let z=zMin;z<zMax;z+=9) pts.push(new THREE.Vector3(-9.6+k*.5,6.4-Math.sin(z*.2)*.35,z));
+      const cv=new THREE.CatmullRomCurve3(pts);
+      const wire=new THREE.Line(new THREE.BufferGeometry().setFromPoints(cv.getPoints(80)), new THREE.LineBasicMaterial({color:0x11151f}));
+      world.add(wire); const w2=wire.clone(); w2.position.x=19.2; world.add(w2);
+    }
+  }
+  for(let z=zMin+4;z<zMax;z+=rnd(9,15)){
+    const side=Math.random()<.5?-1:1;
+    if(day.theme==='fuji'){
+      const tr=new THREE.Mesh(G.cyl,new THREE.MeshStandardMaterial({color:0x4a3a2a}));
+      tr.scale.set(.2,2.6,.2); tr.position.set(side*9.6,1.3,z); world.add(tr);
+      const lv=new THREE.Mesh(G.sph,new THREE.MeshStandardMaterial({color:0x3f6b4a,roughness:.9}));
+      lv.scale.set(1.5,1.2,1.5); lv.position.set(side*9.6,3.3,z); world.add(lv);
+    }else{
+      const vm=new THREE.Mesh(G.box,new THREE.MeshStandardMaterial({color:0xd7443b,roughness:.5}));
+      vm.scale.set(1.1,1.9,.7); vm.position.set(side*9.9,1.1,z); world.add(vm);
+      const scr=new THREE.Mesh(G.plane,new THREE.MeshBasicMaterial({color:0xffe9b8,transparent:true,opacity:.75}));
+      scr.scale.set(.8,1.2,1); scr.position.set(side*(9.9-side*.36),1.3,z);
+      scr.rotation.y=side>0?-Math.PI/2:Math.PI/2; world.add(scr);
+    }
+  }
+  if(day.theme==='fuji'){
+    const fg=new THREE.Group();
+    const m=new THREE.Mesh(G.cone,new THREE.MeshStandardMaterial({color:0x4a6285,roughness:.95}));
+    m.scale.set(46,26,46); m.position.y=13; fg.add(m);
+    const sn=new THREE.Mesh(G.cone,new THREE.MeshStandardMaterial({color:0xf3f0e6,roughness:.7}));
+    sn.scale.set(17,9.6,17); sn.position.y=21.2; fg.add(sn);
+    fg.position.set(0,-2,-140); world.add(fg); fujiMesh=fg;
+    const lake=new THREE.Mesh(new THREE.PlaneGeometry(200,60), new THREE.MeshStandardMaterial({color:0x2d5a7a,roughness:.25,metalness:.5}));
+    lake.rotation.x=-Math.PI/2; lake.position.set(0,-.05,-100); world.add(lake);
+  }
+  const sg2=new THREE.BufferGeometry(),N=260,ps=new Float32Array(N*3);
+  for(let i=0;i<N;i++){ps[i*3]=rnd(-90,90);ps[i*3+1]=rnd(18,60);ps[i*3+2]=rnd(-120,60);}
+  sg2.setAttribute('position',new THREE.BufferAttribute(ps,3));
+  world.add(new THREE.Points(sg2,new THREE.PointsMaterial({color:0xf7e6c0,size:.32,transparent:true,opacity:.7})));
+  day.stops.forEach((s,i)=>{
+    const g=new THREE.Group();
+    const col=s.eat?0xc0392b:0xc9a24b;
+    const mat=new THREE.MeshStandardMaterial({color:col,roughness:.4,emissive:col,emissiveIntensity:.35});
+    [-1.3,1.3].forEach(dx=>{ const p=new THREE.Mesh(G.cyl,mat); p.scale.set(.16,4,.16); p.position.set(dx,2,0); g.add(p); });
+    const top=new THREE.Mesh(G.box,mat); top.scale.set(3.6,.3,.36); top.position.y=4.05; g.add(top);
+    const top2=new THREE.Mesh(G.box,mat); top2.scale.set(3.0,.22,.3); top2.position.y=3.5; g.add(top2);
+    const pl=new THREE.PointLight(col,1.6,13); pl.position.y=3; g.add(pl);
+    const disc=new THREE.Mesh(new THREE.CircleGeometry(2.2,28), new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:.16}));
+    disc.rotation.x=-Math.PI/2; disc.position.y=.04; g.add(disc);
+    g.position.set(s.x,0,s.z); g.userData={idx:i,stop:s,visited:false,light:pl}; world.add(g); markers.push(g);
+  });
+}
+const player={pos:new THREE.Vector3(0,1.7,-40),yaw:0,pitch:0,vel:new THREE.Vector3()};
+const keys={};
+addEventListener('keydown',e=>{keys[e.code]=true; if(['ArrowUp','ArrowDown','Space'].includes(e.code))e.preventDefault();});
+addEventListener('keyup',e=>keys[e.code]=false);
+let drag=false,lx=0,ly=0;
+const cvs=document.getElementById('c');
+cvs.addEventListener('mousedown',e=>{drag=true;lx=e.clientX;ly=e.clientY;});
+addEventListener('mouseup',()=>drag=false);
+addEventListener('mousemove',e=>{
+  if(!drag)return;
+  player.yaw-=(e.clientX-lx)*.0032; player.pitch-=(e.clientY-ly)*.0026;
+  player.pitch=Math.max(-.9,Math.min(.7,player.pitch)); lx=e.clientX;ly=e.clientY;
+});
+let tId=null,tx=0,ty=0;
+cvs.addEventListener('touchstart',e=>{const t=e.changedTouches[0]; if(t.clientX>innerWidth*.42){tId=t.identifier;tx=t.clientX;ty=t.clientY;}},{passive:true});
+cvs.addEventListener('touchmove',e=>{for(const t of e.changedTouches){ if(t.identifier!==tId)continue;
+  player.yaw-=(t.clientX-tx)*.005; player.pitch-=(t.clientY-ty)*.004;
+  player.pitch=Math.max(-.9,Math.min(.7,player.pitch)); tx=t.clientX;ty=t.clientY;}},{passive:true});
+cvs.addEventListener('touchend',e=>{for(const t of e.changedTouches) if(t.identifier===tId)tId=null;},{passive:true});
+const stick=document.getElementById('stick'),knob=document.getElementById('knob');
+let sId=null,sv={x:0,y:0};
+stick.addEventListener('touchstart',e=>{const t=e.changedTouches[0];sId=t.identifier;},{passive:false});
+stick.addEventListener('touchmove',e=>{e.preventDefault();
+  for(const t of e.changedTouches){ if(t.identifier!==sId)continue;
+    const r=stick.getBoundingClientRect();
+    let dx=t.clientX-(r.left+r.width/2), dy=t.clientY-(r.top+r.height/2);
+    const len=Math.hypot(dx,dy),max=44; if(len>max){dx=dx/len*max;dy=dy/len*max;}
+    knob.style.transform=`translate(${dx}px,${dy}px)`; sv.x=dx/max; sv.y=dy/max;}},{passive:false});
+stick.addEventListener('touchend',()=>{sId=null;sv={x:0,y:0};knob.style.transform='';},{passive:true});
+let dayIdx=0,visited=new Set();
+const daysEl=document.getElementById('days');
+DAYS.forEach((d,i)=>{
+  const b=document.createElement('button'); b.className='dbtn';
+  b.innerHTML=`<div class="dd">${d.d}</div><div class="tt">${d.t}</div>`;
+  b.onclick=()=>loadDay(i); daysEl.appendChild(b);
+});
+function loadDay(i){
+  dayIdx=i; visited=new Set();
+  const day=DAYS[i];
+  buildStreet(day);
+  player.pos.set(0,1.7,day.stops[0].z+10); player.yaw=0; player.pitch=0;
+  document.querySelectorAll('.dbtn').forEach((b,k)=>b.classList.toggle('on',k===i));
+  document.getElementById('spotTitle').textContent=day.d+' · '+day.t;
+  document.getElementById('spotRegion').textContent=day.region;
+  document.getElementById('spotList').innerHTML=day.stops.map((s,k)=>
+    `<div class="sp ${s.eat?'eat':''}" data-k="${k}"><div class="tm">${s.time}</div><div><div class="nm">${s.name}</div><div class="nt">${s.note}</div></div></div>`).join('');
+  document.querySelectorAll('.sp').forEach(el=>el.onclick=()=>{ const s=day.stops[+el.dataset.k]; player.pos.set(s.x,1.7,s.z+7); player.yaw=0; });
+  updateCompass();
+}
+function updateCompass(){
+  const dirs=['北','北東','東','南東','南','南西','西','北西'];
+  const a=((-player.yaw*180/Math.PI)%360+360)%360;
+  document.getElementById('cDir').textContent=dirs[Math.round(a/45)%8];
+  document.getElementById('cInfo').textContent=`${visited.size} / ${DAYS[dayIdx].stops.length} 방문`;
+}
+document.getElementById('startBtn').onclick=()=>{
+  document.getElementById('intro').classList.add('gone');
+  document.getElementById('hud').classList.add('on');
+};
+const clock=new THREE.Clock();
+const pop=document.getElementById('pop');
+let curNear=-1,prevT=0;
+function tick(){
+  const t=clock.getElapsedTime();
+  const dt=Math.min(t-prevT,.12); prevT=t;
+  const run=keys['ShiftLeft']||keys['ShiftRight']?2.1:1;
+  const spd=7.5*run*dt;
+  let fx=0,fz=0;
+  if(keys['KeyW']||keys['ArrowUp'])fz+=1;
+  if(keys['KeyS']||keys['ArrowDown'])fz-=1;
+  if(keys['KeyA']||keys['ArrowLeft'])fx-=1;
+  if(keys['KeyD']||keys['ArrowRight'])fx+=1;
+  fx+=sv.x; fz-=sv.y;
+  const len=Math.hypot(fx,fz); if(len>1){fx/=len;fz/=len;}
+  const sin=Math.sin(player.yaw),cos=Math.cos(player.yaw);
+  player.pos.x-=(fx*cos+fz*sin)*spd;
+  player.pos.z-=(fz*cos-fx*sin)*spd;
+  player.pos.x=Math.max(-10.5,Math.min(10.5,player.pos.x));
+  player.pos.z=Math.max(-46,Math.min(50,player.pos.z));
+  const moving=len>.05;
+  player.pos.y=1.7+(moving?Math.sin(t*11*run)*.055:0);
+  camera.position.copy(player.pos);
+  camera.rotation.set(0,0,0,'YXZ'); camera.rotation.order='YXZ';
+  camera.rotation.y=player.yaw; camera.rotation.x=player.pitch;
+  let near=-1,nd=1e9;
+  markers.forEach((m,i)=>{
+    m.rotation.y=Math.sin(t*.6+i)*.25;
+    const d=Math.hypot(m.position.x-player.pos.x,m.position.z-player.pos.z);
+    if(d<nd){nd=d;near=i;}
+    const pulse=.9+Math.sin(t*2.6+i)*.35;
+    m.userData.light.intensity=(m.userData.visited?.7:1.5)*pulse;
+    m.children.forEach(c=>{if(c.material&&c.material.emissiveIntensity!==undefined)
+      c.material.emissiveIntensity=m.userData.visited?.18:.3+Math.sin(t*2.6+i)*.12;});
+  });
+  if(nd<5.5&&near>=0){
+    const m=markers[near];
+    if(curNear!==near){
+      curNear=near; const s=m.userData.stop;
+      document.getElementById('popTime').textContent=s.time;
+      document.getElementById('popName').textContent=s.name;
+      document.getElementById('popDesc').textContent=s.note;
+      pop.classList.add('on');
+      if(!m.userData.visited){m.userData.visited=true;visited.add(near); document.querySelectorAll('.sp')[near]?.classList.add('near');}
+      updateCompass();
+    }
+  }else if(nd>7.5&&curNear!==-1){curNear=-1;pop.classList.remove('on');}
+  if(fujiMesh) fujiMesh.rotation.y=Math.sin(t*.05)*.05;
+  renderer.render(scene,camera);
+  requestAnimationFrame(tick);
+}
+addEventListener('resize',()=>{ camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); });
+loadDay(1); tick(); setInterval(updateCompass,300);
+</script>
+</body>
+</html>

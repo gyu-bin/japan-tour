@@ -1,0 +1,2493 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>도쿄 산책 · 3D 디오라마</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&family=Shippori+Mincho:wght@600;800&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --ink:#3a352e; --ink2:#7a7266; --cream:#faf7f0; --card:#ffffff;
+  --acc:#e8734a; --acc2:#c0392b; --leaf:#7fb069; --sky:#8fb4d9; --gold:#c9a24b;
+}
+html,body{height:100%;overflow:hidden;background:var(--cream);
+  font-family:'Zen Maru Gothic',sans-serif;color:var(--ink)}
+canvas{display:block}
+#scene{position:fixed;inset:0;touch-action:none}
+#labels{position:fixed;inset:0;pointer-events:none;z-index:3;overflow:hidden}
+
+/* 밤 프리셋: 크림색 칩이 야경 위에서 눈을 찌른다 */
+body.night .pinChip{background:rgba(30,38,58,.92);color:#f2f0ea;
+  border-color:rgba(255,255,255,.1);box-shadow:0 4px 16px rgba(0,0,0,.4)}
+body.night .pinChip.sel{background:#f7f3ea;color:#2a3247}
+body.night .pinChip.sel .no{background:var(--acc)}
+body.night .lmChip{background:#f4f1e8;color:#25304a}
+
+/* ---------- 스팟 라벨 칩 ---------- */
+.pinChip{pointer-events:auto;cursor:pointer;transform:translate(-50%,-130%);white-space:nowrap;
+  background:#fff;border-radius:20px;padding:5px 12px 5px 6px;display:flex;align-items:center;gap:7px;
+  font-size:12px;font-weight:700;color:var(--ink);box-shadow:0 4px 14px rgba(58,53,46,.18);
+  border:1.5px solid rgba(58,53,46,.06);transition:transform .15s, box-shadow .15s}
+.pinChip:hover{box-shadow:0 6px 18px rgba(58,53,46,.28)}
+.pinChip .no{width:20px;height:20px;border-radius:50%;background:var(--acc);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:11px}
+.pinChip.eat .no{background:var(--acc2)}
+.pinChip.sel{background:var(--ink);color:#fff}
+.pinChip.sel .no{background:var(--gold)}
+/* 자리가 없으면 번호 배지만 남긴다 */
+.pinChip.mini{width:28px;height:28px;padding:0;gap:0;font-size:0;justify-content:center}
+.pinChip.mini .no{font-size:11px}
+.lmChip{pointer-events:none;transform:translate(-50%,-140%);white-space:nowrap;
+  background:#2c3a55;color:#fff;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;
+  box-shadow:0 4px 14px rgba(44,58,85,.35);letter-spacing:.02em}
+
+/* ---------- 좌상단 타이틀 카드 ---------- */
+#head{position:fixed;top:20px;left:20px;z-index:10;width:min(420px,calc(100vw - 40px));
+  background:rgba(255,255,255,.94);backdrop-filter:blur(10px);border-radius:20px;
+  padding:20px 22px 16px;box-shadow:0 10px 34px rgba(58,53,46,.12)}
+#head .eyebrow{font-size:11px;letter-spacing:.22em;color:var(--ink2);margin-bottom:8px}
+#head .titleRow{display:flex;align-items:baseline;gap:14px;margin-bottom:4px}
+#head .dayNo{font-family:'Shippori Mincho',serif;font-size:40px;font-weight:800;color:var(--acc);line-height:1}
+#head h1{font-family:'Shippori Mincho',serif;font-size:21px;font-weight:800;letter-spacing:.02em}
+#head .region{font-size:12px;color:var(--ink2);margin-bottom:12px}
+/* 한 줄 가로 스크롤 — 카드가 높아지면 그만큼 지도를 덮는다 */
+#chips{display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;padding-bottom:4px;
+  scrollbar-width:thin;scrollbar-color:rgba(58,53,46,.2) transparent}
+#chips::-webkit-scrollbar{height:5px}
+#chips::-webkit-scrollbar-thumb{background:rgba(58,53,46,.2);border-radius:3px}
+#chips .chip{flex:none;white-space:nowrap}
+.chip{cursor:pointer;border:1.5px solid rgba(58,53,46,.14);background:#fff;border-radius:16px;
+  padding:5px 11px;font-family:inherit;font-size:11.5px;font-weight:700;color:var(--ink);transition:.15s}
+.chip:hover{border-color:var(--acc);color:var(--acc)}
+.chip.sel{background:var(--ink);border-color:var(--ink);color:#fff}
+.chip .t{color:var(--ink2);font-weight:400;margin-right:4px}
+.chip.sel .t{color:rgba(255,255,255,.6)}
+
+/* ---------- 우측 상세 패널 ---------- */
+#panel{position:fixed;top:20px;right:20px;bottom:86px;z-index:10;width:min(340px,calc(100vw - 40px));
+  background:rgba(255,255,255,.97);backdrop-filter:blur(12px);border-radius:22px;
+  box-shadow:0 14px 40px rgba(58,53,46,.14);display:flex;flex-direction:column;overflow:hidden}
+#panel .tabs{display:flex;border-bottom:1px solid rgba(58,53,46,.08);padding:0 6px;background:rgba(250,247,240,.65)}
+#panel .tab{flex:1;border:none;background:transparent;font-family:inherit;font-size:12.5px;font-weight:800;
+  color:var(--ink2);padding:14px 8px 12px;cursor:pointer;position:relative;letter-spacing:.02em}
+#panel .tab.on{color:var(--ink)}
+#panel .tab.on::after{content:'';position:absolute;left:18%;right:18%;bottom:0;height:2.5px;
+  background:var(--acc);border-radius:2px}
+#panel .body{padding:18px 20px 20px;overflow-y:auto;flex:1}
+#panel .pane{display:none}
+#panel .pane.on{display:block}
+#panel .plno{font-size:11px;letter-spacing:.18em;color:var(--acc);margin-bottom:6px}
+#panel h2{font-family:'Shippori Mincho',serif;font-size:22px;font-weight:800;margin-bottom:4px}
+#panel .meta{font-size:12px;color:var(--ink2);margin-bottom:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#panel .tag{font-size:10px;background:rgba(192,57,43,.12);color:var(--acc2);border-radius:10px;padding:2px 8px;font-weight:700}
+#panel .sec{margin-bottom:16px}
+#panel .sec .sh{font-size:11px;letter-spacing:.12em;color:var(--ink2);font-weight:800;margin-bottom:8px}
+#panel .sec .st{font-size:13px;line-height:1.85;color:var(--ink);background:var(--cream);
+  border-radius:14px;padding:14px 15px}
+#panel .links{display:flex;flex-direction:column;gap:6px;margin-top:4px;margin-bottom:4px}
+#panel .links a{font-size:12px;font-weight:700;color:#3a6a9a;text-decoration:none}
+#panel .links a:hover{color:var(--acc)}
+#panel .schedHead{font-size:11px;letter-spacing:.14em;color:var(--ink2);margin-bottom:10px;font-weight:800}
+.row{display:flex;gap:9px;padding:9px 10px;border-radius:12px;cursor:pointer;align-items:baseline;transition:.15s}
+.row:hover{background:var(--cream)}
+.row.sel{background:rgba(232,115,74,.12)}
+.row .tm{font-size:11px;color:var(--sky);min-width:36px;font-weight:700}
+.row .nm{font-size:12.5px;font-weight:700}
+.row.eat .nm::after{content:'먹기';font-size:9px;background:rgba(192,57,43,.12);color:var(--acc2);
+  padding:1px 6px;border-radius:8px;margin-left:6px;font-weight:700}
+
+/* ---------- 하단 일차 페이지네이션 ---------- */
+#pager{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:10;
+  background:rgba(255,255,255,.94);backdrop-filter:blur(10px);border-radius:40px;
+  padding:8px 14px;display:flex;gap:4px;align-items:center;box-shadow:0 10px 30px rgba(58,53,46,.14);
+  max-width:94vw;overflow-x:auto}
+.pbtn{cursor:pointer;border:none;background:transparent;font-family:'Shippori Mincho',serif;
+  font-size:13px;font-weight:800;color:var(--ink2);width:40px;height:40px;border-radius:50%;
+  transition:.18s;flex:none}
+.pbtn:hover{color:var(--acc)}
+.pbtn.on{background:var(--ink);color:#fff}
+#pager .sep{width:1px;height:18px;background:rgba(58,53,46,.14);margin:0 4px;flex:none}
+#pager .lbl{font-size:10.5px;color:var(--ink2);white-space:nowrap;padding:0 6px}
+
+/* ---------- 미니맵 (실측) ---------- */
+#mini{position:fixed;left:20px;bottom:20px;z-index:10;width:196px;
+  background:rgba(255,255,255,.95);backdrop-filter:blur(10px);border-radius:16px;
+  padding:12px 14px 10px;box-shadow:0 10px 30px rgba(58,53,46,.14)}
+#mini .mh{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+#mini .mt{font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--ink)}
+#mini .north{width:22px;height:22px;display:flex;align-items:center;justify-content:center}
+#mini .north svg{display:block;transition:transform .1s linear}
+#mini svg.map{display:block;width:100%;height:auto;background:var(--cream);border-radius:10px}
+#mini .ms{font-size:10px;color:var(--ink2);margin-top:6px;text-align:right}
+#mini .mdot{cursor:pointer}
+@media(max-width:900px){#mini{display:none}}
+
+/* ---------- 안내 ---------- */
+#hint{position:fixed;right:20px;bottom:20px;z-index:9;font-size:11px;color:var(--ink2);
+  background:rgba(255,255,255,.85);border-radius:12px;padding:8px 12px;line-height:1.7;
+  box-shadow:0 6px 20px rgba(58,53,46,.1)}
+#hint b{color:var(--ink)}
+#panel .via{font-size:12px;line-height:1.65;color:#3a6a9a;background:rgba(143,180,217,.18);
+  border-radius:12px;padding:10px 12px;margin-bottom:12px}
+#panel .via b{color:var(--ink);font-weight:700}
+#panel .acts{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+#panel .acts a,#panel .acts button{flex:1;min-width:calc(50% - 4px);text-align:center;text-decoration:none;border:none;cursor:pointer;
+  font-family:inherit;font-size:12.5px;font-weight:700;border-radius:12px;padding:11px 10px}
+#panel .acts .maps{background:#1a73e8;color:#fff}
+#panel .acts .maps[hidden]{display:none}
+#panel .acts .closeup{background:var(--ink);color:#fff}
+#panel .acts .closeup.on{background:var(--acc)}
+#panel .acts .overview{background:var(--cream);color:var(--ink);border:1.5px solid rgba(58,53,46,.12)}
+#zoomBadge{position:fixed;left:50%;bottom:72px;transform:translateX(-50%);z-index:9;
+  font-size:11px;font-weight:700;color:var(--ink2);background:rgba(255,255,255,.9);
+  border-radius:999px;padding:6px 12px;box-shadow:0 6px 18px rgba(58,53,46,.1);
+  pointer-events:none;opacity:0;transition:opacity .2s}
+#zoomBadge.show{opacity:1}
+@media(max-width:900px){#zoomBadge{bottom:64px}}
+#alts{position:fixed;top:20px;right:min(380px,calc(100vw - 40px));z-index:11;display:flex;gap:6px}
+#alts a{font-size:11px;font-weight:700;color:var(--ink2);text-decoration:none;background:rgba(255,255,255,.92);
+  border-radius:999px;padding:7px 12px;box-shadow:0 6px 18px rgba(58,53,46,.1)}
+#alts a:hover{color:var(--acc)}
+
+/* ---------- 시간대 선택 ---------- */
+#timeBar{position:fixed;top:56px;right:min(380px,calc(100vw - 40px));z-index:11;
+  display:flex;gap:2px;background:rgba(255,255,255,.92);border-radius:999px;padding:3px;
+  box-shadow:0 6px 18px rgba(58,53,46,.1);max-width:min(360px,calc(100vw - 40px));overflow-x:auto;
+  scrollbar-width:none}
+#timeBar::-webkit-scrollbar{display:none}
+#timeBar button{flex:none;border:none;background:transparent;cursor:pointer;font-family:inherit;
+  font-size:11px;font-weight:700;color:var(--ink2);padding:6px 10px;border-radius:999px;transition:.15s}
+#timeBar button:hover{color:var(--acc)}
+#timeBar button.on{background:var(--ink);color:#fff}
+body.night #timeBar{background:rgba(32,40,60,.9)}
+body.night #timeBar button{color:#b9c2d6}
+body.night #timeBar button.on{background:#f4f1e8;color:#252d42}
+/* ---------- 모바일 시트 손잡이 (데스크톱에서는 숨김) ---------- */
+#panel .grab{display:none}
+
+@media(max-width:900px){
+  /* 헤드: 한 줄로 압축 — 지역·날짜는 시트로 넘긴다 */
+  #head{top:10px;left:10px;right:10px;width:auto;padding:10px 14px;border-radius:16px;
+    display:flex;align-items:baseline;gap:10px}
+  #head .eyebrow{display:none}
+  #head .titleRow{margin:0;flex:1;min-width:0;gap:10px}
+  #head .dayNo{font-size:24px}
+  #head h1{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #head .region{display:none}
+  #chips{display:none}
+  /* 링크는 헤드 아래로 — 더 이상 제목을 덮지 않는다 */
+  #alts{top:auto;bottom:calc(var(--sh) + 68px);right:10px;transition:bottom .28s cubic-bezier(.22,.61,.36,1)}
+  #alts a{font-size:10.5px;padding:6px 10px}
+  #timeBar{top:auto;bottom:calc(var(--sh) + 106px);right:10px;left:10px;max-width:none;
+    transition:bottom .28s cubic-bezier(.22,.61,.36,1)}
+  #timeBar button{padding:6px 9px;font-size:10.5px}
+  #hint{display:none}
+  #pager{bottom:calc(env(safe-area-inset-bottom, 0px) + 8px);padding:6px 10px}
+  .pbtn{width:34px;height:34px;font-size:12px}
+
+  /* ---------- 접히는 하단 시트: peek / half / full ----------
+   * --sh 는 body 에 둔다. #alts 같은 형제 요소도 시트 높이를 따라가야 하기 때문. */
+  body{--sh:84px}
+  body.sheet-half{--sh:44vh}
+  body.sheet-full{--sh:78vh}
+  #panel{
+    top:auto;left:0;right:0;width:auto;
+    bottom:calc(env(safe-area-inset-bottom, 0px) + 54px);
+    height:78vh;max-height:78vh;
+    border-radius:20px 20px 0 0;
+    transform:translateY(calc(78vh - var(--sh)));
+    transition:transform .28s cubic-bezier(.22,.61,.36,1);
+  }
+
+  #panel .grab{display:block;flex:none;padding:8px 18px 10px;cursor:grab;touch-action:none;
+    background:rgba(255,255,255,.98);border-radius:20px 20px 0 0}
+  #panel .grab:active{cursor:grabbing}
+  #panel .grab .bar{display:block;width:38px;height:4px;border-radius:2px;
+    background:rgba(58,53,46,.22);margin:0 auto 8px}
+  #panel .grab .peek{display:flex;align-items:baseline;gap:8px;font-size:13px;font-weight:700;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #panel .grab .peek b{color:var(--acc);font-size:11.5px;flex:none}
+  /* peek 상태에서는 손잡이 줄만 보이면 된다 */
+  body:not(.sheet-half):not(.sheet-full) #panel .tabs,
+  body:not(.sheet-half):not(.sheet-full) #panel .body{opacity:0;pointer-events:none}
+  #panel .tabs,#panel .body{transition:opacity .18s}
+  #panel .tab{padding:11px 8px 10px}
+  #panel .body{padding:14px 18px 24px}
+}
+</style>
+</head>
+<body>
+<div id="scene"></div>
+<div id="labels"></div>
+
+<div id="alts">
+  <a href="./sample.html">실측 지도</a>
+  <a href="./pokemon.html">픽셀 버전</a>
+</div>
+
+<div id="timeBar" role="group" aria-label="시간대">
+  <button type="button" data-light="" class="on">자동</button>
+  <button type="button" data-light="dawn">새벽</button>
+  <button type="button" data-light="morning">아침</button>
+  <button type="button" data-light="sunset">석양</button>
+  <button type="button" data-light="evening">저녁</button>
+  <button type="button" data-light="night">야경</button>
+  <button type="button" data-light="midnight">심야</button>
+</div>
+
+<div id="head">
+  <div class="eyebrow">TOKYO / 5 NIGHTS 6 DAYS · 규빈 &amp; 아내</div>
+  <div class="titleRow"><div class="dayNo" id="hNo">02</div><h1 id="hTitle"></h1></div>
+  <div class="region" id="hRegion"></div>
+  <div id="chips"></div>
+</div>
+
+<div id="panel">
+  <div class="grab" id="grab">
+    <span class="bar"></span>
+    <span class="peek"><b id="peekTime"></b><span id="peekName"></span></span>
+  </div>
+  <div class="tabs">
+    <button type="button" class="tab on" data-pane="info">역사·특징</button>
+    <button type="button" class="tab" data-pane="sched">오늘 일정</button>
+  </div>
+  <div class="body">
+    <div class="pane on" id="paneInfo">
+      <div class="plno" id="pNo"></div>
+      <h2 id="pName"></h2>
+      <div class="meta"><span id="pTime"></span><span id="pDist"></span><span class="tag" id="pTag" style="display:none">먹기</span></div>
+      <div class="sec">
+        <div class="sh">역사 · 왜 이곳인가</div>
+        <div class="st" id="pWhy"></div>
+      </div>
+      <div class="sec">
+        <div class="sh">특징 · 현장에서 볼 포인트</div>
+        <div class="st" id="pSee"></div>
+      </div>
+      <div class="via" id="pVia" hidden></div>
+      <div class="acts">
+        <a class="maps" id="pMaps" href="#" target="_blank" rel="noopener" hidden>Maps 길찾기</a>
+        <button type="button" class="closeup" id="pCloseup">여기만 보기</button>
+        <button type="button" class="overview" id="pOverview">전체 보기</button>
+      </div>
+      <div class="links">
+        <a href="#" id="pGuide" target="_blank" rel="noopener">관련 안내 검색</a>
+        <a href="#" id="pMapsText" target="_blank" rel="noopener">지도에서 위치 보기</a>
+      </div>
+    </div>
+    <div class="pane" id="paneSched">
+      <div class="schedHead">오늘의 일정 · <span id="pCount"></span></div>
+      <div id="pList"></div>
+    </div>
+  </div>
+</div>
+
+<div id="pager"></div>
+
+<div id="mini">
+  <div class="mh">
+    <div class="mt">실제 지도 배치</div>
+    <div class="north"><svg id="northArrow" width="18" height="18" viewBox="0 0 18 18">
+      <polygon points="9,1 12,10 9,8 6,10" fill="#c0392b"/>
+      <polygon points="9,17 12,10 9,12 6,10" fill="#b8b0a2"/>
+    </svg></div>
+  </div>
+  <svg class="map" id="miniSvg" viewBox="0 0 168 118"></svg>
+  <div class="ms" id="miniScale"></div>
+</div>
+
+<div id="hint"><b>드래그</b> 회전 · <b>휠/핀치</b> 확대 · <b>핀</b> 포커스 · <b>더블클릭</b> 클로즈업</div>
+<div id="zoomBadge">×1.0</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DAYS, haversineKm, projectDay, dayTotalKm } from './js/data.js';
+import { buildTile, freeSpots, stopOffset } from './js/osm-tile.js';
+
+/* ============ 실제 지도 조각 ============
+ * tools/fetch-osm.py 가 구워 둔 정적 파일만 읽는다. 런타임 네트워크 조회 없음.
+ * 매니페스트나 조각 로드가 실패하면 tileOf() 가 null 을 돌려주고
+ * 디오라마는 예전처럼 단순 잔디 원판으로 그려진다 (기능은 안 죽는다).
+ */
+let TILE_MANIFEST = [];
+const TILE_CACHE = new Map();
+
+async function loadTileManifest() {
+  try {
+    const r = await fetch('./assets/osm/tiles.json');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    TILE_MANIFEST = await r.json();
+  } catch (e) {
+    console.warn('지도 조각 매니페스트 없음 — 잔디 원판으로 그립니다', e);
+    TILE_MANIFEST = [];
+  }
+}
+
+/** 스팟이 속한 조각 (가장 가까운, 반경 안의 것) */
+function tileOf(lat, lng) {
+  let best = null, bestD = Infinity;
+  for (const t of TILE_MANIFEST) {
+    const d = haversineKm({ lat, lng }, t) * 1000;
+    if (d <= t.r && d < bestD) { best = t; bestD = d; }
+  }
+  return best;
+}
+
+async function loadTiles(ids) {
+  await Promise.all(ids.map(async id => {
+    if (TILE_CACHE.has(id)) return;
+    try {
+      const r = await fetch(`./assets/osm/tile-${id}.json`);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      TILE_CACHE.set(id, await r.json());
+    } catch (e) {
+      console.warn('조각 로드 실패', id, e);
+      TILE_CACHE.set(id, null);
+    }
+  }));
+}
+
+/* ============ three 기본 ============ */
+const sceneEl = document.getElementById('scene');
+const scene = new THREE.Scene();
+// 하늘은 3D 배경이 아니라 캔버스 뒤 CSS 그라데이션이 담당한다 (공짜이고 전환도 부드럽다).
+// three 쪽은 안개 색만 지평선 색에 맞춰 주면 경계가 안 끊긴다.
+scene.fog = new THREE.Fog(0xe9e6df, 95, 175);
+
+const renderer = new THREE.WebGLRenderer({antialias: true, alpha: true, powerPreference: 'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+// 그림자를 거의 안 쓴다 (평면 일러스트 톤). 접지 그림자가 접지감을 대신한다.
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+// 프리셋마다 노출을 조금씩 다르게 쓴다. Linear 는 색을 안 비틀면서 밝기만 조절한다.
+renderer.toneMapping = THREE.LinearToneMapping;
+sceneEl.appendChild(renderer.domElement);
+
+const labelRenderer = new CSS2DRenderer({element: document.getElementById('labels')});
+labelRenderer.setSize(innerWidth, innerHeight);
+
+const AR = () => Math.max(innerWidth || 0, 320) / Math.max(innerHeight || 0, 320);
+let viewSize = 36;
+const camera = new THREE.OrthographicCamera(-viewSize * AR(), viewSize * AR(), viewSize, -viewSize, 0.1, 400);
+
+/* ============ 시간대 프리셋 ============
+ * 일차마다 실제 시각이 다르다 — Day 01 은 자정 도착이고 Day 06 은 일출이다.
+ * 여섯 장이 각자 다른 그림이 되도록 하늘·태양·안개·창문불을 통째로 바꾼다.
+ *   sky   : [위, 아래] CSS 하늘 그라데이션
+ *   fog   : 지평선에서 사라지는 색 (하늘 아래쪽과 맞춘다)
+ *   hemi  : [하늘빛, 땅반사, 세기]
+ *   sun   : [색, 세기, 방위각(도), 고도(도)]
+ *   glow  : 창문·간판 발광 세기 (밤에만 켠다)
+ *   expo  : 톤 노출
+ */
+/* 그림자를 거의 쓰지 않는다. 명암 대신 톤 차이로 면을 나눈다 — 이게 '렌더'가 아니라
+ * '일러스트'로 읽히게 하는 핵심이다. 그래서 hemi 를 높게, sun 을 낮게 잡는다.
+ * shadow 는 프리셋별 그림자 농도. */
+const LIGHT = {
+  morning: {
+    sky: ['#cfe0e8', '#f7f2e6'], fog: 0xf5efe3,
+    hemi: [0xfdf6e8, 0xdfe0cc, 1.45], sun: [0xfff6e6, 0.45, 150, 52], glow: 0, expo: 1.0, shadow: 0.16
+  },
+  dawn: {
+    sky: ['#b9c3dd', '#f9e2cf'], fog: 0xf6e2d0,
+    hemi: [0xf6ecf2, 0xe3cfba, 1.3], sun: [0xffdcbb, 0.5, 95, 20], glow: 0.2, expo: 1.02, shadow: 0.2
+  },
+  sunset: {
+    sky: ['#a9bcd4', '#f7d3ac'], fog: 0xf3d5b4,
+    hemi: [0xfdeadb, 0xe6c8a4, 1.25], sun: [0xffc79a, 0.55, 250, 18], glow: 0.3, expo: 1.02, shadow: 0.22
+  },
+  evening: {
+    sky: ['#7080a4', '#d3b6a4'], fog: 0xc4ac9c,
+    hemi: [0xcfc4d8, 0xa8927f, 0.85], sun: [0xffcda3, 0.38, 268, 12], glow: 0.45, expo: 1.02, shadow: 0.2
+  },
+  night: {
+    sky: ['#242e47', '#4b5471'], fog: 0x454e69,
+    hemi: [0x5f6d94, 0x2f344a, 0.62], sun: [0x9fb0d4, 0.22, 210, 58], glow: 0.9, expo: 1.0, shadow: 0.14
+  },
+  midnight: {
+    sky: ['#1a2338', '#3b4460'], fog: 0x363e58,
+    hemi: [0x505d84, 0x282d40, 0.55], sun: [0x93a3c9, 0.2, 190, 62], glow: 1.0, expo: 1.0, shadow: 0.12
+  }
+};
+
+const hemiLight = new THREE.HemisphereLight(0xeaf4ff, 0xd8cbb0, 0.95);
+scene.add(hemiLight);
+const sun = new THREE.DirectionalLight(0xfff2dc, 1.5);
+sun.position.set(-34, 48, 22);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = -70; sun.shadow.camera.right = 70;
+sun.shadow.camera.top = 70; sun.shadow.camera.bottom = -70;
+sun.shadow.camera.far = 200;
+sun.shadow.bias = -0.0004;
+scene.add(sun);
+
+let glowLevel = 0;     // 창문·간판 발광 (밤 프리셋에서만 켜진다)
+let shadowLevel = 0.2; // 접지 그림자 농도
+let glowMats = [];     // 밤에 빛나는 건물 머티리얼 (시간대 전환 시 세기만 바꾼다)
+let shadowMesh = null; // 접지 그림자 InstancedMesh
+let lightOverride = null;  // 사용자가 고른 시간대. null 이면 일정 시각을 따른다
+
+function applyLight(name) {
+  const L = LIGHT[name] || LIGHT.morning;
+  sceneEl.style.background = `linear-gradient(180deg, ${L.sky[0]} 0%, ${L.sky[1]} 68%)`;
+  document.body.style.background = L.sky[1];
+  scene.fog.color.setHex(L.fog);
+  hemiLight.color.setHex(L.hemi[0]);
+  hemiLight.groundColor.setHex(L.hemi[1]);
+  hemiLight.intensity = L.hemi[2];
+  sun.color.setHex(L.sun[0]);
+  sun.intensity = L.sun[1];
+  const az = L.sun[2] * Math.PI / 180, el = L.sun[3] * Math.PI / 180;
+  const d = 70;
+  sun.position.set(Math.cos(az) * Math.cos(el) * d, Math.sin(el) * d, Math.sin(az) * Math.cos(el) * d);
+  renderer.toneMappingExposure = L.expo;
+  glowLevel = L.glow;
+  shadowLevel = L.shadow ?? 0.2;   // 접지 그림자 농도 — 평면 일러스트라 아주 옅게
+  // 이미 지어진 씬도 다시 짓지 않고 바로 따라오게 한다
+  glowMats.forEach(m => { m.emissiveIntensity = 0.42 * glowLevel; });
+  if (shadowMesh) shadowMesh.material.opacity = shadowLevel;
+  // 밤에는 라벨 칩도 어두운 바탕으로 (크림색 칩이 야경 위에서 눈을 찌른다)
+  document.body.classList.toggle('night', L.glow >= 0.5);
+}
+
+const world = new THREE.Group();
+scene.add(world);
+
+/* ============ 팔레트 & 지오메트리 ============ */
+/* 세계 팔레트 — UI 와 같은 크림·잉크·코랄 계열. 지붕의 코랄만 악센트로 쓴다. */
+const WALLS = [0xf8f4ea, 0xf2ece0, 0xeae3d4, 0xf5efe4, 0xede6d8];
+const ROOFS = [0xe8734a, 0xd9633f, 0xc9a24b, 0xe08a5c, 0xb8563a];
+const GREENS = [0x9db98a, 0x8aa87a, 0xaec49b, 0x7d9a70];
+const G = {
+  box: new THREE.BoxGeometry(1, 1, 1),
+  cyl: new THREE.CylinderGeometry(1, 1, 1, 10),
+  cone4: new THREE.ConeGeometry(1, 1, 4),
+  cone: new THREE.ConeGeometry(1, 1, 14),
+  sph: new THREE.SphereGeometry(1, 12, 10),
+  ico: new THREE.IcosahedronGeometry(1, 0),
+  torus: new THREE.TorusGeometry(1, 0.09, 8, 40)
+};
+/* 접지 그림자 — 물체가 땅에 얹혀 보이게 하는 부드러운 원판.
+ * 방향광 그림자만으로는 접지감이 약해서 바로 밑에 한 장씩 깔아 준다.
+ * 전부 InstancedMesh 하나로 묶어서 드로우콜은 1이다. */
+const SHADOW_TEX = (() => {
+  const s = 64;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = s;
+  const ctx = cv.getContext('2d');
+  const grd = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+  grd.addColorStop(0, 'rgba(0,0,0,0.42)');
+  grd.addColorStop(0.55, 'rgba(0,0,0,0.20)');
+  grd.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = grd;
+  ctx.fillRect(0, 0, s, s);
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+})();
+let shadowSpots = [];   // [x, z, 반지름]
+
+const rnd = (a, b) => a + Math.random() * (b - a);
+const pick = a => a[(Math.random() * a.length) | 0];
+const mat = (c, opts = {}) => new THREE.MeshStandardMaterial({color: c, roughness: 0.95, metalness: 0, ...opts});
+
+function mesh(geo, m, sx, sy, sz, x, y, z, cast = true) {
+  const o = new THREE.Mesh(geo, m);
+  o.scale.set(sx, sy, sz);
+  o.position.set(x, y, z);
+  o.castShadow = cast;
+  o.receiveShadow = true;
+  return o;
+}
+
+
+/* ============ CC0 GLB 에셋 (Kenney + Polygonal Mind) ============ */
+const gltfLoader = new GLTFLoader();
+const GLB = {};
+const CITY_KEYS = [
+  ['commercial', 'building-a'], ['commercial', 'building-b'], ['commercial', 'building-e'],
+  ['commercial', 'building-g'], ['commercial', 'building-i'],
+  ['commercial', 'building-skyscraper-a'], ['commercial', 'building-skyscraper-c'], ['commercial', 'building-skyscraper-e'],
+  ['suburban', 'building-type-a'], ['suburban', 'building-type-c'], ['suburban', 'building-type-e'],
+  ['suburban', 'building-type-h'], ['suburban', 'building-type-k']
+];
+
+function fitGlb(root, targetH, opts = {}) {
+  const g = root.clone(true);
+  g.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(g);
+  const size = box.getSize(new THREE.Vector3());
+  const s = targetH / Math.max(size.y, 0.001);
+  g.scale.setScalar(s * (opts.scaleMul || 1));
+  g.updateMatrixWorld(true);
+  const box2 = new THREE.Box3().setFromObject(g);
+  g.position.y -= box2.min.y;
+  if (opts.yLift) g.position.y += opts.yLift;
+  g.traverse(o => {
+    if (o.isMesh) {
+      o.castShadow = true;
+      o.receiveShadow = true;
+      if (o.material) {
+        const mats = Array.isArray(o.material) ? o.material : [o.material];
+        mats.forEach(m => {
+          if (m.map) m.map.colorSpace = THREE.SRGBColorSpace;
+          m.needsUpdate = true;
+        });
+      }
+    }
+  });
+  return g;
+}
+
+async function preloadGlbs() {
+  const jobs = [];
+  const load = (key, url) => jobs.push(
+    gltfLoader.loadAsync(url).then(gltf => { GLB[key] = gltf.scene; }).catch(e => console.warn('GLB fail', key, e))
+  );
+  CITY_KEYS.forEach(([pack, n]) => load('city:' + n, `./assets/glb/${pack}/${n}.glb`));
+  ['temple-base','temple-roof','temple-roof2','temple-column'].forEach(n =>
+    load(n, `./assets/glb/temple/${n}.glb`));
+  load('water-tower', './assets/glb/industrial/water-tower.glb');
+  load('fountain', './assets/glb/fantasy/fountain.glb');
+  load('hedge', './assets/glb/fantasy/hedge.glb');
+  load('rock', './assets/glb/fantasy/rock-large.glb');
+  load('lantern', './assets/glb/fantasy/lantern.glb');
+  await Promise.all(jobs);
+  pastelizeGlbTextures();
+}
+
+/* Kenney 건물이 칙칙한 진짜 원인은 colormap.png 텍스처 자체가 저채도 회색이라는 것이다.
+ * 머티리얼 color 만 만져서는 못 밝힌다 (곱연산이라 흰색 위로 못 올라간다).
+ * 그래서 로드 직후 텍스처를 캔버스에서 픽셀 단위로 보정한다. 12KB 짜리 4장이라 비용은 무시할 수준. */
+function pastelizeGlbTextures() {
+  const seen = new Set();
+  Object.values(GLB).forEach(root => root.traverse(o => {
+    if (!o.isMesh || !o.material) return;
+    (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => {
+      const tex = m.map;
+      if (!tex || !tex.image || seen.has(tex.uuid)) return;
+      seen.add(tex.uuid);
+      try {
+        const img = tex.image;
+        const w = img.width || img.videoWidth, h = img.height || img.videoHeight;
+        if (!w || !h) return;
+        const cv = document.createElement('canvas');
+        cv.width = w; cv.height = h;
+        const ctx = cv.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(img, 0, 0);
+        const d = ctx.getImageData(0, 0, w, h);
+        const px = d.data;
+        const c = new THREE.Color();
+        const hsl = { h: 0, s: 0, l: 0 };
+        for (let i = 0; i < px.length; i += 4) {
+          if (px[i + 3] === 0) continue;
+          c.setRGB(px[i] / 255, px[i + 1] / 255, px[i + 2] / 255, THREE.SRGBColorSpace);
+          c.getHSL(hsl);
+          // 색상을 크림·코랄 대역으로 끌어모은다. 원래 색상은 흔적만 남긴다 —
+          // 화면 전체가 좁은 팔레트 하나로 읽히는 게 이 톤의 핵심이라 여기서 통일한다.
+          const target = 0.09;                 // 크림~테라코타 사이
+          let dh = target - hsl.h;
+          if (dh > 0.5) dh -= 1; else if (dh < -0.5) dh += 1;
+          hsl.h = (hsl.h + dh * 0.72 + 1) % 1;
+          hsl.s = Math.min(1, hsl.s * 0.5 + 0.05);
+          hsl.l = Math.min(1, hsl.l * 0.42 + 0.52);
+          c.setHSL(hsl.h, hsl.s, hsl.l, THREE.SRGBColorSpace);
+          px[i] = Math.round(c.r * 255);
+          px[i + 1] = Math.round(c.g * 255);
+          px[i + 2] = Math.round(c.b * 255);
+        }
+        ctx.putImageData(d, 0, 0);
+        tex.image = cv;
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.needsUpdate = true;
+      } catch (e) {
+        // 텍스처 보정에 실패해도 원본 그대로 쓰면 된다 — 치명적이지 않다
+        console.warn('팔레트 보정 건너뜀', e);
+      }
+    });
+  }));
+}
+
+function addGlbBuilding(x, z, big = false, theme = 'asakusa', scale = 1) {
+  const all = CITY_KEYS.map(([, n]) => 'city:' + n).filter(k => GLB[k]);
+  if (!all.length) { addBuildingPrim(x, z, big, scale); return; }
+  const suburban = all.filter(k => k.includes('building-type'));
+  const commercial = all.filter(k => !k.includes('building-type') && !k.includes('skyscraper'));
+  const sky = all.filter(k => k.includes('skyscraper'));
+  let pool;
+  if (theme === 'fuji') pool = suburban.length ? suburban : all;
+  else if (theme === 'odaiba' || theme === 'roppongi') {
+    pool = big
+      ? (sky.length ? sky : commercial).concat(commercial)
+      : commercial.concat(sky);
+  } else if (theme === 'night') {
+    pool = commercial.concat(suburban);
+  } else {
+    // asakusa: 낮은 주택·상점 위주, 고층은 드물게
+    pool = big && sky.length ? sky : suburban.concat(commercial);
+  }
+  if (!pool.length) pool = all;
+  const key = pick(pool);
+  const targetH = (theme === 'fuji'
+    ? rnd(2.4, 4.0)
+    : big ? rnd(7, 12) : rnd(3.0, 5.2)) * scale;
+  const g = fitGlb(GLB[key], targetH);
+  // 밤에는 건물이 스스로 빛나야 도시로 읽힌다. 자기 텍스처를 발광맵으로 쓴다.
+  // 시간대를 바꿔도 다시 짓지 않도록 발광을 '항상' 걸어 두고 세기만 0 으로 둔다.
+  g.traverse(o => {
+    if (!o.isMesh || !o.material) return;
+    const mats = Array.isArray(o.material) ? o.material : [o.material];
+    const out = mats.map(m => {
+      const c = m.clone();
+      c.emissive = new THREE.Color(0xffd9a0);
+      c.emissiveMap = c.map;
+      c.emissiveIntensity = 0.42 * glowLevel;
+      glowMats.push(c);
+      return c;
+    });
+    o.material = out.length === 1 ? out[0] : out;
+  });
+  g.position.x = x;
+  g.position.z = z;
+  g.rotation.y = (Math.random() * 4 | 0) * Math.PI / 2;
+  g.userData.fill = true;
+  world.add(g);
+  shadowSpots.push([x, z, targetH * 0.42]);
+}
+
+function buildGlbPagoda(g) {
+  if (GLB['temple-base']) g.add(fitGlb(GLB['temple-base'], 2.4));
+  const roofs = ['temple-roof', 'temple-roof2', 'temple-roof', 'temple-roof2', 'temple-roof'];
+  let y = 2.2;
+  roofs.forEach((k, i) => {
+    if (!GLB[k]) return;
+    const roof = fitGlb(GLB[k], Math.max(1.6, 2.8 - i * 0.28), { scaleMul: 1 - i * 0.08 });
+    roof.position.y = y;
+    g.add(roof);
+    y += 2.0 - i * 0.12;
+  });
+  if (GLB['temple-column']) {
+    const col = fitGlb(GLB['temple-column'], 3.2);
+    col.position.y = y * 0.3;
+    g.add(col);
+  }
+  g.add(mesh(G.cyl, mat(0xc9a24b), 0.12, 2.4, 0.12, 0, y + 1.0, 0));
+}
+
+
+/* ============ 실측 km → 디오라마 유닛 ============
+ * 원칙 하나: 중심에서 본 방위각은 절대 건드리지 않는다. 반경만 조정한다.
+ * 그래서 "북동쪽에 있는 곳은 화면에서도 북동쪽"이 항상 성립한다.
+ *
+ *   1) projectDay() 로 실측 km + 60m 클러스터를 받는다
+ *   2) 스팟이 모여 있는 코어 반경을 SPAN*0.42 에 맞춘다
+ *   3) 코어 밖 이상치(예: Day 05 신주쿠 70km)는 방위를 유지한 채 반경만 눌러 화면에 넣는다
+ *   4) 클러스터끼리 너무 붙으면 반경만 벌린다 — 역시 방위는 고정
+ *
+ * 옛 구현이 하던 "가까운 스팟을 강제로 5.5유닛 떼어놓기"는 없앴다.
+ * 같은 건물인 모리미술관·도쿄 시티뷰를 40배 벌려 지도를 망가뜨리던 원인이었다.
+ */
+const CORE_FRAC = 0.42;   // 코어 조각이 놓이는 반경 (SPAN 대비)
+const EDGE_FRAC = 0.58;   // 이상치가 눌려 들어가는 바깥 한계
+const FAN_R = 1.25;       // 지도 조각이 없을 때 같은 지점 스팟들의 핀 부채꼴 반경
+const TILE_FRAC = 0.22;   // 중간 크기 조각의 목표 반경 (SPAN 대비).
+                          // 작으면 도로가 1픽셀 밑으로 내려가 안 보인다 — 조각이 주인공이다.
+const TILE_PAD = 1.12;    // 조각끼리 이만큼은 떨어뜨린다
+
+/* 스팟을 실제 지도 조각에 배정한다.
+ * 조각이 없는 스팟(매니페스트 로드 실패, 데이터 없는 산속 등)은
+ * 60m 클러스터를 그대로 쓰는 '맨 유닛'이 된다 — 예전 동작으로 자연스럽게 폴백. */
+function assignUnits(day, proj) {
+  const units = [];
+  const unitOf = new Array(day.stops.length).fill(-1);
+
+  day.stops.forEach((s, i) => {
+    const t = tileOf(s.lat, s.lng);
+    let ui = t
+      ? units.findIndex(u => u.id === t.id)
+      : units.findIndex(u => u.id === null && u.ci === proj.stops[i].ci);
+    if (ui < 0) {
+      units.push(t
+        ? { id: t.id, lat: t.lat, lng: t.lng, r: t.r, members: [] }
+        : { id: null, ci: proj.stops[i].ci, lat: s.lat, lng: s.lng, r: 140, members: [] });
+      ui = units.length - 1;
+    }
+    unitOf[i] = ui;
+    units[ui].members.push(i);
+  });
+
+  // 랜드마크: 조각 안에 들어가면 그 조각에 얹고, 아니면 독립 유닛
+  let lmUnit = -1;
+  if (day.lm) {
+    const t = tileOf(day.lm.lat, day.lm.lng);
+    lmUnit = t ? units.findIndex(u => u.id === t.id) : -1;
+    if (lmUnit < 0) {
+      units.push({ id: t ? t.id : null, lat: day.lm.lat, lng: day.lm.lng,
+                   r: t ? t.r : 160, members: [], landmarkOnly: true });
+      lmUnit = units.length - 1;
+    }
+  }
+  return { units, unitOf, lmUnit };
+}
+
+function layoutDay(di) {
+  const day = DAYS[di];
+  const SPAN = day.layoutSpan ?? 50;
+  const proj = projectDay(day);
+
+  const { units, unitOf, lmUnit } = assignUnits(day, proj);
+
+  // 조각 안의 축척 (디오라마 유닛 / 실제 미터).
+  // 중간 크기 조각이 SPAN*TILE_FRAC 반경으로 보이게 맞춘다.
+  const rsM = units.map(u => u.r).slice().sort((a, b) => a - b);
+  const medR = rsM[Math.floor(rsM.length / 2)] || 300;
+  const mag = (SPAN * TILE_FRAC) / medR;
+
+  // 조각 중심을 극좌표로 (a = 방위, r = 기준점에서의 거리 km)
+  const kx = 111.32 * Math.cos(proj.centroid.lat * Math.PI / 180), kz = 110.54;
+  const toKm = p => ({ x: (p.lng - proj.centroid.lng) * kx, z: -(p.lat - proj.centroid.lat) * kz });
+  const O = proj.center;
+  const polarOf = p => {
+    const q = toKm(p);
+    return { a: Math.atan2(q.z - O.z, q.x - O.x), r: Math.hypot(q.x - O.x, q.z - O.z) };
+  };
+  const polar = units.map(polarOf);
+
+  // 코어 반경 = 조각 반경의 75퍼센타일. 이상치 하나에 축척이 끌려가지 않게.
+  const rs = polar.map(p => p.r).slice().sort((a, b) => a - b);
+  const core = Math.max(rs[Math.floor(rs.length * 0.75)] || 0, 0.03);
+  const unitsPerKm = (SPAN * CORE_FRAC) / core;
+
+  const rMaxKm = Math.max(...polar.map(p => p.r), 0);
+  const C = SPAN * CORE_FRAC;
+  const overMaxU = rMaxKm * unitsPerKm - C;
+
+  // 방위 유지, 반경만 압축
+  const squash = r => {
+    const u = r * unitsPerKm;
+    if (u <= C || overMaxU <= 0.01) return u;
+    return C + (SPAN * EDGE_FRAC - C) * Math.pow((u - C) / overMaxU, 0.55);
+  };
+
+  // 조각 축척에 맞춘 모형 크기 (건물·랜드마크). 여기서 정해야 자리싸움 계산도 맞는다.
+  const bScale = Math.max(0.32, Math.min(1, mag * 1000 * 0.026));
+  const isFujiLm = day.landmark === 'fuji';
+  const lmScale = (isFujiLm ? 1.15 : 1.25) * (isFujiLm ? 1 : Math.max(0.42, bScale * 0.85));
+  const lmR = ((LM_SIZE[day.landmark] || [10, 16])[0]) * lmScale;
+
+  // 조각은 자기 반지름만큼 자리를 차지한다 — 겹치면 방위 유지한 채 반경만 벌린다.
+  // 랜드마크가 얹힌 조각은 모형이 조각보다 클 수 있다 (후지산은 실제로 20km 짜리다).
+  const pts = polar.map((p, i) => ({
+    a: p.a, r: squash(p.r),
+    gap: Math.max(units[i].r * mag * 2 * TILE_PAD,
+                  i === lmUnit ? lmR * 2 * 1.15 : 0)
+  }));
+
+  for (let it = 0; it < 60; it++) {
+    let moved = false;
+    for (let i = 0; i < pts.length; i++) {
+      for (let j = i + 1; j < pts.length; j++) {
+        const need = (pts[i].gap + pts[j].gap) / 2;
+        const xi = Math.cos(pts[i].a) * pts[i].r, zi = Math.sin(pts[i].a) * pts[i].r;
+        const xj = Math.cos(pts[j].a) * pts[j].r, zj = Math.sin(pts[j].a) * pts[j].r;
+        const d = Math.hypot(xj - xi, zj - zi);
+        if (d >= need) continue;
+        const push = (need - d) / 2;
+        const [inner, outer] = pts[i].r <= pts[j].r ? [pts[i], pts[j]] : [pts[j], pts[i]];
+        inner.r = Math.max(0, inner.r - push);
+        outer.r += push;
+        moved = true;
+      }
+    }
+    if (!moved) break;
+  }
+
+  const toXZ = p => ({ x: Math.cos(p.a) * p.r, z: Math.sin(p.a) * p.r });
+  let unitPts = pts.map(toXZ);
+  const ox = unitPts.reduce((s, p) => s + p.x, 0) / unitPts.length;
+  const oz = unitPts.reduce((s, p) => s + p.z, 0) / unitPts.length;
+  unitPts = unitPts.map(p => new THREE.Vector3(p.x - ox, 0, p.z - oz));
+
+  // 스팟은 조각 안에서 '실제 위치'에 놓인다 — 여기가 축척 두 개 중 정밀한 쪽
+  const stopPts = day.stops.map((s, i) => {
+    const u = units[unitOf[i]];
+    const c = unitPts[unitOf[i]];
+    if (u.id) {
+      const [dx, dz] = stopOffset(s.lat, s.lng, u.lat, u.lng, mag);
+      return new THREE.Vector3(c.x + dx, 0, c.z + dz);
+    }
+    // 지도 조각이 없는 유닛: 예전처럼 부채꼴로 벌린다
+    const k = u.members.indexOf(i);
+    if (u.members.length === 1) return c.clone();
+    const a = (k / u.members.length) * Math.PI * 2 - Math.PI / 2;
+    return new THREE.Vector3(c.x + Math.cos(a) * FAN_R, 0, c.z + Math.sin(a) * FAN_R);
+  });
+
+  let lmPt = null;
+  if (day.lm && lmUnit >= 0) {
+    const u = units[lmUnit];
+    const c = unitPts[lmUnit];
+    const [dx, dz] = u.id
+      ? stopOffset(day.lm.lat, day.lm.lng, u.lat, u.lng, mag)
+      : [0, 0];
+    lmPt = new THREE.Vector3(c.x + dx, 0, c.z + dz);
+  }
+
+  const trueMaxU = rMaxKm * unitsPerKm;
+  const shownMaxU = squash(rMaxKm);
+  const compression = shownMaxU > 0.01 ? trueMaxU / shownMaxU : 1;
+
+  return {
+    proj, units, unitOf, unitPts, lmUnit, stopPts, lmPt,
+    mag, unitsPerKm, compression, bScale, lmScale,
+    // 미니맵·격리 로직이 쓰던 이름들 — 이제 '유닛'이 그 자리를 대신한다
+    clusterPts: unitPts, clusters: units
+  };
+}
+
+/* ============ 디오라마 빌더 ============ */
+let markers = [];   // {group, chipEl, label, stop, idx, pos, pin}
+let peoples = [];
+let roadCurve = null;
+let landmarkGroup = null;
+let stopBuildings = []; // 클러스터별 건물 그룹 (인덱스 = 클러스터 번호)
+let stopCi = [];        // 스팟 인덱스 → 클러스터 번호
+let dayLayout = null;   // 현재 일차의 실측 배치 결과
+let lmLabel = null;     // 랜드마크 CSS2D 라벨 (직접 껐다 켜야 한다)
+let clouds = [];        // 애니메이션 대상만 모아둔다
+let spinners = [];      // {o, spd} — 관람차류
+
+function disposeWorld() {
+  world.traverse(n => {
+    if (n.isCSS2DObject) n.element.remove();
+    if (n.geometry && !Object.values(G).includes(n.geometry)) n.geometry.dispose();
+    if (n.material) (Array.isArray(n.material) ? n.material : [n.material]).forEach(m => m.dispose());
+  });
+  world.clear();
+  markers = [];
+  peoples = [];
+  stopBuildings = [];
+  stopCi = [];
+  landmarkGroup = null;
+  lmLabel = null;
+  clouds = [];
+  spinners = [];
+  shadowSpots = [];
+  glowMats = [];
+}
+
+function buildRoad(points) {
+  // 같은 자리를 연달아 지나면 접선이 0 벡터가 되어 삼각형이 터진다 (화면에 가시 같은 게 뻗친다)
+  const clean = [];
+  for (const p of points) {
+    const last = clean[clean.length - 1];
+    if (!last || Math.hypot(p.x - last.x, p.z - last.z) > 0.05) clean.push(p.clone());
+  }
+  if (clean.length < 2) clean.push(clean[0].clone().add(new THREE.Vector3(0.1, 0, 0.1)));
+
+  const curve = new THREE.CatmullRomCurve3(clean);
+  const samples = curve.getPoints(220);
+  const W = 2.4;
+  const pos = [], idx = [];
+  let prevN = { x: 0, z: 1 };
+  for (let i = 0; i < samples.length; i++) {
+    const p = samples[i];
+    const t2 = samples[Math.min(i + 1, samples.length - 1)].clone().sub(samples[Math.max(i - 1, 0)]);
+    let nx, nz;
+    if (t2.lengthSq() < 1e-8) { nx = prevN.x; nz = prevN.z; }   // 접선이 없으면 직전 법선을 잇는다
+    else { t2.normalize(); nx = -t2.z; nz = t2.x; prevN = { x: nx, z: nz }; }
+    pos.push(p.x + nx * W, 0.06, p.z + nz * W, p.x - nx * W, 0.06, p.z - nz * W);
+  }
+  for (let i = 0; i < samples.length - 1; i++) {
+    const a = i * 2;
+    idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  const road = new THREE.Mesh(g, mat(0xf8f4ea));
+  road.receiveShadow = true;
+  road.userData.fill = true;   // 클로즈업에서는 접는다
+  world.add(road);
+  return curve;
+}
+
+function addTree(x, z, s = 1) {
+  const g = new THREE.Group();
+  g.add(mesh(G.cyl, mat(0x9a7350), 0.16 * s, 0.9 * s, 0.16 * s, 0, 0.45 * s, 0));
+  const fol = mesh(G.ico, mat(pick(GREENS), {flatShading: true}), 0.95 * s, 1.15 * s, 0.95 * s, 0, 1.55 * s, 0);
+  g.add(fol);
+  g.position.set(x, 0, z);
+  g.rotation.y = rnd(0, Math.PI * 2);
+  g.userData.fill = true;
+  world.add(g);
+  shadowSpots.push([x, z, 1.05 * s]);
+}
+
+function addBuildingPrim(x, z, big = false, scale = 1) {
+  const w = rnd(2.2, 3.6) * (big ? 1.35 : 1) * scale;
+  const d = rnd(2.2, 3.6) * (big ? 1.35 : 1) * scale;
+  const h = (big ? rnd(3.6, 7.5) : rnd(1.5, 3.4)) * scale;
+  const wall = pick(WALLS);
+  const g = new THREE.Group();
+  g.add(mesh(G.box, mat(wall), w, h, d, 0, h / 2, 0));
+  // 레퍼런스처럼 대부분 주황 박공 지붕
+  if (Math.random() < 0.88) {
+    const rh = rnd(0.7, 1.35);
+    const roof = mesh(G.cone4, mat(pick(ROOFS), {flatShading: true}),
+      Math.hypot(w, d) * 0.58, rh, Math.hypot(w, d) * 0.58, 0, h + rh / 2, 0);
+    roof.rotation.y = Math.PI / 4;
+    g.add(roof);
+  } else {
+    g.add(mesh(G.box, mat(0xd9d2c6), w + 0.2, 0.18, d + 0.2, 0, h + 0.09, 0));
+  }
+  g.position.set(x, 0, z);
+  g.userData.fill = true;
+  world.add(g);
+  shadowSpots.push([x, z, Math.max(w, d) * 0.7]);
+}
+
+function addPerson(curve) {
+  const g = new THREE.Group();
+  const cols = [0xe8734a, 0x5b8fb9, 0x7fb069, 0xc9a24b, 0xb06a8f];
+  g.add(mesh(G.cyl, mat(pick(cols)), 0.16, 0.42, 0.16, 0, 0.21, 0));
+  g.add(mesh(G.sph, mat(0xf4d8c2), 0.13, 0.13, 0.13, 0, 0.52, 0));
+  world.add(g);
+  peoples.push({g, t: Math.random(), spd: rnd(0.008, 0.02) * (Math.random() < 0.5 ? 1 : -1), off: rnd(-1.4, 1.4)});
+}
+
+/* ---- 랜드마크 (일차 히어로 — 실제 명소에 가까운 실루엣) ---- */
+function lmPagoda(g) {
+  // 센소지 오층탑 + 도리이 느낌
+  const red = mat(0xb81f1f), dark = mat(0x4a2a1a), cream = mat(0xf3e6d0), goldM = mat(0xd4a84b);
+  const stone = mat(0x9a958c);
+  g.add(mesh(G.box, stone, 7.2, 0.55, 7.2, 0, 0.28, 0)); // 기단
+  g.add(mesh(G.box, stone, 5.6, 0.35, 5.6, 0, 0.65, 0));
+  for (let i = 0; i < 5; i++) {
+    const s = 1 - i * 0.11;
+    const y = 1.1 + i * 2.35;
+    g.add(mesh(G.box, cream, 3.8 * s, 1.35, 3.8 * s, 0, y, 0));
+    // 처마가 넓은 일본식 지붕
+    const roof = mesh(G.cone4, red, 4.6 * s, 1.15, 4.6 * s, 0, y + 0.95, 0);
+    roof.rotation.y = Math.PI / 4;
+    g.add(roof);
+    g.add(mesh(G.box, dark, 4.2 * s, 0.12, 4.2 * s, 0, y + 0.55, 0));
+  }
+  g.add(mesh(G.cyl, goldM, 0.14, 2.8, 0.14, 0, 13.6, 0));
+  g.add(mesh(G.sph, goldM, 0.28, 0.28, 0.28, 0, 15.1, 0));
+  // 도리이
+  const t = new THREE.Group();
+  [-2.0, 2.0].forEach(dx => t.add(mesh(G.cyl, dark, 0.26, 4.0, 0.26, dx, 2.0, 0)));
+  t.add(mesh(G.box, red, 5.6, 0.42, 0.55, 0, 4.05, 0));
+  t.add(mesh(G.box, red, 4.4, 0.28, 0.42, 0, 3.35, 0));
+  t.position.set(0, 0, 7.2);
+  g.add(t);
+  // 본당 실루엣
+  const hall = new THREE.Group();
+  hall.add(mesh(G.box, cream, 6.5, 2.4, 4.2, 0, 1.5, 0));
+  const hr = mesh(G.cone4, red, 5.8, 1.6, 5.8, 0, 3.4, 0);
+  hr.rotation.y = Math.PI / 4;
+  hall.add(hr);
+  hall.position.set(-8.5, 0, -1);
+  g.add(hall);
+}
+
+function lmWheel(g) {
+  // 오다이바 대관람차 느낌 — 큰 원형 + 곤돌라 + A자 지지대
+  const steel = mat(0xffffff, {metalness: 0.35, roughness: 0.45});
+  const blue = mat(0x4aa3d9, {metalness: 0.2, roughness: 0.55});
+  const base = mat(0xd8d2c6);
+  g.add(mesh(G.box, base, 10, 0.5, 6, 0, 0.25, 0));
+  const wheel = new THREE.Group();
+  const R = 7.2;
+  // 이중 림
+  [[R, 0.22], [R * 0.72, 0.14]].forEach(([rad, th]) => {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(rad, th, 8, 48), steel);
+    ring.castShadow = true;
+    wheel.add(ring);
+  });
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2;
+    const sp = mesh(G.cyl, steel, 0.07, R * 2, 0.07, 0, 0, 0);
+    sp.rotation.z = a;
+    wheel.add(sp);
+  }
+  const gondolaCols = [0xe8734a, 0x5b8fb9, 0xc9a24b, 0x7fb069, 0xb06a8f, 0xffffff];
+  for (let i = 0; i < 18; i++) {
+    const a = (i / 18) * Math.PI * 2;
+    const cab = mesh(G.box, mat(gondolaCols[i % gondolaCols.length]), 0.85, 1.05, 0.85,
+      Math.cos(a) * R, Math.sin(a) * R, 0);
+    wheel.add(cab);
+  }
+  wheel.position.set(0, R + 1.2, 0);
+  wheel.name = 'wheelSpin';
+  g.add(wheel);
+  // A-frame legs
+  [[-3.2, 0.35], [3.2, -0.35]].forEach(([dx, tilt]) => {
+    const leg = mesh(G.cyl, blue, 0.28, R + 2.5, 0.28, dx, (R + 1.2) / 2, 0);
+    leg.rotation.z = tilt;
+    g.add(leg);
+  });
+  g.add(mesh(G.cyl, steel, 0.35, 1.2, 0.35, 0, R + 1.2, 0)); // hub
+  // 바다 느낌 플랫폼
+  const sea = new THREE.Mesh(new THREE.CircleGeometry(11, 36), mat(0x8ebfd4, {roughness: 0.3, metalness: 0.12}));
+  sea.rotation.x = -Math.PI / 2;
+  sea.position.set(0, 0.04, 8);
+  sea.receiveShadow = true;
+  g.add(sea);
+}
+
+function lmTower(g) {
+  // 모리타워/시티뷰 — 세로로 긴 유리 고층 + 안테나
+  const glass = mat(0xa8c4d8, {metalness: 0.45, roughness: 0.35});
+  const dark = mat(0x3a4550, {metalness: 0.2, roughness: 0.6});
+  const cream = mat(0xe8e4dc);
+  g.add(mesh(G.box, cream, 7.5, 0.6, 7.5, 0, 0.3, 0)); // 기단/광장
+  // 본관 (사각 타워)
+  g.add(mesh(G.box, glass, 4.4, 16, 4.4, 0, 8.5, 0));
+  g.add(mesh(G.box, dark, 4.6, 0.35, 4.6, 0, 16.7, 0)); // 옥상
+  // 층 띠
+  for (let i = 0; i < 10; i++) {
+    g.add(mesh(G.box, mat(0xffffff, {transparent: true, opacity: 0.35}), 4.45, 0.08, 4.45, 0, 2.2 + i * 1.45, 0, false));
+  }
+  // 안테나 / 전망 스파이어
+  g.add(mesh(G.cyl, dark, 0.35, 3.2, 0.35, 0, 18.5, 0));
+  g.add(mesh(G.cyl, mat(0xc0392b), 0.12, 4.5, 0.12, 0, 21.5, 0));
+  g.add(mesh(G.box, cream, 2.2, 1.4, 2.2, 0, 17.6, 0)); // 전망층
+}
+
+function lmFuji(g) {
+  /* 후지산. 예전 비율(높이/지름 0.3)은 바위 덩어리로 보였다.
+   * 실제 후지는 밑변 대비 완만하지만 실루엣이 또렷하다 — 세우고, 눈 경계를 흩는다. */
+  const rockA = mat(0x5f7382, { flatShading: true });
+  const rockB = mat(0x74899a, { flatShading: true });
+  const snowM = mat(0xf8fbff, { flatShading: true, roughness: 0.75 });
+
+  g.add(mesh(G.cone, rockA, 17, 17.5, 17, 0, 8.75, -2));      // 본체 — 훨씬 높게
+  g.add(mesh(G.cone, rockB, 11.5, 12.5, 11.5, 0, 12.6, -2));  // 중턱 능선
+
+  // 정상 설경: 원뿔 하나로 자르면 경계가 자로 그은 듯해서, 크기가 다른 조각을 겹쳐 흩는다
+  g.add(mesh(G.cone, snowM, 5.4, 6.2, 5.4, 0, 15.5, -2));
+  for (let i = 0; i < 7; i++) {
+    const a = (i / 7) * Math.PI * 2 + 0.4;
+    const rr = 4.3 + Math.sin(i * 2.3) * 1.1;
+    g.add(mesh(G.cone, snowM, 1.5, 2.1, 1.5,
+      Math.cos(a) * rr, 14.0 + Math.sin(i * 1.7) * 0.7, Math.sin(a) * rr - 2));
+  }
+  // 분화구 자리를 살짝 눌러 준다
+  g.add(mesh(G.cyl, mat(0xd8e2ec, { flatShading: true }), 1.5, 0.5, 1.5, 0, 18.5, -2));
+}
+
+function lmPlane(g) {
+  // 하네다 — 여객기 + 활주로 + 터미널 박스
+  const white = mat(0xf4f6f8), blue = mat(0x2c5aa0), acc = mat(0xe8734a), asphalt = mat(0x6a6862);
+  // 터미널
+  g.add(mesh(G.box, mat(0xdde3ea), 14, 2.2, 4.5, -8, 1.1, -6));
+  g.add(mesh(G.box, blue, 14.2, 0.25, 4.7, -8, 2.25, -6));
+  // 활주로
+  const rw = new THREE.Mesh(new THREE.PlaneGeometry(8, 32), asphalt);
+  rw.rotation.x = -Math.PI / 2;
+  rw.position.set(2, 0.05, 2);
+  rw.receiveShadow = true;
+  g.add(rw);
+  for (let i = 0; i < 10; i++) {
+    const dash = new THREE.Mesh(new THREE.PlaneGeometry(0.35, 1.6), mat(0xffffff));
+    dash.rotation.x = -Math.PI / 2;
+    dash.position.set(2, 0.07, -10 + i * 2.8);
+    g.add(dash);
+  }
+  // 항공기
+  const plane = new THREE.Group();
+  const body = mesh(G.cyl, white, 0.85, 8.5, 0.85, 0, 0, 0);
+  body.rotation.x = Math.PI / 2;
+  plane.add(body);
+  plane.add(mesh(G.sph, white, 0.85, 0.85, 1.15, 0, 0, 4.4));
+  plane.add(mesh(G.box, white, 10.5, 0.14, 1.8, 0, 0, 0.2)); // wings
+  plane.add(mesh(G.box, acc, 0.14, 2.0, 1.3, 0, 1.1, -3.6));
+  plane.add(mesh(G.box, acc, 3.4, 0.12, 1.0, 0, 0.15, -3.6));
+  plane.add(mesh(G.cyl, blue, 0.35, 0.5, 0.35, -2.8, -0.55, 0.8));
+  plane.add(mesh(G.cyl, blue, 0.35, 0.5, 0.35, 2.8, -0.55, 0.8));
+  plane.position.set(2, 1.35, 1);
+  g.add(plane);
+}
+const LM = {pagoda: lmPagoda, wheel: lmWheel, tower: lmTower, fuji: lmFuji, plane: lmPlane};
+
+/* ---- 스팟별 건물 (공원·식당·숙소·역 등) ---- */
+function inferStopKind(s) {
+  const n = s.name;
+  if (s.mode === 'bus' || /→|고속버스|버스/.test(n) && !/로프웨이/.test(n)) return 'bus';
+  if (s.stay || /Section L|숙소|호텔|료칸|온천 ·|가이세키/.test(n)) return /온천|료칸|가이세키/.test(n) ? 'onsen' : 'hotel';
+  if (/센소지|나카미세|사찰|신사/.test(n)) return 'temple';
+  if (/해변|바다공원/.test(n)) return 'beach';
+  if (/우에노 공원|공원|황거 러닝|일출/.test(n)) return 'park';
+  if (/아메요코/.test(n)) return 'market';
+  if (/아키하바라|전자/.test(n)) return 'elec';
+  if (/teamLab|모리미술|시티뷰|미술관/.test(n)) return 'museum';
+  if (/조이폴리스/.test(n)) return 'amuse';
+  if (/로손|편의점/.test(n)) return 'conveni';
+  if (/로프웨이/.test(n)) return 'ropeway';
+  if (/택시/.test(n)) return 'taxi';
+  if (/하네다|공항/.test(n)) return 'airport';
+  if (/가조엔/.test(n)) return 'palace';
+  if (/쇼핑|이세탄|돈키/.test(n)) return 'shop';
+  if (s.eat || /몬자|스즈키|야키니쿠|라멘|스시|호토|점심|AFURI|히로키야|아쿠아시티/.test(n)) {
+    if (/몬자/.test(n)) return 'foodMonja';
+    if (/스즈키|말차|젤라토/.test(n)) return 'foodMatcha';
+    if (/야키니쿠|토도로키|히로키야/.test(n)) return 'foodYaki';
+    if (/라멘|AFURI/.test(n)) return 'foodRamen';
+    if (/스시/.test(n)) return 'foodSushi';
+    if (/호토/.test(n)) return 'foodHoto';
+    return 'food';
+  }
+  return 'shop';
+}
+
+function sbRoof(g, w, d, y, col = 0xc45c3e) {
+  const roof = mesh(G.cone4, mat(col, {flatShading: true}), Math.hypot(w, d) * 0.72, 1.1, Math.hypot(w, d) * 0.72, 0, y, 0);
+  roof.rotation.y = Math.PI / 4;
+  g.add(roof);
+}
+
+function sbHotel(g) {
+  const wall = mat(0xe8e2d6), accent = mat(0x5b8fb9), dark = mat(0x6a6862);
+  g.add(mesh(G.box, wall, 4.2, 5.2, 3.4, 0, 2.6, 0));
+  for (let i = 0; i < 4; i++) for (let j = 0; j < 3; j++) {
+    g.add(mesh(G.box, mat(0x9ec4e0, {metalness: 0.2, roughness: 0.4}), 0.55, 0.45, 0.08,
+      -1.35 + j * 1.35, 1.2 + i * 1.05, 1.72));
+  }
+  g.add(mesh(G.box, accent, 4.4, 0.35, 3.6, 0, 5.35, 0));
+  g.add(mesh(G.box, dark, 1.1, 1.6, 0.12, 0, 0.8, 1.72)); // 출입구
+  g.add(mesh(G.box, mat(0xc9a24b), 2.2, 0.12, 1.4, 0, 0.08, 2.4)); // 캐노피
+}
+
+function sbOnsen(g) {
+  const wood = mat(0xb8895a), dark = mat(0x6b4a2e), steam = mat(0xffffff, {transparent: true, opacity: 0.35});
+  g.add(mesh(G.box, wood, 5.0, 2.2, 3.6, 0, 1.1, 0));
+  sbRoof(g, 5.2, 3.8, 2.7, 0x8b3a2a);
+  // 노천탕
+  g.add(mesh(G.cyl, mat(0x8a9588), 1.5, 0.45, 1.5, 2.8, 0.25, 1.2));
+  g.add(mesh(G.cyl, mat(0x7eb6c9, {roughness: 0.25, metalness: 0.1}), 1.25, 0.2, 1.25, 2.8, 0.42, 1.2));
+  g.add(mesh(G.sph, steam, 0.55, 0.7, 0.55, 2.8, 1.1, 1.2, false));
+  g.add(mesh(G.sph, steam, 0.4, 0.55, 0.4, 3.1, 1.5, 1.0, false));
+  g.add(mesh(G.box, dark, 0.9, 1.4, 0.1, -1.2, 0.7, 1.82));
+}
+
+function sbTemple(g) {
+  // 가미나리몬 + 나카미세 상점 느낌 (오층탑은 일차 랜드마크)
+  const red = mat(0xb81f1f), dark = mat(0x4a2a1a), cream = mat(0xf3e6d0), goldM = mat(0xd4a84b);
+  g.add(mesh(G.box, cream, 5.5, 3.2, 2.2, 0, 1.6, 0));
+  sbRoof(g, 6.2, 3.0, 3.6, 0xb81f1f);
+  // 문 기둥
+  [-2.2, 2.2].forEach(dx => g.add(mesh(G.cyl, dark, 0.28, 3.4, 0.28, dx, 1.7, 1.3)));
+  g.add(mesh(G.box, red, 5.2, 0.45, 0.55, 0, 3.5, 1.3));
+  g.add(mesh(G.box, goldM, 1.8, 0.9, 0.15, 0, 2.4, 1.35));
+  // 상점가 박스
+  for (let i = 0; i < 3; i++) {
+    const sx = -4.5 + i * 1.6;
+    g.add(mesh(G.box, mat(0xf0e6d4), 1.35, 1.5, 1.5, sx, 0.75, 3.2));
+    g.add(mesh(G.box, mat(0xc45c3e), 1.45, 0.2, 1.6, sx, 1.55, 3.2));
+  }
+}
+
+function sbPark(g) {
+  const grass = mat(0xc5dc9e), path = mat(0xe8dfc8), water = mat(0x7eb6c9, {roughness: 0.25, metalness: 0.12});
+  const disk = new THREE.Mesh(new THREE.CircleGeometry(4.2, 28), grass);
+  disk.rotation.x = -Math.PI / 2;
+  disk.position.y = 0.04;
+  disk.receiveShadow = true;
+  g.add(disk);
+  const walk = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 5.5), path);
+  walk.rotation.x = -Math.PI / 2;
+  walk.position.set(0, 0.06, 0.4);
+  g.add(walk);
+  // 분수
+  g.add(mesh(G.cyl, mat(0xb8b2a6), 1.1, 0.35, 1.1, 0, 0.2, -1.2));
+  g.add(mesh(G.cyl, water, 0.9, 0.15, 0.9, 0, 0.38, -1.2));
+  g.add(mesh(G.cyl, mat(0xd8d2c6), 0.18, 1.1, 0.18, 0, 0.9, -1.2));
+  [[-2.4, 1.5], [2.2, 1.8], [-1.5, -2.5], [2.6, -1.8], [0.8, 2.6]].forEach(([x, z]) => {
+    g.add(mesh(G.cyl, mat(0x8a6a45), 0.14, 0.9, 0.14, x, 0.45, z));
+    g.add(mesh(G.ico, mat(pick(GREENS), {flatShading: true}), 0.85, 1.0, 0.85, x, 1.25, z));
+  });
+  // 벤치
+  g.add(mesh(G.box, mat(0xa67c52), 1.4, 0.18, 0.45, -2.0, 0.45, 0.2));
+  g.add(mesh(G.box, mat(0xa67c52), 1.4, 0.45, 0.12, -2.0, 0.7, 0.0));
+}
+
+function sbMarket(g) {
+  const awning = [0xe8734a, 0xffffff, 0xe8734a, 0xffffff];
+  for (let i = 0; i < 4; i++) {
+    const x = -2.4 + i * 1.6;
+    g.add(mesh(G.box, mat(0xf2e8d8), 1.4, 1.6, 1.8, x, 0.8, 0));
+    for (let k = 0; k < 4; k++) {
+      g.add(mesh(G.box, mat(awning[k % 4]), 0.35, 0.12, 1.9, x - 0.52 + k * 0.35, 1.7, 0));
+    }
+    g.add(mesh(G.box, mat(0xc0392b), 1.1, 0.55, 0.7, x, 0.55, 1.1)); // 과일 박스
+  }
+}
+
+function sbElec(g) {
+  const neon = [0xe74c3c, 0xf1c40f, 0x3498db, 0x2ecc71];
+  for (let i = 0; i < 3; i++) {
+    const x = -2.2 + i * 2.2;
+    const h = 4.5 + i * 1.2;
+    g.add(mesh(G.box, mat(0x3a4550), 1.8, h, 1.8, x, h / 2, 0));
+    for (let y = 1; y < h - 0.5; y += 0.9) {
+      // y 가 실수라 neon[(i+y)%4] 가 undefined 였다 — 네온이 실제로 안 빛나고 있었다
+      const c = neon[(i + Math.round(y * 10)) % 4];
+      g.add(mesh(G.box, mat(c, {emissive: c, emissiveIntensity: 0.35}), 1.5, 0.35, 0.12, x, y, 0.92));
+    }
+  }
+  g.add(mesh(G.box, mat(0x2c3e50), 7.2, 0.2, 2.4, 0, 0.1, 1.4));
+}
+
+function sbMuseum(g) {
+  // teamLab / 미술관 — 유리 박스 + 빛
+  const glass = mat(0xa8d4f0, {metalness: 0.4, roughness: 0.25, transparent: true, opacity: 0.75});
+  const glow = mat(0x6ec6ff, {emissive: 0x3aa0e8, emissiveIntensity: 0.45});
+  g.add(mesh(G.box, mat(0xdde3ea), 5.5, 0.4, 5.5, 0, 0.2, 0));
+  g.add(mesh(G.box, glass, 4.5, 3.8, 4.5, 0, 2.2, 0));
+  g.add(mesh(G.box, glow, 3.2, 2.4, 3.2, 0, 2.0, 0, false));
+  g.add(mesh(G.box, mat(0xffffff, {transparent: true, opacity: 0.5}), 4.7, 0.15, 4.7, 0, 4.15, 0, false));
+}
+
+function sbAmuse(g) {
+  const col = [0xe8734a, 0x5b8fb9, 0xc9a24b, 0xb06a8f];
+  g.add(mesh(G.box, mat(0xf0ebe3), 5.0, 2.8, 4.0, 0, 1.4, 0));
+  sbRoof(g, 5.4, 4.4, 3.4, 0xe8734a);
+  // 미니 관람차 장식
+  const wheel = new THREE.Group();
+  const R = 1.6;
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(R, 0.1, 6, 24), mat(0xffffff, {metalness: 0.3}));
+  wheel.add(ring);
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    wheel.add(mesh(G.box, mat(col[i % 4]), 0.35, 0.4, 0.35, Math.cos(a) * R, Math.sin(a) * R, 0));
+  }
+  wheel.position.set(0, 4.6, 0);
+  wheel.name = 'miniWheel';
+  g.add(wheel);
+}
+
+function sbBeach(g) {
+  const sand = mat(0xe8d5a8), sea = mat(0x7eb6c9, {roughness: 0.3, metalness: 0.15});
+  const disk = new THREE.Mesh(new THREE.CircleGeometry(4.5, 28), sand);
+  disk.rotation.x = -Math.PI / 2;
+  disk.position.y = 0.04;
+  g.add(disk);
+  const water = new THREE.Mesh(new THREE.CircleGeometry(3.2, 28), sea);
+  water.rotation.x = -Math.PI / 2;
+  water.position.set(0, 0.06, 2.4);
+  g.add(water);
+  // 파라솔
+  [[-1.8, -0.5], [1.5, -1.0]].forEach(([x, z], i) => {
+    g.add(mesh(G.cyl, mat(0xffffff), 0.08, 1.6, 0.08, x, 0.8, z));
+    const um = mesh(G.cone, mat(i ? 0xe8734a : 0xffffff), 1.2, 0.45, 1.2, x, 1.7, z);
+    um.rotation.x = Math.PI;
+    g.add(um);
+  });
+  // 여신상 실루엣
+  g.add(mesh(G.cyl, mat(0x7a9e8e), 0.25, 1.8, 0.25, 2.8, 0.9, -1.5));
+  g.add(mesh(G.sph, mat(0x7a9e8e), 0.28, 0.28, 0.28, 2.8, 1.95, -1.5));
+  g.add(mesh(G.box, mat(0x7a9e8e), 0.15, 0.9, 0.15, 2.8, 2.4, -1.5));
+}
+
+function sbConveni(g) {
+  // 로손 블루/화이트
+  const blue = mat(0x0068b7), white = mat(0xf5f7fa);
+  g.add(mesh(G.box, white, 4.0, 2.4, 3.0, 0, 1.2, 0));
+  g.add(mesh(G.box, blue, 4.2, 0.55, 3.2, 0, 2.55, 0));
+  g.add(mesh(G.box, mat(0xffffff), 2.8, 0.25, 0.2, 0, 2.55, 1.62));
+  g.add(mesh(G.box, mat(0x9ec4e0, {metalness: 0.25}), 1.6, 1.5, 0.1, 0, 0.95, 1.52));
+  g.add(mesh(G.box, blue, 0.9, 0.35, 0.15, -1.4, 2.0, 1.55));
+}
+
+function sbRopeway(g) {
+  const steel = mat(0xd8d2c6, {metalness: 0.4, roughness: 0.5});
+  g.add(mesh(G.cyl, steel, 0.35, 6.5, 0.35, -2.5, 3.25, 0));
+  g.add(mesh(G.cyl, steel, 0.35, 5.0, 0.35, 3.0, 2.5, 1.5));
+  g.add(mesh(G.box, steel, 6.2, 0.12, 0.12, 0.25, 6.0, 0.75));
+  // 곤돌라
+  const cab = mesh(G.box, mat(0xe8734a), 1.4, 1.1, 1.0, 0.2, 5.2, 0.75);
+  g.add(cab);
+  g.add(mesh(G.box, mat(0x9ec4e0, {metalness: 0.3}), 1.1, 0.55, 0.08, 0.2, 5.35, 1.28));
+  g.add(mesh(G.box, mat(0xf0ebe3), 2.5, 1.4, 2.0, -2.5, 0.7, 0)); // 승강장
+}
+
+function sbTaxi(g) {
+  const body = mat(0xf5c542), dark = mat(0x2c3e50);
+  g.add(mesh(G.box, body, 2.6, 0.9, 1.5, 0, 0.65, 0));
+  g.add(mesh(G.box, body, 1.5, 0.7, 1.4, -0.2, 1.35, 0));
+  g.add(mesh(G.box, mat(0x7a9eb8, {metalness: 0.3}), 1.2, 0.45, 1.42, -0.15, 1.4, 0));
+  [[-0.85, 0.85], [0.85, 0.85], [-0.85, -0.85], [0.85, -0.85]].forEach(([x, z]) => {
+    g.add(mesh(G.cyl, dark, 0.28, 0.22, 0.28, x, 0.28, z));
+  });
+  g.add(mesh(G.box, mat(0xc0392b), 0.5, 0.25, 0.2, 0.2, 1.85, 0));
+}
+
+function sbAirport(g) {
+  const glass = mat(0xb8cfe0, {metalness: 0.35, roughness: 0.35});
+  g.add(mesh(G.box, mat(0xe8eef4), 6.5, 2.0, 3.2, 0, 1.0, 0));
+  g.add(mesh(G.box, glass, 6.0, 1.4, 0.15, 0, 1.2, 1.62));
+  g.add(mesh(G.box, mat(0x2c5aa0), 6.7, 0.3, 3.4, 0, 2.1, 0));
+  // 작은 비행기
+  const p = new THREE.Group();
+  const body = mesh(G.cyl, mat(0xf4f6f8), 0.25, 2.4, 0.25, 0, 0, 0);
+  body.rotation.x = Math.PI / 2;
+  p.add(body);
+  p.add(mesh(G.box, mat(0xf4f6f8), 2.8, 0.08, 0.5, 0, 0, 0));
+  p.position.set(4.5, 1.0, 0);
+  g.add(p);
+}
+
+function sbBus(g) {
+  const green = mat(0x2d6a4f), white = mat(0xf5f7fa);
+  g.add(mesh(G.box, green, 4.2, 1.8, 1.8, 0, 1.1, 0));
+  g.add(mesh(G.box, white, 3.6, 0.7, 1.7, 0.1, 2.15, 0));
+  g.add(mesh(G.box, mat(0x9ec4e0, {metalness: 0.25}), 3.2, 0.55, 0.1, 0.1, 2.15, 0.9));
+  [[-1.3, 0.75], [1.3, 0.75], [-1.3, -0.75], [1.3, -0.75]].forEach(([x, z]) => {
+    g.add(mesh(G.cyl, mat(0x2c3e50), 0.32, 0.28, 0.32, x, 0.35, z));
+  });
+  // 정류장 표지
+  g.add(mesh(G.cyl, mat(0x888780), 0.08, 2.4, 0.08, 2.8, 1.2, 0));
+  g.add(mesh(G.box, mat(0xe8734a), 0.7, 0.5, 0.12, 2.8, 2.4, 0));
+}
+
+function sbPalace(g) {
+  // 가조엔 — 붉은 기와 + 화려한 본관
+  const cream = mat(0xf3e6d0), red = mat(0xb81f1f), goldM = mat(0xd4a84b);
+  g.add(mesh(G.box, cream, 6.0, 3.0, 4.0, 0, 1.5, 0));
+  sbRoof(g, 6.8, 4.8, 3.6, 0xb81f1f);
+  g.add(mesh(G.box, goldM, 1.2, 1.8, 0.15, 0, 1.2, 2.05));
+  g.add(mesh(G.box, red, 2.5, 0.25, 1.5, 0, 0.15, 2.6));
+  [[-2.5, 2.2], [2.5, 2.2]].forEach(([x, z]) => {
+    g.add(mesh(G.cyl, mat(0x8a6a45), 0.12, 1.0, 0.12, x, 0.5, z));
+    g.add(mesh(G.ico, mat(0x6a9c5f, {flatShading: true}), 0.7, 0.85, 0.7, x, 1.3, z));
+  });
+}
+
+function sbShop(g) {
+  const wall = mat(0xf0ebe3), accent = mat(0xe8734a);
+  g.add(mesh(G.box, wall, 3.6, 3.5, 2.8, 0, 1.75, 0));
+  sbRoof(g, 3.8, 3.0, 3.8, 0xc45c3e);
+  g.add(mesh(G.box, mat(0x9ec4e0, {metalness: 0.2}), 2.4, 1.8, 0.1, 0, 1.5, 1.42));
+  g.add(mesh(G.box, accent, 2.0, 0.4, 0.15, 0, 2.7, 1.45));
+}
+
+function sbFoodBase(g, accent = 0xc0392b) {
+  g.add(mesh(G.box, mat(0xf5efe4), 3.4, 2.2, 2.8, 0, 1.1, 0));
+  sbRoof(g, 3.6, 3.0, 2.6, accent);
+  g.add(mesh(G.box, mat(0x6a6862), 1.0, 1.4, 0.1, 0, 0.7, 1.42));
+  g.add(mesh(G.box, mat(accent), 1.8, 0.35, 0.12, 0, 2.0, 1.45));
+  // 노렌 느낌
+  g.add(mesh(G.box, mat(accent, {transparent: true, opacity: 0.85}), 2.2, 0.7, 0.06, 0, 1.85, 1.48, false));
+}
+
+function sbFoodMonja(g) {
+  sbFoodBase(g, 0xc0392b);
+  // 철판
+  g.add(mesh(G.box, mat(0x4a4a48, {metalness: 0.5, roughness: 0.4}), 1.6, 0.12, 1.2, 0, 0.95, 2.2));
+  g.add(mesh(G.box, mat(0x2c2c2a), 1.8, 0.55, 0.9, 0, 0.5, 2.2));
+}
+
+function sbFoodMatcha(g) {
+  sbFoodBase(g, 0x5a8f4a);
+  g.add(mesh(G.cone, mat(0x6a9c5f), 0.45, 0.9, 0.45, 1.4, 1.5, 1.6));
+  g.add(mesh(G.cyl, mat(0xffffff), 0.35, 0.25, 0.35, 1.4, 0.95, 1.6));
+}
+
+function sbFoodYaki(g) {
+  sbFoodBase(g, 0x8b3a2a);
+  g.add(mesh(G.box, mat(0x3a3a38, {metalness: 0.4}), 1.5, 0.15, 1.0, 0, 1.0, 2.1));
+  g.add(mesh(G.sph, mat(0xffffff, {transparent: true, opacity: 0.3}), 0.4, 0.55, 0.4, 0, 1.6, 2.1, false));
+}
+
+function sbFoodRamen(g) {
+  sbFoodBase(g, 0xe8734a);
+  g.add(mesh(G.cyl, mat(0xffffff), 0.4, 0.25, 0.4, 1.2, 1.0, 1.7));
+  g.add(mesh(G.cyl, mat(0xe8d5a8), 0.32, 0.12, 0.32, 1.2, 1.15, 1.7));
+}
+
+function sbFoodSushi(g) {
+  sbFoodBase(g, 0x2c5aa0);
+  for (let i = 0; i < 3; i++) {
+    g.add(mesh(G.box, mat(0xffffff), 0.35, 0.18, 0.25, -0.5 + i * 0.5, 1.05, 2.0));
+    g.add(mesh(G.box, mat(0xe8734a), 0.35, 0.1, 0.22, -0.5 + i * 0.5, 1.18, 2.0));
+  }
+}
+
+function sbFoodHoto(g) {
+  sbFoodBase(g, 0xc9a24b);
+  g.add(mesh(G.cyl, mat(0xf5efe4), 0.45, 0.3, 0.45, 1.1, 1.0, 1.7));
+  g.add(mesh(G.cyl, mat(0xc9a24b), 0.38, 0.18, 0.38, 1.1, 1.18, 1.7));
+}
+
+function sbFood(g) { sbFoodBase(g, 0xc0392b); }
+
+const STOP_BUILD = {
+  hotel: sbHotel, onsen: sbOnsen, temple: sbTemple, park: sbPark, market: sbMarket,
+  elec: sbElec, museum: sbMuseum, amuse: sbAmuse, beach: sbBeach, conveni: sbConveni,
+  ropeway: sbRopeway, taxi: sbTaxi, airport: sbAirport, bus: sbBus, palace: sbPalace,
+  shop: sbShop, food: sbFood, foodMonja: sbFoodMonja, foodMatcha: sbFoodMatcha,
+  foodYaki: sbFoodYaki, foodRamen: sbFoodRamen, foodSushi: sbFoodSushi, foodHoto: sbFoodHoto
+};
+
+function addLodDetails(kind, near) {
+  // 가까이서만 보이는 창문·간판·소품
+  const win = mat(0x9ec4e0, {metalness: 0.25, roughness: 0.4});
+  const wood = mat(0xa67c52);
+  const ink = mat(0x3a352e);
+  const paper = mat(0xf5efe4);
+  const goldM = mat(0xd4a84b);
+  const red = mat(0xc0392b);
+
+  if (/hotel|palace|museum|elec|shop|food|onsen|temple|amuse|conveni|airport/.test(kind)) {
+    for (let row = 0; row < 3; row++) {
+      for (let col = 0; col < 3; col++) {
+        near.add(mesh(G.box, win, 0.38, 0.42, 0.06,
+          -0.95 + col * 0.95, 1.15 + row * 0.85, 1.55));
+      }
+    }
+  }
+  // 간판
+  near.add(mesh(G.box, paper, 1.6, 0.45, 0.08, 0, 2.55, 1.62));
+  near.add(mesh(G.box, red, 1.35, 0.28, 0.06, 0, 2.55, 1.68));
+  // 노렌 / 문발
+  if (/food|temple|onsen|shop|conveni/.test(kind)) {
+    [-0.55, 0, 0.55].forEach(dx => {
+      near.add(mesh(G.box, mat(kind === 'foodMatcha' ? 0x5a8f4a : 0xc0392b, {transparent: true, opacity: 0.8}),
+        0.48, 0.75, 0.04, dx, 1.55, 1.5, false));
+    });
+  }
+  // 화분·랜턴
+  near.add(mesh(G.cyl, wood, 0.22, 0.35, 0.22, -1.7, 0.2, 1.8));
+  near.add(mesh(G.ico, mat(0x6a9c5f, {flatShading: true}), 0.35, 0.4, 0.35, -1.7, 0.55, 1.8));
+  if (/temple|onsen|palace|park/.test(kind)) {
+    near.add(mesh(G.cyl, ink, 0.08, 1.4, 0.08, 1.8, 0.9, 1.6));
+    near.add(mesh(G.box, mat(0xe8734a), 0.45, 0.55, 0.45, 1.8, 1.7, 1.6));
+    near.add(mesh(G.box, goldM, 0.5, 0.08, 0.5, 1.8, 2.0, 1.6));
+  }
+  if (kind === 'park' || kind === 'beach') {
+    // 벤치·쓰레기통·안내판
+    near.add(mesh(G.box, wood, 1.5, 0.15, 0.4, 1.5, 0.5, 0.5));
+    near.add(mesh(G.box, wood, 1.5, 0.4, 0.1, 1.5, 0.75, 0.3));
+    near.add(mesh(G.cyl, ink, 0.07, 1.5, 0.07, -1.8, 0.75, -0.5));
+    near.add(mesh(G.box, paper, 0.7, 0.5, 0.06, -1.8, 1.6, -0.5));
+  }
+  if (kind === 'elec') {
+    const neon = [0xe74c3c, 0xf1c40f, 0x3498db];
+    for (let i = 0; i < 5; i++) {
+      near.add(mesh(G.box, mat(neon[i % 3], {emissive: neon[i % 3], emissiveIntensity: 0.5}),
+        0.9, 0.22, 0.08, -1.5 + (i % 3) * 1.5, 2.2 + Math.floor(i / 3) * 0.8, 1.0));
+    }
+  }
+  if (kind === 'market') {
+    for (let i = 0; i < 4; i++) {
+      near.add(mesh(G.box, mat(0xe8734a), 0.35, 0.35, 0.35, -1.8 + i * 1.15, 0.55, 1.5));
+      near.add(mesh(G.sph, mat(0xf4d35e), 0.18, 0.18, 0.18, -1.8 + i * 1.15, 0.85, 1.5));
+    }
+  }
+  if (/foodYaki|foodMonja|foodRamen|foodSushi|foodHoto|foodMatcha|food/.test(kind)) {
+    near.add(mesh(G.cyl, mat(0xffffff), 0.12, 0.9, 0.12, 1.55, 1.6, 1.3));
+    near.add(mesh(G.box, mat(0xc0392b), 0.55, 0.35, 0.08, 1.55, 2.15, 1.3));
+  }
+}
+
+function addStopBuilding(stop, p, kindOverride, scale = 1, ui = 0) {
+  const kind = kindOverride || inferStopKind(stop);
+  const fn = STOP_BUILD[kind] || sbShop;
+  const g = new THREE.Group();
+  fn(g);
+  const near = new THREE.Group();
+  near.name = 'lodNear';
+  near.visible = false;
+  addLodDetails(kind, near);
+  g.add(near);
+  g.userData.lodNear = near;   // 매 프레임 getObjectByName 으로 훑지 않도록 캐싱
+  g.scale.setScalar(scale);
+  // 핀이 앞쪽에 오도록 건물 살짝 뒤로
+  g.position.set(p.x, 0, p.z - 1.6 * scale);
+  g.rotation.y = rnd(-0.15, 0.15);
+  g.userData.stopKind = kind;
+  g.userData.stopBuilding = true;
+  g.userData.ci = ui;
+  world.add(g);
+  stopBuildings.push(g);
+  shadowSpots.push([g.position.x, g.position.z, 2.6 * scale]);
+  return kind;
+}
+
+/* ---- 마커(핀 + 칩) ----
+ * tier: 같은 지점(클러스터)에 묶인 스팟의 순번. 라벨을 층층이 띄워 겹치지 않게 한다. */
+function addMarker(stop, i, p, tier = 0) {
+  const g = new THREE.Group();
+  const col = stop.eat ? 0xc0392b : 0xe8734a;
+  const pin = new THREE.Group();
+  const head = mesh(G.sph, mat(col, {roughness: 0.55}), 0.55, 0.55, 0.55, 0, 2.15, 0);
+  const tip = mesh(G.cone, mat(col, {roughness: 0.55}), 0.34, 1.0, 0.34, 0, 1.35, 0);
+  tip.rotation.x = Math.PI;
+  pin.add(head, tip);
+  pin.name = 'pin';
+  g.add(pin);
+  const disc = new THREE.Mesh(new THREE.CircleGeometry(1.15, 26),
+    new THREE.MeshBasicMaterial({color: col, transparent: true, opacity: 0.22, depthWrite: false}));
+  disc.rotation.x = -Math.PI / 2;
+  disc.position.y = 0.08;
+  g.add(disc);
+
+  const el = document.createElement('div');
+  el.className = 'pinChip' + (stop.eat ? ' eat' : '');
+  el.innerHTML = `<span class="no">${i + 1}</span>${stop.name}`;
+  el.addEventListener('click', e => { e.stopPropagation(); selectStop(i, true); });
+  el.addEventListener('dblclick', e => {
+    e.stopPropagation();
+    e.preventDefault();
+    enterCloseUp(i);
+  });
+  const lbl = new CSS2DObject(el);
+  lbl.position.set(0, 3.1 + tier * 1.5, 0);
+  g.add(lbl);
+
+  g.position.copy(p);
+  world.add(g);
+  markers.push({group: g, chipEl: el, label: lbl, stop, idx: i, pos: p.clone(), pin, tier});
+}
+
+function buildDiorama(day) {
+  disposeWorld();
+  applyLight(lightOverride || day.light);
+
+  const layout = layoutDay(dayIdx);
+  const { stopPts, unitPts, units, unitOf, mag, bScale, lmScale } = layout;
+  dayLayout = layout;
+
+  // ---- 한 장의 땅 ----
+  // 조각을 섬으로 떼어놓지 않는다. 하나로 이어진 대지 위에 지도 무늬를 얹고,
+  // 조각 사이는 연한 언덕·숲으로 메운다 (그 사이 땅은 실측이 아니고, 그건 미니맵의 압축률 표기가 말해 준다).
+  const landR = Math.max(
+    ...unitPts.map((p, i) => Math.hypot(p.x, p.z) + (units[i].r * mag)),
+    layout.lmPt ? Math.hypot(layout.lmPt.x, layout.lmPt.z) + 18 : 0
+  ) + 10;
+  // 정원(正圓)이면 접시 위에 올려놓은 것처럼 보인다. 굴곡을 줘서 해안선처럼 만든다.
+  // 일차마다 고정된 모양이 나오도록 시드를 쓴다 (다시 지어도 흔들리지 않는다).
+  const landShape = (R, seed) => {
+    let s = seed * 9301 + 49297;
+    const rr = () => ((s = (s * 9301 + 49297) % 233280) / 233280);
+    const p1 = rr() * 6.28, p2 = rr() * 6.28, p3 = rr() * 6.28;
+    const shape = new THREE.Shape();
+    const N = 128;
+    for (let i = 0; i <= N; i++) {
+      const a = (i / N) * Math.PI * 2;
+      const k = 1
+        + 0.20 * Math.sin(a * 2 + p1)
+        + 0.11 * Math.sin(a * 3 + p2)
+        + 0.06 * Math.sin(a * 5 + p3);
+      const x = Math.cos(a) * R * k, y = Math.sin(a) * R * k;
+      if (i === 0) shape.moveTo(x, y); else shape.lineTo(x, y);
+    }
+    shape.closePath();
+    const g = new THREE.ShapeGeometry(shape, 12);
+    g.rotateX(-Math.PI / 2);
+    return g;
+  };
+
+  // 물가 — 땅보다 조금 크게 깔아 가장자리가 뚝 끊기지 않게 한다
+  const shore = new THREE.Mesh(landShape(landR * 1.09, dayIdx + 7), mat(0xc9d3b4));
+  shore.position.y = -0.06;
+  shore.userData.land = true;
+  world.add(shore);
+
+  const land = new THREE.Mesh(landShape(landR, dayIdx + 1), mat(0xd3dab6));
+  land.receiveShadow = true;
+  land.userData.land = true;
+  world.add(land);
+
+  // 완만한 지형 결 — 톤이 살짝 다른 넓은 원판 몇 장 (레퍼런스의 언덕 느낌)
+  for (let i = 0; i < 14; i++) {
+    const a = rnd(0, Math.PI * 2), d = rnd(0.25, 0.95) * landR;
+    const hill = new THREE.Mesh(new THREE.CircleGeometry(rnd(landR * 0.14, landR * 0.3), 32),
+      mat(pick([0xcbd3ad, 0xdae0c2, 0xc5cea6])));
+    hill.rotation.x = -Math.PI / 2;
+    hill.position.set(Math.cos(a) * d, 0.012 + i * 0.001, Math.sin(a) * d);
+    hill.userData.fill = true;
+    world.add(hill);
+  }
+
+  // ---- 실제 지도 무늬를 그 위에 얹는다 ----
+  units.forEach((u, ui) => {
+    const data = u.id ? TILE_CACHE.get(u.id) : null;
+    const p = unitPts[ui];
+    const r = Math.max(4, u.r * mag);
+    let g;
+    if (data) {
+      g = buildTile(data, { mag, roadMul: 3.2 });
+    } else {
+      // 조각 데이터가 없으면 그냥 땅에 맡긴다 (연한 녹지 한 장만)
+      g = new THREE.Group();
+      const disk = new THREE.Mesh(new THREE.CircleGeometry(r * 0.8, 36), mat(0xd2dcb6));
+      disk.rotation.x = -Math.PI / 2;
+      disk.position.y = 0.03;
+      g.add(disk);
+      g.userData.radius = r;
+    }
+    g.position.copy(p);
+    g.position.y = 0.02;
+    g.userData.ci = ui;          // 클로즈업 격리에서 이 유닛의 것으로 취급
+    world.add(g);
+    u.group = g;
+    u.drawnR = g.userData.radius ?? r;
+  });
+
+  // 산책로는 조각 중심을 방문 순서대로 잇는다 (같은 조각 왕복은 한 점으로)
+  const routePts = [];
+  day.stops.forEach((s, i) => {
+    const ui = unitOf[i];
+    if (routePts.length === 0 || routePts[routePts.length - 1].ui !== ui) {
+      routePts.push({ ui, p: unitPts[ui] });
+    }
+  });
+  roadCurve = buildRoad(routePts.length >= 2 ? routePts.map(r => r.p) : stopPts);
+
+  const theme = day.theme || 'asakusa';
+  const isFuji = day.landmark === 'fuji';
+  const isOdaiba = theme === 'odaiba';
+
+  // 랜드마크: 실제 위경도를 스팟과 같은 투영에 태운다 (더 이상 추정하지 않는다)
+  landmarkGroup = new THREE.Group();
+  LM[day.landmark](landmarkGroup);
+  const lmPos = layout.lmPt ? layout.lmPt.clone() : new THREE.Vector3(0, 0, -(day.layoutSpan ?? 50) * 0.5);
+  const lmClear = isFuji ? 26 : 16;
+  landmarkGroup.position.copy(lmPos);
+  // 조각 위에 서므로 조각 축척을 따라간다 (layoutDay 에서 이미 계산했다)
+  landmarkGroup.scale.setScalar(lmScale);
+  landmarkGroup.userData.ci = layout.lmUnit;
+  world.add(landmarkGroup);
+  const lmEl = document.createElement('div');
+  lmEl.className = 'lmChip';
+  lmEl.textContent = day.lmName;
+  const lmLbl = new CSS2DObject(lmEl);
+  const labelY = ({ pagoda: 16, wheel: 18, tower: 24, fuji: 14, plane: 8 })[day.landmark] || 14;
+  lmLbl.position.set(0, labelY * 1.05, 0);   // 그룹 스케일이 적용되므로 모형 높이 기준 그대로
+  landmarkGroup.add(lmLbl);
+  lmLabel = lmLbl;
+
+  // ---- 스팟 건물: 조각 위 '실제 위치'에 얹는다 ----
+  units.forEach((u, ui) => {
+    if (!u.members.length) return;
+    // 묶인 스팟 중 '큰' 종류를 대표로 — 미술관+식당이면 미술관이 이긴다
+    const kinds = u.members.map(m => inferStopKind(day.stops[m]));
+    const big = kinds.find(k => /park|beach|temple|elec|museum|palace|onsen|airport|amuse/.test(k));
+    u.members.forEach((m, k) => {
+      // 조각이 있으면 스팟마다 제 자리에, 없으면 대표 하나만
+      if (!u.id && k > 0) return;
+      addStopBuilding(day.stops[m], stopPts[m],
+        u.id ? inferStopKind(day.stops[m]) : (big || kinds[0]), bScale, ui);
+    });
+  });
+
+  // ---- 배경 채움: 조각 위 도로에서 떨어진 빈 자리에만 ----
+  const skyChance = theme === 'odaiba' || theme === 'roppongi' ? 0.16 : 0.03;
+  units.forEach((u, ui) => {
+    const data = u.id ? TILE_CACHE.get(u.id) : null;
+    const p = unitPts[ui];
+    if (!data) return;
+    const spots = freeSpots(data, { mag, clearM: 24, stepM: 52 });
+    const taken = u.members.map(m => stopPts[m]);
+    for (const [sx, sz] of spots) {
+      const x = p.x + sx, z = p.z + sz;
+      if (taken.some(t => Math.hypot(t.x - x, t.z - z) < 4.5)) continue;
+      if (layout.lmPt && Math.hypot(layout.lmPt.x - x, layout.lmPt.z - z) < (isFuji ? 26 : 13)) continue;
+      const roll = Math.random();
+      if (roll < 0.55) addGlbBuilding(x, z, Math.random() < skyChance, theme, bScale);
+      else if (roll < 0.82) addTree(x, z, rnd(0.5, 0.9) * bScale * 2.2);
+    }
+  });
+
+  // 사람들
+  for (let i = 0; i < 16; i++) addPerson(roadCurve);
+
+  // 구름
+  for (let i = 0; i < 6; i++) {
+    const c = new THREE.Group();
+    const n = 3 + (Math.random() * 3 | 0);
+    for (let k = 0; k < n; k++) {
+      c.add(mesh(G.sph, mat(0xffffff, {roughness: 1}), rnd(1.6, 2.8), rnd(1, 1.5), rnd(1.4, 2.2),
+        k * rnd(1.4, 2.2) - n, rnd(-0.3, 0.3), rnd(-0.6, 0.6), false));
+    }
+    c.position.set(rnd(-50, 50), rnd(24, 34), rnd(-50, 50));
+    c.name = 'cloud';
+    c.userData.spd = rnd(0.3, 0.8);
+    world.add(c);
+    clouds.push(c);
+  }
+
+  // 회전 장식 수집 (대관람차 · 미니 관람차)
+  const lmWheelObj = landmarkGroup.getObjectByName('wheelSpin');
+  if (lmWheelObj) spinners.push({ o: lmWheelObj, spd: 0.25 });
+  stopBuildings.forEach(g => {
+    const mw = g.getObjectByName('miniWheel');
+    if (mw) spinners.push({ o: mw, spd: 0.6 });
+  });
+
+  // 접지 그림자를 한 덩어리로 (건물·나무마다 모아 둔 자리)
+  if (shadowSpots.length) {
+    const geo = new THREE.PlaneGeometry(1, 1);
+    geo.rotateX(-Math.PI / 2);
+    const im = new THREE.InstancedMesh(geo,
+      new THREE.MeshBasicMaterial({
+        map: SHADOW_TEX, transparent: true, depthWrite: false, opacity: shadowLevel
+      }), shadowSpots.length);
+    const mtx = new THREE.Matrix4();
+    shadowSpots.forEach(([x, z, r], i) => {
+      mtx.makeScale(r * 2, 1, r * 2);
+      mtx.setPosition(x, 0.16, z);
+      im.setMatrixAt(i, mtx);
+    });
+    im.instanceMatrix.needsUpdate = true;
+    im.renderOrder = 2;
+    im.userData.fill = true;
+    world.add(im);
+    shadowMesh = im;
+  }
+
+  // 마커 — 좌표는 실측 그대로. 조각이 없어 같은 자리에 겹치는 경우만 라벨을 층으로 띄운다.
+  stopCi = unitOf.slice();
+  day.stops.forEach((s, i) => {
+    const u = units[unitOf[i]];
+    const tier = (!u.id && u.members.length > 1) ? u.members.indexOf(i) : 0;
+    addMarker(s, i, stopPts[i].clone(), tier);
+  });
+}
+
+/* ============ 카메라 ============ */
+// 세로 화면에서는 하루 전체를 담으려면 0.5 로는 부족하다 (fitZoomForDay 가 바닥에 걸려 화면 밖으로 넘쳤다)
+const ZOOM_MIN = 0.25;
+const ZOOM_MAX = 5.0;
+const ZOOM_OVERVIEW = 0.68;
+const ZOOM_SPOT = 2.05;
+const ZOOM_CLOSE = 3.6;
+const LOD_ZOOM = 1.55;
+
+const cam = {
+  az: Math.PI * 0.28, el: 0.62,
+  zoom: ZOOM_OVERVIEW, zoomTarget: ZOOM_OVERVIEW,
+  focus: new THREE.Vector3(), focusTarget: new THREE.Vector3()
+};
+let viewMode = 'day'; // day | spot | close
+let zoomBadgeTimer = 0;
+let sheetShownPx = 84;   // 화면에 실제로 보이는 시트 높이 (애니메이션 추종값)
+
+// NaN 이 한 번 들어오면 프로젝션 행렬이 영영 복구되지 않는다. 여기서 막는다.
+function clampZoom(z) {
+  return Number.isFinite(z) ? Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z)) : ZOOM_OVERVIEW;
+}
+
+function setZoomTarget(z, showBadge = true) {
+  cam.zoomTarget = clampZoom(z);
+  if (showBadge) flashZoomBadge();
+}
+
+function flashZoomBadge() {
+  const el = document.getElementById('zoomBadge');
+  if (!el) return;
+  el.textContent = `×${cam.zoomTarget.toFixed(1)}`;
+  el.classList.add('show');
+  zoomBadgeTimer = 1.4;
+}
+
+/* UI 에 가려지지 않는 영역 — 카메라는 이 사각형 안에 하루를 담는다.
+ * 모바일에서는 시트 높이(--sh)를 따라 실시간으로 줄었다 늘었다 한다. */
+/* useTarget=true 면 시트가 다 열렸을 때 기준으로 계산한다.
+ * 줌 맞추기는 최종 상태를 봐야 하고, 화면 중심 이동은 애니메이션을 따라가야 한다. */
+function safeRect(useTarget = false) {
+  // 숨겨진 탭·복원 직후에는 innerWidth 가 0 으로 올 수 있다.
+  // 그대로 두면 카메라 행렬이 NaN 이 되고 다시는 복구되지 않는다.
+  const W = Math.max(innerWidth || 0, 320);
+  const H = Math.max(innerHeight || 0, 320);
+  if (W <= 900) {
+    const top = 68;                       // 압축된 헤드 카드
+    // 시트가 열리고 닫히는 동안 카메라가 뚝 끊기지 않도록 부드럽게 따라간 값을 쓴다
+    const bottom = H - ((useTarget ? sheetPx() : sheetShownPx) + 54 + 16);
+    return { x0: 12, x1: W - 12, y0: top, y1: Math.max(top + 80, bottom), W, H };
+  }
+  // 데스크톱: 우측 패널 / 하단 페이저를 피한다
+  return { x0: 24, x1: Math.max(W * 0.35, W - 372), y0: 24, y1: H - 92, W, H };
+}
+
+/* 안전영역의 중심을 화면 중심 대신 쓰기 위한 NDC 오프셋.
+ * ortho 프러스텀을 비대칭으로 만들어 focus 가 안전영역 한가운데 오게 한다. */
+function frustumOffset(useTarget = false) {
+  const r = safeRect(useTarget);
+  return {
+    sx: ((r.x0 + r.x1) / 2 / r.W) * 2 - 1,
+    sy: 1 - ((r.y0 + r.y1) / 2 / r.H) * 2,
+    // 안전영역이 화면에서 차지하는 비율 (NDC 반폭/반높이)
+    hw: (r.x1 - r.x0) / r.W,
+    hh: (r.y1 - r.y0) / r.H
+  };
+}
+
+function updateCamera() {
+  const d = 90;
+  const y = Math.sin(cam.el) * d;
+  const r = Math.cos(cam.el) * d;
+  camera.position.set(
+    cam.focus.x + Math.cos(cam.az) * r,
+    y,
+    cam.focus.z + Math.sin(cam.az) * r
+  );
+  camera.lookAt(cam.focus.x, 0, cam.focus.z);
+
+  // 비대칭 프러스텀: focus 가 NDC (sx, sy) 에 오도록.
+  // three 는 zoom 을 프러스텀 중심 기준으로 나누므로 오프셋도 zoom 으로 나눠 둔다.
+  const { sx, sy } = frustumOffset();
+  const hw = viewSize * AR(), hh = viewSize, z = cam.zoom;
+  camera.left = -hw - sx * hw / z;
+  camera.right = hw - sx * hw / z;
+  camera.top = hh - sy * hh / z;
+  camera.bottom = -hh - sy * hh / z;
+  camera.zoom = z;
+  camera.updateProjectionMatrix();
+}
+
+/* 랜드마크 모형의 대략적인 크기 (반지름, 높이) — 프레이밍 계산용 */
+const LM_SIZE = {
+  pagoda: [9, 16], wheel: [11, 18], tower: [8, 26], fuji: [22, 15], plane: [10, 8]
+};
+
+/* 하루 전체가 안전영역에 들어오는 줌 — 세로 화면에서도, 높은 랜드마크도 안 잘리게 */
+function fitZoomForDay() {
+  if (!dayLayout) return ZOOM_OVERVIEW;
+  const day = DAYS[dayIdx];
+  // 각 조각을 '덩어리'로 본다: 실제 그려진 반지름과 위로 솟은 높이
+  const blobs = dayLayout.unitPts.map((p, i) => ({
+    p,
+    r: dayLayout.units[i].drawnR ?? Math.max(4, dayLayout.units[i].r * dayLayout.mag),
+    h: 5
+  }));
+  if (dayLayout.lmPt) {
+    const [lr, lh] = LM_SIZE[day.landmark] || [10, 16];
+    const s = dayLayout.lmScale ?? 1;
+    blobs.push({ p: dayLayout.lmPt, r: lr * s, h: lh * s });
+  }
+  if (!blobs.length) return ZOOM_OVERVIEW;
+
+  // 카메라 화면축으로 투영. 높이는 화면 위쪽으로 cos(el) 만큼 솟는다.
+  const right = new THREE.Vector3(-Math.sin(cam.az), 0, Math.cos(cam.az));
+  const upXZ = new THREE.Vector3(-Math.cos(cam.az), 0, -Math.sin(cam.az)).multiplyScalar(Math.sin(cam.el));
+  const hRise = Math.cos(cam.el);
+  let ex = 0, ey = 0;
+  for (const b of blobs) {
+    const sx = b.p.x * right.x + b.p.z * right.z;
+    const sy = b.p.x * upXZ.x + b.p.z * upXZ.z;
+    ex = Math.max(ex, Math.abs(sx) + b.r);
+    ey = Math.max(ey, Math.abs(sy) + b.r, Math.abs(sy) + b.h * hRise);
+  }
+
+  const { hw, hh } = frustumOffset(true);   // 시트가 다 열린 상태 기준
+  const zx = (hw * viewSize * AR()) / Math.max(ex, 1);
+  const zy = (hh * viewSize) / Math.max(ey, 1);
+  return clampZoom(Math.min(zx, zy) * 0.9);   // 라벨 칩이 얹힐 여유
+}
+
+function applyIsolation() {
+  const close = viewMode === 'close';
+  const selCi = stopCi[selIdx] ?? -1;
+  stopBuildings.forEach(g => {
+    g.visible = !close || g.userData.ci === selCi;
+  });
+  markers.forEach((m, i) => {
+    const on = !close || i === selIdx;
+    m.group.visible = on;
+    // CSS2DObject 는 부모 group 의 visible 을 따르지 않는다. 라벨은 직접 꺼야 한다.
+    if (m.label) m.label.visible = on;
+    m.chipEl.style.opacity = (!close && i !== selIdx) ? '0.85' : '1';
+  });
+  world.children.forEach(c => {
+    if (c.userData.fill) c.visible = !close;
+    if (c.name === 'cloud') c.visible = !close;
+    if (c.userData.ci !== undefined) c.visible = !close || c.userData.ci === selCi;
+  });
+  if (landmarkGroup) landmarkGroup.visible = !close;
+  if (lmLabel) lmLabel.visible = !close;
+  peoples.forEach(p => { p.g.visible = !close; });
+  const btn = document.getElementById('pCloseup');
+  if (btn) {
+    btn.classList.toggle('on', close);
+    btn.textContent = close ? '클로즈업 중' : '여기만 보기';
+  }
+}
+
+function enterCloseUp(i = selIdx) {
+  viewMode = 'close';
+  selectStop(i, true, { zoom: ZOOM_CLOSE, mode: 'close' });
+  applyIsolation();
+}
+
+function exitCloseUp(toSpot = true) {
+  viewMode = toSpot ? 'spot' : 'day';
+  applyIsolation();
+  if (toSpot && markers[selIdx]) {
+    cam.focusTarget.copy(markers[selIdx].pos);
+    setZoomTarget(ZOOM_SPOT);
+  } else {
+    cam.focusTarget.set(0, 0, 0);
+    setZoomTarget(fitZoomForDay());
+  }
+}
+
+function updateLod() {
+  const showNear = cam.zoom >= LOD_ZOOM || viewMode === 'close';
+  const selCi = stopCi[selIdx] ?? -1;
+  stopBuildings.forEach(g => {
+    const near = g.userData.lodNear;
+    if (!near) return;
+    const ci = g.userData.ci;
+    const dist = Math.hypot(g.position.x - cam.focus.x, g.position.z - cam.focus.z);
+    near.visible = showNear && (viewMode === 'close' ? ci === selCi : dist < 18 || ci === selCi);
+  });
+  if (landmarkGroup) {
+    let lmNear = landmarkGroup.getObjectByName('lodNear');
+    if (!lmNear) {
+      lmNear = new THREE.Group();
+      lmNear.name = 'lodNear';
+      // 랜드마크용 간단 디테일
+      for (let i = 0; i < 6; i++) {
+        lmNear.add(mesh(G.box, mat(0x9ec4e0, {metalness: 0.2}), 0.5, 0.4, 0.08,
+          -2 + (i % 3) * 2, 2 + Math.floor(i / 3) * 2.2, 3.5));
+      }
+      landmarkGroup.add(lmNear);
+    }
+    lmNear.visible = cam.zoom >= LOD_ZOOM;
+  }
+}
+
+let dragging = false, moved = 0, px = 0, py = 0;
+const pointers = new Map();
+let pinchDist0 = 0, pinchZoom0 = 1;
+
+sceneEl.addEventListener('pointerdown', e => {
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size === 1) {
+    dragging = true; moved = 0; px = e.clientX; py = e.clientY;
+  } else if (pointers.size === 2) {
+    dragging = false;
+    const [a, b] = [...pointers.values()];
+    pinchDist0 = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+    pinchZoom0 = cam.zoomTarget;
+  }
+  try { sceneEl.setPointerCapture(e.pointerId); } catch (_) {}
+});
+sceneEl.addEventListener('pointerup', e => {
+  pointers.delete(e.pointerId);
+  if (pointers.size < 2) pinchDist0 = 0;
+  if (pointers.size === 0) dragging = false;
+});
+sceneEl.addEventListener('pointercancel', e => {
+  pointers.delete(e.pointerId);
+  if (pointers.size === 0) dragging = false;
+  pinchDist0 = 0;
+});
+sceneEl.addEventListener('pointermove', e => {
+  if (!pointers.has(e.pointerId)) return;
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size === 2 && pinchDist0 > 0) {
+    const [a, b] = [...pointers.values()];
+    const d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+    setZoomTarget(pinchZoom0 * (d / pinchDist0), false);
+    flashZoomBadge();
+    return;
+  }
+  if (!dragging) return;
+  const dx = e.clientX - px, dy = e.clientY - py;
+  moved += Math.abs(dx) + Math.abs(dy);
+  px = e.clientX; py = e.clientY;
+  cam.az -= dx * 0.005;
+  cam.el = Math.max(0.3, Math.min(1.15, cam.el + dy * 0.004));
+});
+sceneEl.addEventListener('dblclick', e => {
+  if (e.target.closest?.('.pinChip, #panel, #head, #pager, #mini, #alts, #hint')) return;
+  if (viewMode === 'close') exitCloseUp(true);
+  else enterCloseUp(selIdx);
+});
+sceneEl.addEventListener('wheel', e => {
+  e.preventDefault();
+  setZoomTarget(cam.zoomTarget * (1 - e.deltaY * 0.00115));
+  if (viewMode === 'day' && cam.zoomTarget >= ZOOM_SPOT * 0.85) viewMode = 'spot';
+  if (viewMode === 'close' && cam.zoomTarget < ZOOM_SPOT * 0.9) exitCloseUp(true);
+}, {passive: false});
+
+/* ============ 모바일 하단 시트 (peek / half / full) ============ */
+const panelEl = document.getElementById('panel');
+const grabEl = document.getElementById('grab');
+const MOBILE_MQ = matchMedia('(max-width:900px)');   // 매 프레임 matchMedia() 를 새로 만들지 않는다
+const isMobile = () => MOBILE_MQ.matches;
+let sheetState = 'peek';
+
+/** 현재(또는 지정한) 시트 상태의 실제 높이(px) */
+function sheetPx(state = sheetState) {
+  if (!isMobile()) return 0;
+  const inline = document.body.style.getPropertyValue('--sh');
+  if (state === sheetState && inline) return parseFloat(inline);
+  if (state === 'half') return innerHeight * 0.44;
+  if (state === 'full') return innerHeight * 0.78;
+  return 84;
+}
+
+function setSheet(state) {
+  if (!isMobile()) return;
+  sheetState = state;
+  document.body.classList.toggle('sheet-half', state === 'half');
+  document.body.classList.toggle('sheet-full', state === 'full');
+  // 시트가 커지면 지도에 남는 자리가 줄어든다 — 하루 전체 보기 중이면 다시 맞춘다
+  if (viewMode === 'day') setZoomTarget(fitZoomForDay(), false);
+}
+
+let sDrag = null;
+grabEl.addEventListener('pointerdown', e => {
+  if (!isMobile()) return;
+  sDrag = { y: e.clientY, from: sheetPx(), moved: 0 };
+  panelEl.style.transition = 'none';
+  try { grabEl.setPointerCapture(e.pointerId); } catch (_) {}
+});
+grabEl.addEventListener('pointermove', e => {
+  if (!sDrag) return;
+  const dy = e.clientY - sDrag.y;            // 위로 끌면 dy < 0 → 시트가 커진다
+  sDrag.moved = Math.max(sDrag.moved, Math.abs(dy));
+  const h = Math.max(60, Math.min(innerHeight * 0.78, sDrag.from - dy));
+  document.body.style.setProperty('--sh', h + 'px');
+});
+function endSheetDrag() {
+  if (!sDrag) return;
+  const cur = sheetPx();
+  panelEl.style.transition = '';
+  document.body.style.removeProperty('--sh');
+  if (sDrag.moved < 6) {
+    setSheet(sheetState === 'peek' ? 'half' : 'peek');   // 탭 = 토글
+  } else {
+    const snap = ['peek', 'half', 'full']
+      .map(s => [s, sheetPx(s)])
+      .sort((a, b) => Math.abs(a[1] - cur) - Math.abs(b[1] - cur))[0][0];
+    setSheet(snap);
+  }
+  sDrag = null;
+}
+grabEl.addEventListener('pointerup', endSheetDrag);
+grabEl.addEventListener('pointercancel', endSheetDrag);
+
+/* ============ UI ============ */
+let dayIdx = 1, selIdx = 0;
+let panelTab = 'info';
+
+document.querySelectorAll('#panel .tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    panelTab = tab.dataset.pane;
+    document.querySelectorAll('#panel .tab').forEach(t => t.classList.toggle('on', t === tab));
+    document.getElementById('paneInfo').classList.toggle('on', panelTab === 'info');
+    document.getElementById('paneSched').classList.toggle('on', panelTab === 'sched');
+  });
+});
+
+document.getElementById('pCloseup').addEventListener('click', () => {
+  if (viewMode === 'close') exitCloseUp(true);
+  else enterCloseUp(selIdx);
+});
+document.getElementById('pOverview').addEventListener('click', () => {
+  viewMode = 'day';
+  applyIsolation();
+  cam.focusTarget.set(0, 0, 0);
+  setZoomTarget(fitZoomForDay());
+});
+
+/* 시간대 선택 — 고른 값은 일차를 바꿔도 유지된다. '자동'이면 일정 시각을 따라간다. */
+document.querySelectorAll('#timeBar button').forEach(b => {
+  b.addEventListener('click', () => {
+    lightOverride = b.dataset.light || null;
+    document.querySelectorAll('#timeBar button').forEach(o => o.classList.toggle('on', o === b));
+    applyLight(lightOverride || DAYS[dayIdx].light);
+  });
+});
+
+const pager = document.getElementById('pager');
+DAYS.forEach((d, i) => {
+  const b = document.createElement('button');
+  b.className = 'pbtn';
+  b.textContent = d.no;
+  b.onclick = () => loadDay(i);
+  pager.appendChild(b);
+});
+const sep = document.createElement('div');
+sep.className = 'sep';
+pager.appendChild(sep);
+const plbl = document.createElement('div');
+plbl.className = 'lbl';
+pager.appendChild(plbl);
+
+function mapsUrl(s) {
+  const q = encodeURIComponent(`${s.lat},${s.lng}`);
+  const isiOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  return isiOS
+    ? `https://maps.apple.com/?daddr=${q}&dirflg=w`
+    : `https://www.google.com/maps/dir/?api=1&destination=${q}&travelmode=walking`;
+}
+
+function selectStop(i, focusCam = false, opts = {}) {
+  selIdx = i;
+  const day = DAYS[dayIdx];
+  const s = day.stops[i];
+  document.getElementById('pNo').textContent = s.stay
+    ? `STAY / ${day.region.split('·')[0].trim()}`
+    : `PLACE ${String(i + 1).padStart(2, '0')} / ${day.region.split('·')[0].trim()}`;
+  document.getElementById('pName').textContent = s.name;
+  document.getElementById('pTime').textContent = s.time + ' 예정';
+  document.getElementById('peekTime').textContent = s.time;
+  document.getElementById('peekName').textContent = s.name;
+  document.getElementById('pDist').textContent = i === 0
+    ? '오늘의 시작'
+    : `이전에서 ${haversineKm(day.stops[i - 1], s).toFixed(1)}km`;
+  document.getElementById('pTag').style.display = s.eat ? '' : 'none';
+  document.getElementById('pWhy').textContent = s.why || s.note || '';
+  document.getElementById('pSee').textContent = s.see || s.note || '';
+  const via = document.getElementById('pVia');
+  if (s.via) { via.innerHTML = `<b>이동</b> · ${s.via}`; via.hidden = false; }
+  else { via.hidden = true; }
+  const maps = document.getElementById('pMaps');
+  maps.href = mapsUrl(s);
+  maps.hidden = false;
+  const q = encodeURIComponent(s.name + ' 도쿄');
+  document.getElementById('pGuide').href = `https://www.google.com/search?q=${q}`;
+  document.getElementById('pMapsText').href = mapsUrl(s);
+  document.querySelectorAll('#pList .row').forEach((r, k) => r.classList.toggle('sel', k === i));
+  document.querySelectorAll('#chips .chip').forEach((c, k) => c.classList.toggle('sel', k === i));
+  markers.forEach((m, k) => m.chipEl.classList.toggle('sel', k === i));
+  const selCi = stopCi[i];
+  document.querySelectorAll('#miniSvg .mdot').forEach(c => {
+    const cis = c.dataset.cis.split(',').map(Number);
+    const members = cis.flatMap(ci => dayLayout?.clusters[ci]?.members || []);
+    const multi = members.length > 1;
+    const on = cis.includes(selCi);
+    const anyEat = members.some(m => day.stops[m]?.eat);
+    c.setAttribute('fill', on ? '#3a352e' : (anyEat ? '#c0392b' : '#e8734a'));
+    c.setAttribute('r', (multi ? 9 : 6.5) + (on ? 1.5 : 0));
+  });
+  if (focusCam && markers[i]) {
+    cam.focusTarget.copy(markers[i].pos);
+    // 모바일: 스팟을 고르면 설명이 보여야 하지만, 지도를 다 덮지는 않는다
+    if (isMobile() && sheetState === 'peek') setSheet('half');
+    if (opts.mode === 'close') viewMode = 'close';
+    else if (viewMode === 'close') {
+      // 클로즈업 중 다른 스팟으로 이동하면 그 스팟만 유지
+      applyIsolation();
+    } else {
+      viewMode = 'spot';
+    }
+    setZoomTarget(opts.zoom ?? (viewMode === 'close' ? ZOOM_CLOSE : ZOOM_SPOT));
+    if (viewMode === 'close') applyIsolation();
+  }
+}
+
+/* 실측 미니맵 — 디오라마와 같은 projectDay() 결과를 쓴다.
+ * 다른 점은 압축을 안 한다는 것뿐: 여기가 '진짜 비율', 디오라마는 '같은 방위, 눌린 반경'. */
+function buildMinimap(di) {
+  const day = DAYS[di];
+  const proj = projectDay(day);
+  const cp = proj.clusters.map(c => ({ x: c.km.x, y: c.km.z }));
+  const xs = cp.map(p => p.x), ys = cp.map(p => p.y);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  const spanX = Math.max(maxX - minX, 0.001), spanY = Math.max(maxY - minY, 0.001);
+  const W = 168, H = 118, pad = 18;
+  const sc = Math.min((W - pad * 2) / spanX, (H - pad * 2) / spanY);
+  const ox = (W - spanX * sc) / 2, oy = (H - spanY * sc) / 2;
+  const P = cp.map(p => ({ x: ox + (p.x - minX) * sc, y: oy + (p.y - minY) * sc }));
+
+  // 경로는 방문 순서대로 클러스터를 잇는다 (같은 지점 연속 방문은 한 점)
+  const order = [];
+  proj.stops.forEach(s => { if (order[order.length - 1] !== s.ci) order.push(s.ci); });
+
+  // 실축척이라 가까운 스팟은 화면에서 겹친다. 좌표는 그대로 두고 표시만 묶는다.
+  const groups = [];
+  proj.clusters.forEach((cl, ci) => {
+    const p = P[ci];
+    const g = groups.find(q => Math.hypot(q.x - p.x, q.y - p.y) < 13);
+    if (g) { g.cis.push(ci); g.stops.push(...cl.members); }
+    else groups.push({ x: p.x, y: p.y, cis: [ci], stops: [...cl.members] });
+  });
+
+  let svg = `<polyline points="${order.map(ci => `${P[ci].x.toFixed(1)},${P[ci].y.toFixed(1)}`).join(' ')}"
+    fill="none" stroke="#d8ccb8" stroke-width="2.5" stroke-dasharray="4 3" stroke-linecap="round"/>`;
+  groups.forEach(g => {
+    const nums = g.stops.slice().sort((a, b) => a - b).map(m => m + 1);
+    const multi = nums.length > 1;
+    const label = nums.length > 2 ? `${nums[0]}–${nums[nums.length - 1]}` : nums.join('·');
+    svg += `<circle class="mdot" data-cis="${g.cis.join(',')}" data-stop="${g.stops[0]}"
+        cx="${g.x.toFixed(1)}" cy="${g.y.toFixed(1)}" r="${multi ? 9 : 6.5}" fill="#e8734a"/>
+      <text x="${g.x.toFixed(1)}" y="${(g.y + 3).toFixed(1)}" text-anchor="middle"
+        font-size="${multi ? 7.5 : 8.5}" font-weight="700" fill="#fff" pointer-events="none">${label}</text>`;
+  });
+  document.getElementById('miniSvg').innerHTML = svg;
+  document.querySelectorAll('#miniSvg .mdot').forEach(c =>
+    c.addEventListener('click', () => selectStop(+c.dataset.stop, true)));
+
+  const total = dayTotalKm(day);
+  const dist = total >= 10 ? `하루 이동 약 ${Math.round(total)} km` : `하루 이동 약 ${total.toFixed(1)} km`;
+  // 이상치를 얼마나 눌러 화면에 넣었는지 정직하게 적는다
+  const comp = dayLayout ? dayLayout.compression : 1;
+  document.getElementById('miniScale').innerHTML = comp >= 1.15
+    ? `${dist}<br><span style="opacity:.7">먼 구간은 약 1/${comp.toFixed(1)}로 압축</span>`
+    : dist;
+}
+
+/** 일차에 필요한 지도 조각을 먼저 받아 둔다 (없으면 잔디 원판으로 폴백) */
+async function loadDay(i) {
+  dayIdx = i;
+  const day = DAYS[i];
+  const need = new Set();
+  day.stops.forEach(s => { const t = tileOf(s.lat, s.lng); if (t) need.add(t.id); });
+  if (day.lm) { const t = tileOf(day.lm.lat, day.lm.lng); if (t) need.add(t.id); }
+  await loadTiles([...need]);
+  if (dayIdx !== i) return;        // 로딩 중에 사용자가 다른 일차를 눌렀다
+  buildDiorama(day);
+
+  document.getElementById('hNo').textContent = day.no;
+  document.getElementById('hTitle').textContent = day.t;
+  document.getElementById('hRegion').textContent = `${day.d} · ${day.region}`;
+  document.getElementById('pCount').textContent = `${day.stops.length}곳`;
+  plbl.textContent = day.d;
+
+  document.getElementById('chips').innerHTML = day.stops.map((s, k) =>
+    `<button class="chip" type="button"><span class="t">${s.time}</span>${s.name}</button>`).join('');
+  document.querySelectorAll('#chips .chip').forEach((c, k) => {
+    c.onclick = () => selectStop(k, true);
+    c.ondblclick = e => { e.preventDefault(); enterCloseUp(k); };
+  });
+
+  document.getElementById('pList').innerHTML = day.stops.map((s, k) =>
+    `<div class="row ${s.eat ? 'eat' : ''}"><div class="tm">${s.time}</div><div class="nm">${s.name}</div></div>`).join('');
+  document.querySelectorAll('#pList .row').forEach((r, k) => {
+    r.onclick = () => {
+      selectStop(k, true);
+      document.querySelector('#panel .tab[data-pane="info"]')?.click();
+    };
+    r.ondblclick = e => {
+      e.preventDefault();
+      enterCloseUp(k);
+      document.querySelector('#panel .tab[data-pane="info"]')?.click();
+    };
+  });
+
+  document.querySelectorAll('.pbtn').forEach((b, k) => b.classList.toggle('on', k === i));
+
+  buildMinimap(i);
+
+  cam.focus.set(0, 0, 0);
+  cam.focusTarget.set(0, 0, 0);
+  viewMode = 'day';
+  setSheet('peek');                 // 새 일차는 지도부터 보여준다
+  const fit = fitZoomForDay();
+  cam.zoom = fit;
+  cam.zoomTarget = fit;
+  document.getElementById('zoomBadge')?.classList.remove('show');   // 이전 일차 배율 표시 제거
+  zoomBadgeTimer = 0;
+  applyIsolation();
+  selectStop(0, false);
+}
+
+addEventListener('keydown', e => {
+  if (e.code === 'ArrowRight') selectStop(Math.min(selIdx + 1, DAYS[dayIdx].stops.length - 1), true);
+  if (e.code === 'ArrowLeft') selectStop(Math.max(selIdx - 1, 0), true);
+  if (e.code === 'ArrowUp') loadDay(Math.max(dayIdx - 1, 0));
+  if (e.code === 'ArrowDown') loadDay(Math.min(dayIdx + 1, DAYS.length - 1));
+  if (e.code === 'KeyC') enterCloseUp(selIdx);
+  if (e.code === 'Escape') {
+    if (viewMode === 'close') exitCloseUp(true);
+    else {
+      viewMode = 'day';
+      applyIsolation();
+      cam.focusTarget.set(0, 0, 0);
+      setZoomTarget(fitZoomForDay());
+    }
+  }
+});
+
+/* ============ 라벨 겹침 정리 ============
+ * 우선순위: 선택된 스팟 > 먹기 > 이른 순번.
+ * 자리가 없으면 번호 배지만 남기고, 그마저 안 되면 감춘다.
+ * 화면 좌표는 직접 투영해서 구한다 — 매 프레임 getBoundingClientRect 를 부르지 않기 위해서. */
+let declutterT = 0;
+const TRANSLATE_RE = /translate\((-?[\d.]+)px,\s*(-?[\d.]+)px\)(?!.*translate)/;
+
+/** CSS2DRenderer 가 방금 써 넣은 위치를 그대로 읽는다.
+ *  직접 재투영하면 카메라 행렬 갱신 시점이 어긋나 화면과 다른 좌표가 나온다. */
+function chipCenter(el) {
+  const m = TRANSLATE_RE.exec(el.style.transform || '');
+  return m ? { x: +m[1], y: +m[2] } : null;
+}
+
+function declutterChips(dt) {
+  declutterT -= dt;
+  if (declutterT > 0) return;
+  declutterT = 0.1;
+
+  const uiRects = [document.getElementById('head'), panelEl, document.getElementById('pager')]
+    .filter(e => e && getComputedStyle(e).display !== 'none')
+    .map(e => {
+      const r = e.getBoundingClientRect();
+      return { l: r.left, r: r.right, t: r.top, b: r.bottom };
+    });
+
+  const hits = (a, b) => a.l < b.r && a.r > b.l && a.t < b.b && a.b > b.t;
+  // full = 라벨 전체가 차지하는 자리, core = 번호 배지만의 자리.
+  // 축약 배지는 core 끼리만 안 부딪히면 된다 — 긴 라벨 꼬리 옆에 붙어도 읽힌다.
+  const placed = [];
+
+  // 선택된 스팟이 최우선, 나머지는 일정 순서대로. 번호 순서와 화면이 어긋나지 않게.
+  const order = markers
+    .filter(m => m.group.visible && m.label.visible)
+    .sort((a, b) => (b.idx === selIdx) - (a.idx === selIdx) || a.idx - b.idx);
+
+  // 같은 건물에 묶인 스팟들의 라벨은 화면상 일정 간격으로 쌓는다.
+  // 월드 오프셋으로 두면 축소했을 때 간격이 같이 줄어 결국 겹친다.
+  const unitPerPx = (2 * viewSize) / (Math.max(innerHeight, 1) * cam.zoom);
+  for (const m of markers) {
+    if (m.tier) m.label.position.y = 3.1 + m.tier * 34 * unitPerPx;
+  }
+
+  for (const m of order) {
+    const el = m.chipEl;
+    if (el.style.display === 'none') continue;          // 렌더러가 이미 감춘 라벨
+    const c = chipCenter(el);
+    if (!c) continue;                                    // 아직 위치가 안 잡혔다
+    if (!m.chipW && !el.classList.contains('mini')) {
+      m.chipW = el.offsetWidth || 120;
+      m.chipH = el.offsetHeight || 28;
+    }
+    const w = m.chipW || 120, h = m.chipH || 28;
+
+    const rectFor = (rw, rh) => ({ l: c.x - rw / 2 - 2, r: c.x + rw / 2 + 2, t: c.y - rh / 2 - 2, b: c.y + rh / 2 + 2 });
+    const full = rectFor(w, h);
+    const core = rectFor(28, 28);
+
+    // UI 카드 뒤로 들어가면 어차피 안 보인다
+    if (uiRects.some(u => hits(core, u))) { el.style.visibility = 'hidden'; continue; }
+
+    if (!placed.some(p => hits(full, p.full))) {
+      el.classList.remove('mini');
+      el.style.visibility = '';
+      placed.push({ full, core });
+    } else if (!placed.some(p => hits(core, p.core))) {
+      el.classList.add('mini');
+      el.style.visibility = '';
+      placed.push({ full: core, core });
+    } else {
+      el.style.visibility = 'hidden';
+    }
+  }
+}
+
+/* ============ 루프 ============ */
+const clock = new THREE.Clock();
+const northArrow = document.getElementById('northArrow');
+const _pa = new THREE.Vector3(), _pb = new THREE.Vector3();
+function tick() {
+  // 120Hz 화면에서 구름·사람이 두 배로 빨라지던 문제 — 실제 경과시간을 쓴다
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const t = clock.getElapsedTime();
+
+  sheetShownPx += (sheetPx() - sheetShownPx) * (1 - Math.pow(0.0005, dt));
+  cam.focus.lerp(cam.focusTarget, 1 - Math.pow(0.001, dt));
+  cam.zoom += (cam.zoomTarget - cam.zoom) * (1 - Math.pow(0.0001, dt));
+  updateCamera();
+  updateLod();
+  declutterChips(dt);
+
+  if (zoomBadgeTimer > 0) {
+    zoomBadgeTimer -= dt;
+    if (zoomBadgeTimer <= 0) document.getElementById('zoomBadge')?.classList.remove('show');
+  }
+
+  // 나침반: 화면상 북쪽 방향
+  _pa.set(cam.focus.x, 0, cam.focus.z).project(camera);
+  _pb.set(cam.focus.x, 0, cam.focus.z - 1).project(camera);
+  northArrow.style.transform = `rotate(${Math.atan2(_pb.x - _pa.x, _pb.y - _pa.y)}rad)`;
+
+  // 핀 바운스
+  markers.forEach((m, i) => {
+    if (!m.group.visible) return;
+    const isSel = i === selIdx;
+    const bounce = isSel ? Math.abs(Math.sin(t * 3.2)) * 0.5 : Math.sin(t * 1.8 + i) * 0.08;
+    m.pin.position.y = bounce;
+    const s = isSel ? 1.25 : 1;
+    m.pin.scale.set(s, s, s);
+  });
+
+  // 사람들 산책
+  if (roadCurve) {
+    peoples.forEach(p => {
+      if (!p.g.visible) return;
+      p.t = (p.t + p.spd * dt + 1) % 1;
+      const pos = roadCurve.getPointAt(p.t);
+      const tan = roadCurve.getTangentAt(p.t);
+      p.g.position.set(pos.x - tan.z * p.off * 0.5, 0, pos.z + tan.x * p.off * 0.5);
+      p.g.rotation.y = Math.atan2(tan.x * Math.sign(p.spd), tan.z * Math.sign(p.spd));
+      p.g.position.y = Math.abs(Math.sin(t * 9 + p.off * 10)) * 0.05;
+    });
+  }
+
+  // 구름 & 관람차 — 빌드할 때 모아둔 목록만 돈다 (매 프레임 씬 전체를 훑지 않는다)
+  clouds.forEach(c => {
+    if (!c.visible) return;
+    c.position.x += c.userData.spd * dt;
+    if (c.position.x > 55) c.position.x = -55;
+  });
+  spinners.forEach(s => { s.o.rotation.z = t * s.spd; });
+
+  renderer.render(scene, camera);
+  labelRenderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+
+addEventListener('resize', () => {
+  renderer.setSize(innerWidth, innerHeight);
+  labelRenderer.setSize(innerWidth, innerHeight);
+  // 회전·창 크기 변경 후에도 하루가 안전영역에 들어오게 다시 맞춘다
+  if (viewMode === 'day') setZoomTarget(fitZoomForDay(), false);
+  updateCamera();
+});
+
+const boot = document.createElement('div');
+boot.id = 'boot';
+boot.style.cssText = 'position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:#e9e6df;font-family:inherit;color:#3a352e;font-weight:700;letter-spacing:.04em';
+boot.textContent = '디오라마 에셋 불러오는 중…';
+document.body.appendChild(boot);
+
+Promise.all([preloadGlbs(), loadTileManifest()]).then(async () => {
+  await loadDay(1);
+  boot.remove();
+  updateCamera();
+  tick();
+}).catch(async err => {
+  console.error(err);
+  boot.textContent = '에셋 로드 실패 — 기본 모형으로 진행';
+  await loadDay(1);
+  boot.remove();
+  updateCamera();
+  tick();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+# Dependencies / secrets
+node_modules/
+.env
+.env.*
+config.local.js
+*.pem
+.DS_Store
+.backup/
+.vercel/
+*.bak
+__pycache__/
+*.pyc
