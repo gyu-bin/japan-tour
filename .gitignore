@@ -1,5 +1,7 @@
 # Dependencies / secrets
 node_modules/
+app/node_modules/
+app/dist/
 .env
 .env.*
 config.local.js
@@ -7,6 +9,8 @@ config.local.js
 .DS_Store
 .backup/
 .vercel/
+app/.vercel/
 *.bak
 __pycache__/
 *.pyc
+.vercel
