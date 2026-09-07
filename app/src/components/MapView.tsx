@@ -71,54 +71,56 @@ function tuneStyle(map: MapLibreMap) {
       continue
     }
 
-    // 물 — 지중해 청록
-    if (id === 'water') setPaint(id, 'fill-color', '#8FC2C4')
-    if (/^waterway/.test(id)) setPaint(id, 'line-color', '#7FB5B8')
+    // 물 — 연한 파랑 (네이버 지도 톤)
+    if (id === 'water') setPaint(id, 'fill-color', '#A9CEE8')
+    if (/^waterway/.test(id)) setPaint(id, 'line-color', '#A9CEE8')
 
-    // 땅 — 크림
-    if (id === 'background') setPaint(id, 'background-color', '#F7F0E1')
+    // 땅 — 밝은 회백색
+    if (id === 'background') setPaint(id, 'background-color', '#F5F5F1')
     if (id === 'landuse_residential')
-      setPaint(id, 'fill-color', 'rgba(238, 227, 208, 0.55)')
+      setPaint(id, 'fill-color', 'rgba(235, 235, 230, 0.6)')
 
-    // 초록 — 공원·숲을 또렷하게
-    if (id === 'park') setPaint(id, 'fill-color', '#B9D89B')
-    if (id === 'park_outline') setPaint(id, 'line-color', 'rgba(151, 185, 118, 0.8)')
-    if (id === 'landcover_wood') setPaint(id, 'fill-color', 'rgba(154, 196, 120, 0.75)')
-    if (id === 'landcover_grass') setPaint(id, 'fill-color', '#B4D494')
-    if (id === 'landcover_sand') setPaint(id, 'fill-color', '#EFE0B4')
-    if (/landuse_(pitch|track)/.test(id)) setPaint(id, 'fill-color', '#C9DCAB')
-    if (id === 'landuse_school') setPaint(id, 'fill-color', '#EDE6C8')
-    if (id === 'landuse_hospital') setPaint(id, 'fill-color', '#F4E0D8')
+    // 초록 — 공원·숲은 연녹색
+    if (id === 'park') setPaint(id, 'fill-color', '#CBE5AE')
+    if (id === 'park_outline') setPaint(id, 'line-color', 'rgba(178, 210, 141, 0.7)')
+    if (id === 'landcover_wood') setPaint(id, 'fill-color', 'rgba(184, 218, 147, 0.8)')
+    if (id === 'landcover_grass') setPaint(id, 'fill-color', '#C8E3AB')
+    if (id === 'landcover_sand') setPaint(id, 'fill-color', '#EEEADA')
+    if (/landuse_(pitch|track)/.test(id)) setPaint(id, 'fill-color', '#D4E7BC')
+    if (id === 'landuse_school') setPaint(id, 'fill-color', '#EDEEE4')
+    if (id === 'landuse_hospital') setPaint(id, 'fill-color', '#F3E9E7')
 
-    // 도로 — 크림 바탕 위 황토 계열
+    // 도로 — 흰 도로 + 연회색 외곽선, 고속도로만 노랑
     if (/^(road|bridge|tunnel)_(motorway|trunk_primary)($|_link$)/.test(id))
-      setPaint(id, 'line-color', '#EDB878')
+      setPaint(id, 'line-color', '#FCD265')
     if (/^(road|bridge|tunnel)_secondary_tertiary$/.test(id))
-      setPaint(id, 'line-color', '#F2D9A4')
+      setPaint(id, 'line-color', '#FFFFFF')
     if (/^(road|bridge|tunnel)_(minor|service_track|link|street)$/.test(id))
-      setPaint(id, 'line-color', '#FFFDF6')
-    if (/casing$/.test(id)) setPaint(id, 'line-color', '#DCCDB4')
-    if (/rail/.test(id)) setPaint(id, 'line-color', '#C9BCA8')
+      setPaint(id, 'line-color', '#FFFFFF')
+    if (/(motorway|trunk_primary).*casing$/.test(id))
+      setPaint(id, 'line-color', '#E8B94F')
+    else if (/casing$/.test(id)) setPaint(id, 'line-color', '#D9DBD6')
+    if (/rail/.test(id)) setPaint(id, 'line-color', '#C5C8C4')
   }
 
   if (map.getLayer('building')) hide('building')
 
-  // 건물 — 밝은 석재 + 테라코타 기운, 높을수록 진하게
+  // 건물 — 중립적인 연회색, 높을수록 진하게
   if (map.getLayer('building-3d')) {
     setPaint('building-3d', 'fill-extrusion-color', [
       'interpolate',
       ['linear'],
       ['coalesce', ['get', 'render_height'], 10],
       0,
-      '#F1E4CE',
+      '#E9E9E5',
       20,
-      '#E7D2B4',
+      '#DDDDD8',
       50,
-      '#D9B995',
+      '#CDCEC9',
       100,
-      '#C69B78',
+      '#BCBEBA',
       200,
-      '#B08560',
+      '#A9ACA9',
     ])
     setPaint('building-3d', 'fill-extrusion-opacity', 0.95)
   }
@@ -266,7 +268,7 @@ export function MapView({
             source: ROUTE_SOURCE,
             layout: { 'line-cap': 'round', 'line-join': 'round' },
             paint: {
-              'line-color': 'rgba(250, 246, 236, 0.9)',
+              'line-color': 'rgba(255, 255, 255, 0.9)',
               'line-width': 7,
             },
           })
