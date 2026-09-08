@@ -12,8 +12,8 @@ function Fallback() {
         minHeight: '100vh',
         display: 'grid',
         placeItems: 'center',
-        background: '#e9e6df',
-        color: '#3a352e',
+        background: '#14171c',
+        color: '#f2f4f7',
         fontFamily: 'system-ui, sans-serif',
         fontWeight: 700,
       }}
@@ -28,10 +28,10 @@ export default function App() {
     <BrowserRouter>
       <Suspense fallback={<Fallback />}>
         <Routes>
-          <Route path="/" element={<MapPage />} />
+          <Route path="/" element={<AstraDioramaPage />} />
+          <Route path="/astra" element={<Navigate to="/" replace />} />
+          <Route path="/map" element={<MapPage />} />
           <Route path="/diorama" element={<DioramaPage />} />
-          <Route path="/astra" element={<AstraDioramaPage />} />
-          <Route path="/map" element={<Navigate to="/" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>

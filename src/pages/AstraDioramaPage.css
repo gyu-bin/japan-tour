@@ -1,12 +1,23 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,500;0,9..40,700;0,9..40,800;1,9..40,500&family=Fraunces:opsz,wght@9..40,600;9..40,700&display=swap');
 
 .astra-root {
+  --bg: #1a2230;
+  --panel: rgba(24, 30, 40, 0.86);
+  --panel-2: rgba(30, 37, 49, 0.9);
+  --ink: #f2f4f7;
+  --muted: #8f98a8;
+  --line: rgba(242, 244, 247, 0.1);
+  --coral: #e8825f;
+  --blue: #7fa7c4;
+  --font: 'DM Sans', system-ui, sans-serif;
+  --display: 'Fraunces', Georgia, serif;
+
   position: fixed;
   inset: 0;
   overflow: hidden;
-  font-family: 'DM Sans', system-ui, sans-serif;
-  color: #1e2430;
-  background: #9eb4c9;
+  font-family: var(--font);
+  color: var(--ink);
+  background: var(--bg);
 }
 
 .astra-scene {
@@ -14,6 +25,7 @@
   inset: 0;
   touch-action: none;
   cursor: grab;
+  background: #1a2230;
 }
 .astra-scene:active { cursor: grabbing; }
 .astra-scene canvas { display: block; }
@@ -31,51 +43,58 @@
   inset: 0;
   z-index: 5;
   pointer-events: none;
-  background:
-    radial-gradient(ellipse 90% 80% at 55% 48%, transparent 55%, rgba(30, 36, 48, 0.12) 100%);
+  background: radial-gradient(ellipse 80% 72% at 60% 48%, transparent 40%, rgba(12, 16, 24, 0.6) 100%);
 }
 
-/* pins */
+/* ── pins: 작은 오렌지 번호 원, 선택된 것만 이름 라벨 ── */
 .astra-pin {
   pointer-events: auto;
   cursor: pointer;
-  transform: translate(-50%, -120%);
+  transform: translate(-50%, -50%);
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 0;
   white-space: nowrap;
-  max-width: 180px;
-  padding: 5px 12px 5px 5px;
   border-radius: 999px;
-  background: rgba(30, 36, 48, 0.88);
-  color: #f4f6f9;
+  background: transparent;
+  color: #fff;
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  box-shadow: 0 8px 22px rgba(20, 28, 40, 0.28);
-  transition: opacity 0.2s, transform 0.18s;
+  font-weight: 800;
+  transition: opacity 0.2s, transform 0.18s, background 0.18s;
 }
-.astra-pin .nm { overflow: hidden; text-overflow: ellipsis; }
 .astra-pin .no {
   flex: none;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: #4a90b8;
-  font-size: 10px;
+  background: var(--coral);
+  color: #fff;
+  font-size: 11px;
+  box-shadow: 0 0 0 3px rgba(232, 130, 95, 0.22), 0 6px 14px rgba(0, 0, 0, 0.35);
 }
-.astra-pin.eat { background: rgba(176, 72, 52, 0.92); }
-.astra-pin.eat .no { background: #e07a5f; }
-.astra-pin.dim { opacity: 0.35; }
+.astra-pin .nm {
+  display: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 170px;
+}
+.astra-pin.eat .no { background: #c8623f; }
+.astra-pin.dim { opacity: 0.8; }
 .astra-pin.sel {
   opacity: 1;
-  transform: translate(-50%, -120%) scale(1.08);
-  box-shadow: 0 10px 28px rgba(20, 28, 40, 0.4);
+  gap: 8px;
+  padding: 3px 12px 3px 3px;
+  background: #f4f6f9;
+  color: #14171c;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.4);
+  transform: translate(-50%, -50%) scale(1.04);
 }
+.astra-pin.sel .nm { display: inline; font-size: 12px; }
+.astra-pin.sel .no { box-shadow: none; }
 
-/* landmark labels */
+/* 랜드마크 라벨: 어두운 카드, 한글 세리프 + 영어/일어 캡션 */
 .astra-lm {
   transform: translate(-50%, -110%);
   display: flex;
@@ -84,317 +103,425 @@
   gap: 2px;
   pointer-events: none;
   white-space: nowrap;
-  padding: 6px 12px;
+  padding: 8px 14px;
   border-radius: 10px;
-  background: rgba(244, 246, 249, 0.94);
-  border: 1px solid rgba(30, 36, 48, 0.12);
-  box-shadow: 0 8px 24px rgba(30, 36, 48, 0.16);
+  background: rgba(20, 25, 34, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
 }
 .astra-lm .t {
-  font-family: 'Fraunces', Georgia, serif;
-  font-size: 12px;
+  font-family: var(--display);
+  font-size: 13px;
   font-weight: 700;
-  color: #1e2430;
-  letter-spacing: 0.02em;
+  color: #f2f4f7;
 }
 .astra-lm .j {
   font-size: 9px;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.16em;
-  color: #5a6578;
+  color: var(--muted);
+  text-transform: uppercase;
 }
 
-/* left day rail */
-.astra-rail {
+/* ── top ── */
+.astra-top {
   position: absolute;
-  top: 50%;
-  left: 16px;
-  transform: translateY(-50%);
-  z-index: 12;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.astra-rail-day {
-  width: 52px;
-  border: none;
-  border-radius: 14px;
-  padding: 10px 0 8px;
-  background: rgba(244, 246, 249, 0.72);
-  backdrop-filter: blur(12px);
-  color: #5a6578;
-  cursor: pointer;
-  font-family: inherit;
-  transition: background 0.15s, color 0.15s, transform 0.15s;
-  box-shadow: 0 4px 16px rgba(30, 36, 48, 0.08);
-}
-.astra-rail-day .n {
-  display: block;
-  font-family: 'Fraunces', Georgia, serif;
-  font-size: 16px;
-  font-weight: 700;
-  line-height: 1;
-}
-.astra-rail-day .d {
-  display: block;
-  margin-top: 3px;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-}
-.astra-rail-day:hover { transform: translateX(2px); color: #1e2430; }
-.astra-rail-day.on {
-  background: #1e2430;
-  color: #f4f6f9;
-  box-shadow: 0 8px 24px rgba(30, 36, 48, 0.28);
-}
-
-/* brand */
-.astra-brand {
-  position: absolute;
-  top: 22px;
-  left: 84px;
-  z-index: 12;
-  max-width: min(420px, calc(100vw - 200px));
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) minmax(240px, 1.4fr) minmax(200px, 1fr);
+  gap: 16px;
+  align-items: start;
+  padding: 22px 26px 0;
   pointer-events: none;
 }
-.astra-brand .kicker {
-  margin: 0 0 8px;
+.astra-top > * { pointer-events: auto; }
+
+.astra-brand .line {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.astra-brand .en {
+  font-family: var(--display);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.astra-brand .bar {
+  width: 1px;
+  height: 18px;
+  background: rgba(242, 244, 247, 0.25);
+}
+.astra-brand .ko {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--muted);
+}
+.astra-brand .tag {
+  margin: 8px 0 0;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.24em;
+  color: rgba(242, 244, 247, 0.38);
+}
+
+.astra-chapter-title { text-align: center; padding-top: 4px; }
+.astra-chapter-title .ch {
+  margin: 0;
   font-size: 10px;
   font-weight: 800;
-  letter-spacing: 0.28em;
-  color: rgba(30, 36, 48, 0.55);
+  letter-spacing: 0.24em;
+  color: rgba(242, 244, 247, 0.5);
 }
-.astra-brand h1 {
-  margin: 0;
-  font-family: 'Fraunces', Georgia, serif;
-  font-size: clamp(22px, 3vw, 34px);
-  font-weight: 700;
+.astra-chapter-title h1 {
+  margin: 8px 0 0;
+  font-family: var(--display);
+  font-size: clamp(20px, 2.6vw, 32px);
+  font-weight: 600;
   line-height: 1.15;
-  color: #1e2430;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+  letter-spacing: -0.01em;
+  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.55);
 }
-.astra-brand .sub {
+.astra-chapter-title .ko-sub {
   margin: 8px 0 0;
   font-size: 12px;
   font-weight: 600;
-  color: rgba(30, 36, 48, 0.55);
+  color: rgba(242, 244, 247, 0.6);
 }
 
-.astra-alts {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  z-index: 12;
+.astra-top-actions {
   display: flex;
-  gap: 6px;
+  gap: 14px;
+  align-items: center;
+  justify-content: flex-end;
 }
-.astra-alts a {
-  text-decoration: none;
+.astra-top-actions .explore {
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  padding: 8px 4px;
   font-size: 11px;
-  font-weight: 700;
-  color: #1e2430;
-  background: rgba(244, 246, 249, 0.85);
-  backdrop-filter: blur(10px);
-  border-radius: 999px;
-  padding: 8px 13px;
-  box-shadow: 0 4px 16px rgba(30, 36, 48, 0.1);
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
-.astra-alts a:hover { background: #1e2430; color: #f4f6f9; }
+.astra-top-actions .explore .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--coral);
+  box-shadow: 0 0 0 3px rgba(232, 130, 95, 0.25);
+}
+.astra-top-actions .explore.on .dot { animation: astra-blink 1s infinite; }
+@keyframes astra-blink { 50% { opacity: 0.3; } }
+.astra-top-actions .pill {
+  text-decoration: none;
+  background: #f2f4f7;
+  color: #14171c;
+  border-radius: 999px;
+  padding: 9px 16px;
+  font-size: 12px;
+  font-weight: 800;
+}
+.astra-top-actions .pill:not(.alt):hover { background: var(--coral); color: #fff; }
+.astra-top-actions .pill.alt {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+.astra-top-actions .pill.alt:hover {
+  background: rgba(242, 244, 247, 0.08);
+  color: #fff;
+}
 
-/* bottom sheet */
-.astra-sheet {
+/* ── left side ── */
+.astra-side {
   position: absolute;
-  left: 84px;
-  right: 20px;
-  bottom: 18px;
-  z-index: 12;
-  max-width: 720px;
-  background: rgba(244, 246, 249, 0.9);
+  top: 104px;
+  left: 22px;
+  bottom: 118px;
+  z-index: 20;
+  width: min(340px, calc(100vw - 44px));
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
   backdrop-filter: blur(18px);
+  border: 1px solid var(--line);
   border-radius: 18px;
-  box-shadow: 0 16px 48px rgba(30, 36, 48, 0.16);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
   overflow: hidden;
   transition: transform 0.25s ease;
 }
-.astra-sheet:not(.open) {
+.astra-side:not(.open) {
   transform: translateY(calc(100% - 44px));
+  max-height: 44px;
 }
-.astra-sheet-toggle {
-  display: block;
-  width: 100%;
+.astra-side-toggle {
   border: none;
   background: transparent;
-  font-family: inherit;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-align: right;
+  padding: 12px 18px 0;
+  cursor: pointer;
+}
+.astra-side-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+  padding: 0 14px 14px;
+}
+
+.astra-day-head {
+  padding: 0 6px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.astra-day-head .day-kicker {
+  margin: 0;
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.12em;
-  color: #5a6578;
-  padding: 14px 18px 10px;
-  cursor: pointer;
-  text-align: left;
+  letter-spacing: 0.22em;
+  color: var(--coral);
 }
-.astra-sheet-body {
-  display: grid;
-  grid-template-columns: minmax(180px, 0.9fr) 1.2fr;
-  gap: 0;
-  max-height: 240px;
-  border-top: 1px solid rgba(30, 36, 48, 0.08);
+.astra-day-head h2 {
+  margin: 8px 0 0;
+  font-family: var(--display);
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.astra-day-head .region {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
 }
 
 .astra-stops {
   list-style: none;
-  margin: 0;
-  padding: 8px;
+  margin: 10px 0 0;
+  padding: 0 2px;
   overflow-y: auto;
-  max-height: 240px;
-  border-right: 1px solid rgba(30, 36, 48, 0.08);
+  flex: 1;
+  min-height: 0;
+  scrollbar-width: thin;
 }
 .astra-stop {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 10px;
-  border: none;
+  gap: 12px;
+  border: 1px solid transparent;
   background: transparent;
   border-radius: 12px;
-  padding: 8px 10px;
+  padding: 9px 10px;
   cursor: pointer;
-  font-family: inherit;
+  color: var(--ink);
   text-align: left;
-  color: #1e2430;
 }
 .astra-stop .ix {
   flex: none;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: rgba(30, 36, 48, 0.08);
+  border: 1px solid rgba(242, 244, 247, 0.22);
   font-size: 11px;
   font-weight: 800;
+  color: var(--muted);
 }
-.astra-stop .meta { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.astra-stop .tm { font-size: 10px; font-weight: 700; color: #4a90b8; }
-.astra-stop .nm { font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.astra-stop:hover { background: rgba(30, 36, 48, 0.05); }
-.astra-stop.on { background: #1e2430; color: #f4f6f9; }
-.astra-stop.on .ix { background: #e07a5f; color: #fff; }
-.astra-stop.on .tm { color: rgba(244, 246, 249, 0.55); }
-.astra-stop.eat .ix { color: #c45c45; }
+.astra-stop .meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.astra-stop .nm {
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.astra-stop .tm { font-size: 10px; font-weight: 700; color: var(--muted); letter-spacing: 0.04em; }
+.astra-stop:hover { background: rgba(242, 244, 247, 0.05); }
+.astra-stop.on {
+  background: rgba(242, 244, 247, 0.07);
+  border-color: rgba(242, 244, 247, 0.12);
+}
+.astra-stop.on .ix { background: var(--coral); border-color: var(--coral); color: #fff; }
+.astra-stop.eat .ix { color: var(--coral); border-color: rgba(232, 130, 95, 0.5); }
+.astra-stop.eat.on .ix { color: #fff; }
 
 .astra-card {
-  padding: 14px 18px 18px;
-  overflow-y: auto;
-  max-height: 240px;
+  margin-top: 12px;
+  padding: 16px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--line);
 }
 .astra-card .place {
-  margin: 0 0 6px;
+  margin: 0 0 8px;
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.18em;
-  color: #e07a5f;
+  color: var(--coral);
 }
-.astra-card h2 {
+.astra-card h3 {
   margin: 0;
-  font-family: 'Fraunces', Georgia, serif;
-  font-size: 20px;
-  font-weight: 700;
+  font-family: var(--display);
+  font-size: 19px;
+  font-weight: 600;
 }
 .astra-card .jp {
   margin: 4px 0 10px;
   font-size: 11px;
-  letter-spacing: 0.14em;
-  color: #5a6578;
+  letter-spacing: 0.12em;
+  color: var(--muted);
 }
 .astra-card .body {
   margin: 0;
-  font-size: 13px;
+  font-size: 12.5px;
   line-height: 1.7;
-  color: #1e2430;
-}
-.astra-card .tip {
-  margin: 12px 0 0;
-  padding-top: 12px;
-  border-top: 1px solid rgba(30, 36, 48, 0.08);
-  font-size: 12px;
-  line-height: 1.65;
-  color: #5a6578;
+  color: rgba(242, 244, 247, 0.86);
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
+/* ── bottom chapters ── */
+.astra-chapters {
+  position: absolute;
+  left: 50%;
+  bottom: 40px;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  gap: 6px;
+  max-width: min(980px, calc(100vw - 240px));
+  overflow-x: auto;
+  padding: 6px;
+  background: var(--panel);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+  scrollbar-width: none;
+}
+.astra-chapters::-webkit-scrollbar { display: none; }
+.astra-ch {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 12px;
+  padding: 8px 14px 8px 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  white-space: nowrap;
+}
+.astra-ch .no {
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1;
+  color: rgba(242, 244, 247, 0.55);
+}
+.astra-ch .meta { display: flex; flex-direction: column; gap: 1px; }
+.astra-ch .nm { font-size: 13px; font-weight: 700; color: rgba(242, 244, 247, 0.85); }
+.astra-ch .dt { font-size: 10px; font-weight: 600; color: var(--muted); }
+.astra-ch:hover { background: rgba(242, 244, 247, 0.06); }
+.astra-ch.on {
+  background: rgba(242, 244, 247, 0.08);
+  border-color: rgba(242, 244, 247, 0.2);
+}
+.astra-ch.on .no { color: var(--coral); }
+.astra-ch.on .nm { color: #fff; }
+
+/* ── controls ── */
 .astra-ctrl {
   position: absolute;
-  right: 20px;
-  bottom: 18px;
-  z-index: 12;
+  right: 22px;
+  bottom: 40px;
+  z-index: 20;
   display: flex;
-  gap: 5px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
 }
+.astra-ctrl .row { display: flex; gap: 6px; }
 .astra-ctrl button {
-  border: none;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  backdrop-filter: blur(12px);
+  color: var(--ink);
+  border-radius: 999px;
   min-width: 36px;
   height: 36px;
   padding: 0 12px;
-  border-radius: 999px;
-  background: rgba(244, 246, 249, 0.88);
-  backdrop-filter: blur(10px);
-  font-family: inherit;
   font-size: 12px;
   font-weight: 800;
-  color: #1e2430;
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(30, 36, 48, 0.12);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
 }
-.astra-ctrl button:hover { background: #1e2430; color: #f4f6f9; }
-
+.astra-ctrl button:hover {
+  background: #f2f4f7;
+  color: #14171c;
+}
 .astra-help {
+  margin: 0;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: rgba(242, 244, 247, 0.42);
+  text-align: right;
+  pointer-events: none;
+}
+
+.astra-foot {
   position: absolute;
-  left: 84px;
-  bottom: auto;
-  top: auto;
-  display: none;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  margin: 0;
+  z-index: 19;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: rgba(242, 244, 247, 0.35);
+  pointer-events: none;
+  white-space: nowrap;
 }
 
 @media (max-width: 900px) {
-  .astra-rail { left: 10px; }
-  .astra-rail-day { width: 44px; padding: 8px 0 6px; }
-  .astra-brand { left: 64px; top: 14px; }
-  .astra-brand h1 { font-size: 20px; }
-  .astra-sheet {
+  .astra-top { grid-template-columns: 1fr auto; padding: 14px 14px 0; }
+  .astra-chapter-title { display: none; }
+  .astra-brand .tag { display: none; }
+  .astra-side {
+    top: auto;
     left: 10px;
     right: 10px;
-    bottom: 64px;
+    bottom: 96px;
+    width: auto;
+    max-height: 46vh;
+  }
+  .astra-chapters {
+    left: 10px;
+    right: 10px;
+    transform: none;
     max-width: none;
+    bottom: 30px;
   }
-  .astra-sheet-body { grid-template-columns: 1fr; max-height: 42vh; }
-  .astra-stops {
-    max-height: 120px;
-    border-right: none;
-    border-bottom: 1px solid rgba(30, 36, 48, 0.08);
-    display: flex;
-    gap: 4px;
-    overflow-x: auto;
-    overflow-y: hidden;
-  }
-  .astra-stops li { flex: none; }
-  .astra-stop { width: auto; max-width: 160px; }
-  .astra-card { max-height: none; }
-  .astra-ctrl { bottom: 14px; right: 10px; }
-  .astra-alts { top: 10px; right: 10px; }
-}
-
-@media (min-width: 901px) {
-  .astra-help {
-    display: block;
-    left: auto;
-    right: 20px;
-    top: 72px;
-    margin: 0;
-    font-size: 11px;
-    font-weight: 600;
-    color: rgba(30, 36, 48, 0.45);
-    z-index: 11;
-    text-align: right;
-  }
+  .astra-ctrl { right: 10px; bottom: 96px; }
+  .astra-help { display: none; }
+  .astra-foot { display: none; }
 }

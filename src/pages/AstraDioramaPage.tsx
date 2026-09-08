@@ -12,10 +12,10 @@ import './AstraDioramaPage.css'
 const HALF = 36
 const ROADS = [-30, -24, -18, -12, -6, 0, 6, 12, 18, 24, 30]
 const AZ0 = Math.PI / 4
-const EL0 = Math.PI * 0.30
-const DIST = 88
-const ZOOM0 = 18
-const SPAN = 24 // stop / landmark layout radius
+const EL0 = 0.62 // ~35.5° classic isometric
+const DIST = 120
+const ZOOM0 = 12
+const SPAN = 22 // stop / landmark layout radius
 
 type Theme = {
   sky: [string, string]
@@ -38,39 +38,39 @@ type Theme = {
 
 const THEMES: Record<string, Theme> = {
   night: {
-    sky: ['#9eb4c9', '#dfe6ef'], fog: 0xd6dde8,
-    plate: 0xf2f4f7, rim: 0xd8dde6, road: 0xc8d0db,
-    park: 0xb9cfc0, walls: [0xf7f8fa, 0xeef1f5, 0xf4f0eb, 0xe8edf3, 0xf0ebe4],
-    roofs: [0x6d7f96, 0x8496ab, 0xe07a5f, 0x5f7188], accent: 0xe07a5f,
-    cool: [0x7a8da6, 0x6a7d96], warmP: 0.35, tall: 1.15, empty: 0.05, trees: 0.12,
+    sky: ['#1a2230', '#33435a'], fog: 0x1e2838,
+    plate: 0xc4ccd6, rim: 0x59636f, road: 0xa9b2bd,
+    park: 0x6f8f72, walls: [0xf1f3f6, 0xe7ebf0, 0xf4f2ee, 0xdfe4ea],
+    roofs: [0xd9dfe6, 0xc7cfd8, 0x8496ab], accent: 0xe07a5f,
+    cool: [0x9db6c8, 0x8aa8bc, 0x7f95a8], warmP: 0.12, tall: 1.15, empty: 0.05, trees: 0.12,
   },
   asakusa: {
-    sky: ['#a8c0c8', '#e8efe8'], fog: 0xdce8e4,
-    plate: 0xf4f1ea, rim: 0xddd6c8, road: 0xd2cbbd,
-    park: 0xb8cba8, walls: [0xfaf6ef, 0xf3ebe0, 0xf7f0e6, 0xefe6d8, 0xf5ece2],
-    roofs: [0xc45c45, 0xa84838, 0xd9785c, 0x6d7f96], accent: 0xc45c45,
-    cool: [0x7a8da6], warmP: 0.82, tall: 0.72, empty: 0.04, trees: 0.2,
+    sky: ['#1b222e', '#354256'], fog: 0x202a38,
+    plate: 0xd2cfc6, rim: 0x625d55, road: 0xb8b3a8,
+    park: 0x6f8f66, walls: [0xfaf6ef, 0xf3ebe0, 0xf7f0e6, 0xefe6d8],
+    roofs: [0xb85a48, 0x9e4a3c, 0xc9cbc8, 0x6d7f96], accent: 0xe07a5f,
+    cool: [0x9aa8b8], warmP: 0.6, tall: 0.72, empty: 0.04, trees: 0.2,
   },
   odaiba: {
-    sky: ['#8eb8d4', '#d5e8f2'], fog: 0xcfe3ef,
-    plate: 0xeef3f6, rim: 0xc9d7e2, road: 0xc2d0db,
-    park: 0xa8c9b4, walls: [0xf5f9fb, 0xe8f0f5, 0xf2f6f8, 0xe4ecef],
-    roofs: [0x6d8fad, 0x8aa8c0, 0xe07a5f], accent: 0x4a90b8,
-    cool: [0x6d8fad, 0x8aa8c0, 0x5a7f9a], warmP: 0.28, tall: 1.45, empty: 0.06, trees: 0.1, sea: true,
+    sky: ['#182230', '#33465c'], fog: 0x1c2a3a,
+    plate: 0xc3cad3, rim: 0x545e6a, road: 0xa7b0ba,
+    park: 0x668a7c, walls: [0xf3f6f8, 0xe9f0f4, 0xeef2f5, 0xe2eaee],
+    roofs: [0xdbe1e7, 0xcbd3db, 0xb4c6d4], accent: 0xe07a5f,
+    cool: [0x9fb9cb, 0x8db0c6, 0xb3c9d8], warmP: 0.08, tall: 1.5, empty: 0.06, trees: 0.1, sea: true,
   },
   roppongi: {
-    sky: ['#8fa0b5', '#d8dee8'], fog: 0xcfd6e2,
-    plate: 0xeceef2, rim: 0xc8ced8, road: 0xb8c0cc,
-    park: 0xa8b9a4, walls: [0xf0f1f4, 0xe6e8ec, 0xf4f2ee, 0xdddfe4, 0xeae6e0],
-    roofs: [0x4a5568, 0x5c6b80, 0xe07a5f, 0x6d7f96], accent: 0xe07a5f,
-    cool: [0x4a5568, 0x5c6b80, 0x6d7f96], warmP: 0.22, tall: 1.85, empty: 0.04, trees: 0.08,
+    sky: ['#161c28', '#2d3a4e'], fog: 0x1a2230,
+    plate: 0xbfc5ce, rim: 0x505864, road: 0xa2aab4,
+    park: 0x62806a, walls: [0xf0f1f4, 0xe6e8ec, 0xf4f2ee, 0xdddfe4],
+    roofs: [0xd0d6de, 0x9ea9b8, 0x6d7f96], accent: 0xe07a5f,
+    cool: [0x8fa4b8, 0x7d92a8, 0xa9bccb], warmP: 0.1, tall: 1.9, empty: 0.04, trees: 0.08,
   },
   fuji: {
-    sky: ['#9ab8c8', '#d8e6d4'], fog: 0xd2e0d6,
-    plate: 0xe4ecd8, rim: 0xc5d0b4, road: 0xc0cbb0,
-    park: 0x9fba8e, walls: [0xf7f3ea, 0xf0e8dc, 0xefe9e0],
-    roofs: [0xc45c45, 0xa84838, 0x6d7f96], accent: 0xc45c45,
-    cool: [0x6d7f96], warmP: 0.75, tall: 0.48, empty: 0.38, trees: 0.62, green: true,
+    sky: ['#182028', '#334450'], fog: 0x1c2830,
+    plate: 0xcdd4c2, rim: 0x5c675a, road: 0xb0baa2,
+    park: 0x648a5e, walls: [0xf7f3ea, 0xf0e8dc, 0xefe9e0],
+    roofs: [0xb85a48, 0x9e4a3c, 0xcfd3d1, 0x6d7f96], accent: 0xe07a5f,
+    cool: [0x8fa0ad], warmP: 0.5, tall: 0.48, empty: 0.38, trees: 0.62, green: true,
   },
 }
 
@@ -80,12 +80,13 @@ type Engine = {
   zoomBy: (f: number) => void
   reset: () => void
   setPaused: (p: boolean) => void
+  setSideOffset: (px: number) => void
   dispose: () => void
 }
 
 function createEngine(host: HTMLDivElement, labelsEl: HTMLDivElement, onPick: (i: number) => void): Engine {
   const scene = new THREE.Scene()
-  scene.fog = new THREE.Fog(0xd6dde8, 100, 280)
+  scene.fog = new THREE.Fog(0x162430, 90, 260)
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' })
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2))
@@ -168,6 +169,7 @@ function createEngine(host: HTMLDivElement, labelsEl: HTMLDivElement, onPick: (i
 
   let az = AZ0, elev = EL0, zoom = ZOOM0, zoomT = ZOOM0
   const focus = new THREE.Vector3(), focusT = new THREE.Vector3()
+  let sideOffsetPx = 0
   let flying = false
   let paused = false
   let sel = 0
@@ -180,7 +182,17 @@ function createEngine(host: HTMLDivElement, labelsEl: HTMLDivElement, onPick: (i
   let cars: { g: THREE.Group; axis: string; c: number; t: number; spd: number; dir: number }[] = []
   let wheels: { o: THREE.Object3D; spd: number }[] = []
   let rings: THREE.Object3D[] = []
-  let pathGlow: THREE.Mesh | null = null
+  let pathMat: THREE.MeshBasicMaterial | null = null
+  let haloMat: THREE.MeshBasicMaterial | null = null
+
+  /** 판 전체가 화면에 들어오는 줌 (사이드바 제외 영역 기준) */
+  function fitZoom() {
+    const w = Math.max(320, host.clientWidth - sideOffsetPx * 2 - 40)
+    const h = Math.max(240, host.clientHeight - 210)
+    const diag = HALF * 2 * Math.SQRT2 + 6
+    const depth = diag * Math.sin(elev) + 14
+    return Math.max(6, Math.min(w / diag, h / depth))
+  }
 
   function clampFocus() {
     const lim = HALF * 0.92
@@ -204,12 +216,16 @@ function createEngine(host: HTMLDivElement, labelsEl: HTMLDivElement, onPick: (i
     flying = false
   }
 
+  const lookAt = new THREE.Vector3()
   function updateCam() {
-    const x = focus.x + Math.cos(elev) * Math.sin(az) * DIST
-    const y = focus.y + Math.sin(elev) * DIST
-    const z = focus.z + Math.cos(elev) * Math.cos(az) * DIST
+    groundAxes()
+    // 사이드바 폭만큼 판을 화면 오른쪽으로 밀어 보이게 (타깃을 왼쪽으로 이동)
+    lookAt.copy(focus).addScaledVector(right, -sideOffsetPx / Math.max(zoom, 1))
+    const x = lookAt.x + Math.cos(elev) * Math.sin(az) * DIST
+    const y = lookAt.y + Math.sin(elev) * DIST
+    const z = lookAt.z + Math.cos(elev) * Math.cos(az) * DIST
     cam.position.set(x, y, z)
-    cam.lookAt(focus)
+    cam.lookAt(lookAt)
     cam.zoom = zoom
     cam.updateProjectionMatrix()
   }
@@ -218,10 +234,11 @@ function createEngine(host: HTMLDivElement, labelsEl: HTMLDivElement, onPick: (i
     while (world.children.length) world.remove(world.children[0])
     labelsEl.querySelectorAll('.astra-pin, .astra-lm').forEach((n) => n.remove())
     pins = []; people = []; cars = []; wheels = []; rings = []; spots = []
-    pathGlow = null
+    pathMat?.dispose(); haloMat?.dispose()
+    pathMat = null; haloMat = null
   }
 
-  function plate(th: Theme) {
+  function plate(th: Theme, seaX: number | null) {
     const base = M(G.box, mat(th.rim), HALF * 2 + 1.6, 0.55, HALF * 2 + 1.6, 0, -0.28, 0)
     world.add(base)
     const top = M(G.box, mat(th.plate), HALF * 2, 0.18, HALF * 2, 0, 0.02, 0)
@@ -229,9 +246,11 @@ function createEngine(host: HTMLDivElement, labelsEl: HTMLDivElement, onPick: (i
     const lip = M(G.box, mat(th.rim, { rough: 0.6 }), HALF * 2 + 0.35, 0.22, HALF * 2 + 0.35, 0, -0.02, 0)
     world.add(lip)
 
+    const landR = seaX !== null ? seaX - 0.4 : HALF - 0.3
+    const landLen = landR - (-HALF + 0.3)
     for (const r of ROADS) {
-      world.add(M(G.box, mat(th.road), HALF * 2 - 0.6, 0.04, 1.15, 0, 0.12, r))
-      world.add(M(G.box, mat(th.road), 1.15, 0.04, HALF * 2 - 0.6, r, 0.12, 0))
+      world.add(M(G.box, mat(th.road), landLen, 0.04, 1.15, (landR + (-HALF + 0.3)) / 2, 0.12, r))
+      if (seaX === null || r < seaX - 0.8) world.add(M(G.box, mat(th.road), 1.15, 0.04, HALF * 2 - 0.6, r, 0.12, 0))
     }
     if (th.green) {
       for (let i = 0; i < 18; i++) {
@@ -583,10 +602,11 @@ function createEngine(host: HTMLDivElement, labelsEl: HTMLDivElement, onPick: (i
     wheel.add(M(G.cyl, mat(0x4a5568), 0.35, 0.35, 0.35, 0, 0, 0))
     wheel.position.y = 3.8
     g.add(wheel)
+    g.scale.setScalar(1.75)
     g.position.set(x, 0, z)
     world.add(g)
     wheels.push({ o: wheel, spd: 0.28 })
-    addLmLabel(x, z, 7.8, '대관람차', '観覧車')
+    addLmLabel(x, z, 12.6, '대관람차', '観覧車')
   }
 
   function lmBridge(x0: number, x1: number, z: number) {
@@ -599,6 +619,33 @@ function createEngine(host: HTMLDivElement, labelsEl: HTMLDivElement, onPick: (i
     }
     world.add(M(G.box, mat(0x4a5568), 0.25, 2.2, 0.25, x0 + 1.2, 1.3, z))
     world.add(M(G.box, mat(0x4a5568), 0.25, 2.2, 0.25, x1 - 1.2, 1.3, z))
+    // 다리 기둥 (수면 아래로 내려가는 교각)
+    for (let i = 1; i < 6; i++) {
+      const px = x0 + (len * i) / 6
+      world.add(M(G.box, mat(0x8a94a0), 0.35, 0.6, 1.4, px, 0.3, z))
+    }
+    addLmLabel(mid, z, 3.6, '레인보우 브리지', 'RAINBOW BRIDGE')
+  }
+
+  function harbor(seaX: number) {
+    // 선착장
+    for (let i = 0; i < 4; i++) {
+      const pz = -HALF + 6 + i * ((HALF * 2 - 12) / 3) + rnd(-2, 2)
+      const len = rnd(3.5, 6)
+      world.add(M(G.box, mat(0xb9c1ca), len, 0.14, 1.1, seaX + len / 2 + 0.6, 0.3, pz))
+      for (let k = 0; k < 3; k++) world.add(M(G.cyl, mat(0x6b7480), 0.09, 0.5, 0.09, seaX + 1.2 + k * (len / 3), 0.2, pz + 0.65))
+      if (Math.random() < 0.7) world.add(M(G.box, mat(0xeef1f5), 1.6, 0.6, 0.9, seaX + len * 0.55, 0.65, pz - 0.05))
+    }
+    // 배
+    for (let i = 0; i < 5; i++) {
+      const bx = rnd(seaX + 4, HALF - 3), bz = rnd(-HALF + 4, HALF - 4)
+      const g = new THREE.Group()
+      g.add(M(G.box, mat(0xf2f4f7), 1.1, 0.22, 0.42, 0, 0.16, 0))
+      g.add(M(G.box, mat(0xd8dee6), 0.45, 0.22, 0.3, -0.1, 0.36, 0))
+      g.position.set(bx, 0.12, bz)
+      g.rotation.y = rnd(0, Math.PI * 2)
+      world.add(g)
+    }
   }
 
   function lmFuji(x: number, z: number) {
@@ -691,14 +738,72 @@ function createEngine(host: HTMLDivElement, labelsEl: HTMLDivElement, onPick: (i
     addLmLabel(x, z, 4.2, '하네다공항', '羽田空港')
   }
 
+  const snapRoad = (v: number) => ROADS.reduce((a, b) => (Math.abs(b - v) < Math.abs(a - v) ? b : a))
+
+  /** 스팟 → 가장 가까운 교차로 → 도로를 따라 직각으로 다음 교차로 → 스팟 (Manhattan routing) */
+  function routePolyline(pts: THREE.Vector3[]) {
+    const out: THREE.Vector3[] = []
+    const push = (x: number, z: number) => {
+      const last = out[out.length - 1]
+      if (last && Math.abs(last.x - x) < 1e-3 && Math.abs(last.z - z) < 1e-3) return
+      out.push(new THREE.Vector3(x, 0, z))
+    }
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i]
+      const ix = snapRoad(p.x), iz = snapRoad(p.z)
+      push(p.x, p.z)
+      push(ix, iz)
+      if (i < pts.length - 1) {
+        const q = pts[i + 1]
+        const jx = snapRoad(q.x), jz = snapRoad(q.z)
+        if (i % 2 === 0) push(jx, iz)
+        else push(ix, jz)
+        push(jx, jz)
+      }
+    }
+    return out
+  }
+
+  function pathClears(pts: THREE.Vector3[], clears: { x: number; z: number; r: number }[]) {
+    // 스팟 ↔ 교차로 사이 진입로에 건물이 서지 않게
+    for (const p of pts) {
+      const ix = snapRoad(p.x), iz = snapRoad(p.z)
+      for (const f of [0.35, 0.7]) clears.push({ x: p.x + (ix - p.x) * f, z: p.z + (iz - p.z) * f, r: 1.05 })
+    }
+  }
+
   function addPath(pts: THREE.Vector3[], accent: number) {
     if (pts.length < 2) return
-    const curve = new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(p.x, 0.16, p.z)))
-    const tube = new THREE.TubeGeometry(curve, Math.max(32, pts.length * 12), 0.14, 8, false)
-    pathGlow = new THREE.Mesh(tube, mat(accent, { basic: true, opacity: 0.85 }))
-    world.add(pathGlow)
-    const halo = new THREE.TubeGeometry(curve, Math.max(32, pts.length * 12), 0.32, 8, false)
-    world.add(new THREE.Mesh(halo, mat(accent, { basic: true, opacity: 0.12 })))
+    const line = routePolyline(pts)
+    pathMat = new THREE.MeshBasicMaterial({ color: 0xff8c5a, transparent: true, opacity: 0.95, depthTest: false, depthWrite: false })
+    haloMat = new THREE.MeshBasicMaterial({ color: accent, transparent: true, opacity: 0.16, depthWrite: false })
+    const grp = new THREE.Group()
+    const W = 0.6, Y = 0.24
+    for (let i = 0; i < line.length - 1; i++) {
+      const a = line[i], b = line[i + 1]
+      const len = Math.hypot(b.x - a.x, b.z - a.z)
+      if (len < 1e-3) continue
+      const ang = Math.atan2(b.x - a.x, b.z - a.z)
+      const seg = new THREE.Mesh(G.box, pathMat)
+      seg.renderOrder = 5
+      seg.scale.set(W, 0.05, len + W * 0.6)
+      seg.position.set((a.x + b.x) / 2, Y, (a.z + b.z) / 2)
+      seg.rotation.y = ang
+      grp.add(seg)
+      const halo = new THREE.Mesh(G.box, haloMat)
+      halo.scale.set(W * 2.6, 0.03, len + W * 1.4)
+      halo.position.set((a.x + b.x) / 2, Y - 0.02, (a.z + b.z) / 2)
+      halo.rotation.y = ang
+      grp.add(halo)
+    }
+    for (const v of line) {
+      const cap = new THREE.Mesh(G.cyl, pathMat)
+      cap.renderOrder = 5
+      cap.scale.set(W / 2, 0.05, W / 2)
+      cap.position.set(v.x, Y, v.z)
+      grp.add(cap)
+    }
+    world.add(grp)
   }
 
   function addLife() {
@@ -720,18 +825,14 @@ function createEngine(host: HTMLDivElement, labelsEl: HTMLDivElement, onPick: (i
   }
 
   function addSpot(i: number, pos: THREE.Vector3, stop: { name: string; eat?: number }, accent: number) {
-    const acc = stop.eat ? 0xe07a5f : accent
     const rg = new THREE.Group()
-    const ring = M(G.torus, mat(acc, { basic: true }), 0.85, 0.85, 0.85, 0, 0.08, 0)
+    const ring = M(G.torus, mat(accent, { basic: true }), 0.7, 0.7, 0.7, 0, 0.1, 0)
     ring.rotation.x = Math.PI / 2
     rg.add(ring)
-    const disc = M(G.circle, mat(acc, { basic: true, opacity: 0.2 }), 0.85, 1, 0.85, 0, 0.05, 0)
+    const disc = M(G.circle, mat(accent, { basic: true, opacity: 0.22 }), 0.7, 1, 0.7, 0, 0.06, 0)
     disc.rotation.x = -Math.PI / 2
     rg.add(disc)
-    const peg = M(G.cyl, mat(acc, { basic: true }), 0.12, 0.9, 0.12, 0, 0.55, 0)
-    rg.add(peg)
-    const head = M(G.sph, mat(acc, { basic: true }), 0.28, 0.28, 0.28, 0, 1.15, 0)
-    rg.add(head)
+    rg.add(M(G.cyl, mat(accent, { basic: true }), 0.07, 0.8, 0.07, 0, 0.5, 0))
     rg.position.copy(pos)
     world.add(rg)
     rings.push(rg)
@@ -742,7 +843,7 @@ function createEngine(host: HTMLDivElement, labelsEl: HTMLDivElement, onPick: (i
     el.onclick = () => onPick(i)
     const obj = new CSS2DObject(el)
     const dup = spots.slice(0, i).filter((p) => p.distanceTo(pos) < 0.5).length
-    obj.position.set(pos.x, 2.6 + dup * 1.0, pos.z)
+    obj.position.set(pos.x, 1.1 + dup * 0.9, pos.z)
     world.add(obj)
     pins.push({ el, obj })
   }
@@ -751,7 +852,7 @@ function createEngine(host: HTMLDivElement, labelsEl: HTMLDivElement, onPick: (i
     clear()
     const day = DAYS[di]
     const th = THEMES[day.theme as string] ?? THEMES.night
-    host.style.background = `radial-gradient(ellipse 90% 70% at 58% 42%, ${th.sky[1]} 0%, ${th.sky[0]} 55%, ${th.sky[0]} 100%)`
+    host.style.background = `radial-gradient(ellipse 70% 60% at 60% 46%, ${th.sky[1]} 0%, ${th.sky[0]} 75%)`
     if (scene.fog instanceof THREE.Fog) scene.fog.color.setHex(th.fog)
 
     const proj = projectDay(day)
@@ -771,16 +872,45 @@ function createEngine(host: HTMLDivElement, labelsEl: HTMLDivElement, onPick: (i
     const lr = Math.hypot(lmv.x, lmv.z)
     if (lr > SPAN + 2) lmv.multiplyScalar((SPAN + 2) / lr)
 
-    const clears = spots.map((p) => ({ x: p.x, z: p.z, r: 2.0 }))
-    const seaX = th.sea ? HALF * 0.42 : null
-    plate(th)
-    if (th.sea) {
-      const seaW = HALF - (seaX as number) + 2
-      world.add(M(G.box, mat(0x7eb0c8), seaW, 0.1, HALF * 2 + 2, HALF - seaW / 2 + 0.5, 0.04, 0))
-      lmBridge((seaX as number) - 4, (seaX as number) + 6, -6)
+    const seaX = th.sea ? HALF * 0.22 : null
+    if (seaX !== null) {
+      // 바다 위에 놓인 스팟·랜드마크는 해안선 안쪽으로
+      const shore = seaX - 3.2
+      // 바다 쪽(+x)에 있는 점들을 해안선 안쪽으로 비율 압축 (상대 배치는 유지)
+      const maxX = Math.max(lmv.x, ...spots.map((s) => s.x))
+      if (maxX > shore) {
+        const k = shore / maxX
+        spots.forEach((s) => { if (s.x > 0) s.x *= k })
+        if (lmv.x > 0) lmv.x *= k
+      }
+      // 반대편(-x)으로는 판을 더 넓게 써서 동선이 길게 굽이치도록
+      const minX = Math.min(lmv.x, ...spots.map((s) => s.x))
+      const targetMin = -HALF + 6
+      if (minX > targetMin + 6 && minX < 0) {
+        const k2 = targetMin / minX
+        spots.forEach((s) => { if (s.x < 0) s.x *= k2 })
+        if (lmv.x < 0) lmv.x *= k2
+      }
     }
 
-    const lmR = { plane: 5.5, pagoda: 3.4, wheel: 4.0, tower: 3.2, fuji: 7.0 }[day.landmark as string] ?? 3
+    const clears = spots.map((p) => ({ x: p.x, z: p.z, r: 2.0 }))
+    pathClears(spots, clears)
+    plate(th, seaX)
+    if (seaX !== null) {
+      const seaW = HALF - seaX + 0.8
+      world.add(M(G.box, mat(0x3f7e8f, { rough: 0.35 }), seaW, 0.12, HALF * 2 + 0.8, HALF - seaW / 2 + 0.4, 0.075, 0))
+      // 얕은 물결 띠
+      for (let i = 0; i < 14; i++) {
+        const wx = rnd(seaX + 2, HALF - 2), wz = rnd(-HALF + 2, HALF - 2)
+        world.add(M(G.box, mat(0x5a97a6, { basic: true, opacity: 0.55 }), rnd(1.2, 3.0), 0.01, 0.12, wx, 0.14, wz))
+      }
+      // 해안 방파제
+      world.add(M(G.box, mat(0x9aa4ae), 0.7, 0.24, HALF * 2, seaX + 0.05, 0.17, 0))
+      lmBridge(seaX - 5, HALF - 1.5, -7)
+      harbor(seaX)
+    }
+
+    const lmR = { plane: 5.5, pagoda: 3.4, wheel: 6.8, tower: 3.2, fuji: 7.0 }[day.landmark as string] ?? 3
     clears.push({ x: lmv.x, z: lmv.z, r: lmR })
     switch (day.landmark) {
       case 'plane': lmAirport(lmv.x, lmv.z); break
@@ -819,13 +949,14 @@ function createEngine(host: HTMLDivElement, labelsEl: HTMLDivElement, onPick: (i
     focusT.set(0, 0.45, 0)
     focus.copy(focusT)
     flying = false
-    zoomT = ZOOM0
+    zoomT = fitZoom()
     select(0)
   }
 
   function select(i: number) {
     sel = i
-    if (spots[i]) {
+    // 판 전체가 보이는 상태에서는 시점을 유지, 확대해 들어간 상태에서만 스팟으로 이동
+    if (spots[i] && zoomT > fitZoom() * 1.3) {
       focusT.set(spots[i].x, 0.45, spots[i].z)
       flying = true
     }
@@ -893,10 +1024,8 @@ function createEngine(host: HTMLDivElement, labelsEl: HTMLDivElement, onPick: (i
       const k = i === sel ? 1 + Math.abs(Math.sin(t * 2.8)) * 0.2 : 1
       r.scale.setScalar(k)
     })
-    if (pathGlow) {
-      const m = pathGlow.material as THREE.MeshBasicMaterial
-      m.opacity = 0.7 + Math.sin(t * 2) * 0.12
-    }
+    if (pathMat) pathMat.opacity = 0.82 + Math.sin(t * 2.2) * 0.14
+    if (haloMat) haloMat.opacity = 0.14 + Math.sin(t * 2.2) * 0.05
     renderer.render(scene, cam)
     labelR.render(scene, cam)
     raf = requestAnimationFrame(tick)
@@ -925,14 +1054,14 @@ function createEngine(host: HTMLDivElement, labelsEl: HTMLDivElement, onPick: (i
     if (mode === 'pan') panScreen(dx, dy)
     else {
       az -= dx * 0.005
-      elev = Math.max(0.14, Math.min(0.52, elev + dy * 0.003))
+      elev = Math.max(0.32, Math.min(1.05, elev + dy * 0.003))
     }
   }) as EventListener)
   on(host, 'pointerup', (() => { mode = 'none' }) as EventListener)
   on(host, 'pointercancel', (() => { mode = 'none' }) as EventListener)
   on(host, 'wheel', ((e: WheelEvent) => {
     e.preventDefault()
-    zoomT = Math.max(8, Math.min(48, zoomT * (1 - e.deltaY * 0.0011)))
+    zoomT = Math.max(5, Math.min(48, zoomT * (1 - e.deltaY * 0.0011)))
   }) as EventListener, { passive: false })
   on(window, 'keydown', ((e: KeyboardEvent) => {
     if (e.metaKey || e.ctrlKey || e.altKey) return
@@ -950,6 +1079,7 @@ function createEngine(host: HTMLDivElement, labelsEl: HTMLDivElement, onPick: (i
     renderer.setSize(w, h); labelR.setSize(w, h)
     cam.left = -w / 2; cam.right = w / 2; cam.top = h / 2; cam.bottom = -h / 2
     cam.updateProjectionMatrix()
+    zoomT = fitZoom()
   }) as EventListener)
 
   updateCam()
@@ -958,12 +1088,14 @@ function createEngine(host: HTMLDivElement, labelsEl: HTMLDivElement, onPick: (i
   return {
     buildDay,
     select,
-    zoomBy: (f) => { zoomT = Math.max(8, Math.min(48, zoomT * f)) },
+    zoomBy: (f) => { zoomT = Math.max(5, Math.min(48, zoomT * f)) },
     reset: () => {
-      az = AZ0; elev = EL0; zoomT = ZOOM0
-      focusT.set(0, 0.45, 0); focus.copy(focusT); flying = false
+      az = AZ0; elev = EL0
+      focusT.set(0, 0.45, 0); flying = true
+      zoomT = fitZoom()
     },
     setPaused: (p) => { paused = p },
+    setSideOffset: (px) => { sideOffsetPx = px },
     dispose: () => {
       dead = true
       cancelAnimationFrame(raf)
@@ -990,13 +1122,34 @@ type StopView = {
   eat?: number
 }
 
+const CHAPTER_EN = [
+  'Landing at midnight',
+  'Old Tokyo alleys',
+  'Where the city meets the sea',
+  'Above the Tokyo sky',
+  'Sleep under Fuji',
+  'Morning farewell to Fuji',
+] as const
+
+const CHAPTER_KO = ['하네다', '아사쿠사', '오다이바', '롯폰기', '카와구치코', '귀국'] as const
+
+const SIDE_W = 340
+
+/** '월 10/19' → '10/19 월' */
+function fmtDate(d: string) {
+  const parts = (d || '').trim().split(/\s+/)
+  if (parts.length < 2) return d || ''
+  return `${parts[1]} ${parts[0]}`
+}
+
 export default function AstraDioramaPage() {
   const hostRef = useRef<HTMLDivElement>(null)
   const labelRef = useRef<HTMLDivElement>(null)
   const eng = useRef<Engine | null>(null)
-  const [dayIdx, setDayIdx] = useState(0)
+  const [dayIdx, setDayIdx] = useState(2)
   const [selIdx, setSelIdx] = useState(0)
   const [paused, setPaused] = useState(false)
+  const [touring, setTouring] = useState(false)
   const [open, setOpen] = useState(true)
 
   useEffect(() => {
@@ -1006,11 +1159,35 @@ export default function AstraDioramaPage() {
     return () => { e.dispose(); eng.current = null }
   }, [])
 
+  // 사이드바가 열려 있으면 판을 화면 오른쪽으로 밀어서 가리지 않게
+  useEffect(() => {
+    const apply = () => {
+      const wide = window.innerWidth > 900
+      eng.current?.setSideOffset(open && wide ? SIDE_W / 2 + 10 : 0)
+    }
+    apply()
+    window.addEventListener('resize', apply)
+    return () => window.removeEventListener('resize', apply)
+  }, [open])
+
   useEffect(() => { eng.current?.buildDay(dayIdx) }, [dayIdx])
   useEffect(() => { eng.current?.select(selIdx) }, [selIdx])
   useEffect(() => { eng.current?.setPaused(paused) }, [paused])
 
   const selectDay = useCallback((i: number) => { setDayIdx(i); setSelIdx(0) }, [])
+
+  // EXPLORE: 스팟을 차례로 훑는 자동 투어
+  useEffect(() => {
+    if (!touring) return
+    const id = window.setInterval(() => {
+      setSelIdx((s) => {
+        const n = DAYS[dayIdx].stops.length
+        if (s + 1 >= n) { setTouring(false); return s }
+        return s + 1
+      })
+    }, 2400)
+    return () => window.clearInterval(id)
+  }, [touring, dayIdx])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -1025,44 +1202,52 @@ export default function AstraDioramaPage() {
 
   const day = DAYS[dayIdx]
   const stop = (day.stops[selIdx] ?? day.stops[0]) as StopView
+  const tag = stop.eat ? 'EAT' : stop.stay ? 'STAY' : 'STOP'
+  const dateLabel = typeof day.d === 'string' ? fmtDate(day.d) : ''
 
   return (
     <div className="astra-root">
       <div className="astra-scene" ref={hostRef} />
       <div className="astra-labels" ref={labelRef} />
-
       <div className="astra-vignette" aria-hidden />
 
-      <aside className="astra-rail">
-        {DAYS.map((d: { no: string; d: string }, i: number) => (
+      <header className="astra-top">
+        <div className="astra-brand">
+          <p className="line">
+            <span className="en">Tokyo Walk</span>
+            <span className="bar" aria-hidden />
+            <span className="ko">東京散歩</span>
+          </p>
+          <p className="tag">A LITTLE WORLD. A LONG MEMORY.</p>
+        </div>
+        <div className="astra-chapter-title">
+          <p className="ch">CHAPTER {day.no} / 06</p>
+          <h1>{CHAPTER_EN[dayIdx]}</h1>
+          <p className="ko-sub">{day.t}</p>
+        </div>
+        <div className="astra-top-actions">
           <button
-            key={d.no}
             type="button"
-            className={'astra-rail-day' + (i === dayIdx ? ' on' : '')}
-            onClick={() => selectDay(i)}
+            className={'explore' + (touring ? ' on' : '')}
+            onClick={() => setTouring((v) => !v)}
           >
-            <span className="n">{d.no}</span>
-            <span className="d">{d.d.split(' ')[1]}</span>
+            <span className="dot" /> {touring ? 'TOURING' : 'EXPLORE'}
           </button>
-        ))}
-      </aside>
-
-      <header className="astra-brand">
-        <p className="kicker">ASTRA MAP · TOKYO WALK</p>
-        <h1>{day.t}</h1>
-        <p className="sub">DAY {day.no} · {day.d} · {day.region}</p>
+          <a className="pill alt" href="/pokemon.html">픽셀 ↗</a>
+          <Link className="pill" to="/map">실제 지도 ↗</Link>
+        </div>
       </header>
 
-      <div className="astra-alts">
-        <Link to="/diorama">기존 디오라마</Link>
-        <Link to="/">실측 지도</Link>
-      </div>
-
-      <section className={'astra-sheet' + (open ? ' open' : '')}>
-        <button type="button" className="astra-sheet-toggle" onClick={() => setOpen((v) => !v)}>
-          {open ? '접기' : '일정 펼치기'}
+      <aside className={'astra-side' + (open ? ' open' : '')}>
+        <button type="button" className="astra-side-toggle" onClick={() => setOpen((v) => !v)}>
+          {open ? '접기' : '일정 보기'}
         </button>
-        <div className="astra-sheet-body">
+        <div className="astra-side-body">
+          <div className="astra-day-head">
+            <p className="day-kicker">DAY {day.no}</p>
+            <h2>{day.t}</h2>
+            <p className="region">{day.region} · {dateLabel}</p>
+          </div>
           <ol className="astra-stops">
             {day.stops.map((s: { name: string; time: string; eat?: number }, i: number) => (
               <li key={i}>
@@ -1073,36 +1258,52 @@ export default function AstraDioramaPage() {
                 >
                   <span className="ix">{i + 1}</span>
                   <span className="meta">
-                    <span className="tm">{s.time}</span>
                     <span className="nm">{s.name}</span>
+                    <span className="tm">{s.time}</span>
                   </span>
                 </button>
               </li>
             ))}
           </ol>
           <article className="astra-card">
-            <p className="place">
-              PLACE {String(selIdx + 1).padStart(2, '0')}
-              {stop.eat ? ' · EAT' : stop.stay ? ' · STAY' : ''}
-            </p>
-            <h2>{stop.name}</h2>
+            <p className="place">PLACE {String(selIdx + 1).padStart(2, '0')} · {tag}</p>
+            <h3>{stop.name}</h3>
             {stop.jp && <p className="jp">{stop.jp}</p>}
             <p className="body">{stop.why || stop.note}</p>
-            {(stop.see || stop.via) && (
-              <p className="tip">{stop.see || stop.via}</p>
-            )}
           </article>
         </div>
-      </section>
+      </aside>
+
+      <nav className="astra-chapters" aria-label="일차 선택">
+        {DAYS.map((d: { no: string; d: string }, i: number) => (
+          <button
+            key={d.no}
+            type="button"
+            className={'astra-ch' + (i === dayIdx ? ' on' : '')}
+            onClick={() => selectDay(i)}
+          >
+            <span className="no">{d.no}</span>
+            <span className="meta">
+              <span className="nm">{CHAPTER_KO[i]}</span>
+              <span className="dt">{fmtDate(d.d)}</span>
+            </span>
+          </button>
+        ))}
+      </nav>
 
       <div className="astra-ctrl">
-        <button type="button" onClick={() => eng.current?.zoomBy(1.2)}>＋</button>
-        <button type="button" onClick={() => eng.current?.zoomBy(0.84)}>−</button>
-        <button type="button" onClick={() => eng.current?.reset()}>리셋</button>
-        <button type="button" onClick={() => setPaused((p) => !p)}>{paused ? '재생' : '멈춤'}</button>
+        <div className="row">
+          <button type="button" onClick={() => eng.current?.zoomBy(1.2)} aria-label="확대">＋</button>
+          <button type="button" onClick={() => eng.current?.zoomBy(0.84)} aria-label="축소">−</button>
+          <button type="button" onClick={() => eng.current?.reset()}>전체 보기</button>
+          <button type="button" onClick={() => setPaused((p) => !p)}>
+            {paused ? '움직임 재생' : '움직임 멈춤'}
+          </button>
+        </div>
+        <p className="astra-help">드래그 이동 · 우클릭 회전 · 휠 확대 · WASD 이동 · ← → 날짜</p>
       </div>
 
-      <p className="astra-help">드래그 이동 · 우클릭/Alt 회전 · WASD 이동 · QE 회전 · 휠 줌 · ←→ 날짜</p>
+      <p className="astra-foot">여행을 담은 미니어처 · 축척과 위치는 실제와 다릅니다</p>
     </div>
   )
 }

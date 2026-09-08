@@ -1069,8 +1069,9 @@ export default function DioramaPage() {
 
       {/* 우상단 */}
       <div className="dio-alts">
-        <Link to="/">실측 지도</Link>
-        <Link to="/astra">Astra 실험</Link>
+        <Link to="/map">실제 지도</Link>
+        <a href="/pokemon.html">픽셀</a>
+        <Link to="/">메인 디오라마</Link>
       </div>
 
       {/* 하단 날짜 선택 */}

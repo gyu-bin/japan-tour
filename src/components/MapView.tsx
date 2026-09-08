@@ -42,6 +42,12 @@ type Props = {
   onSelectPlace: (index: number) => void
   onStatus: (s: 'loading' | 'ready' | 'error', message?: string) => void
   reduceMotion: boolean
+  /** 뷰포트 관찰 없이 즉시 로드 (풀스크린 맵) */
+  eager?: boolean
+  /** Astra식 다크 미니어처 톤 */
+  darkTheme?: boolean
+  zoomCmd?: { n: number; dir: 1 | -1 }
+  fitPadding?: { top?: number; bottom?: number; left?: number; right?: number }
 }
 
 function lineGeoJSON(places: Place[], upToInclusive?: number) {
@@ -78,8 +84,8 @@ function ensureSatelliteSource(map: MapLibreMap) {
   })
 }
 
-/** 일반 지도 색 보정 (네이버 일반지도 톤) */
-function tuneStyle(map: MapLibreMap) {
+/** 일반 지도 색 보정 */
+function tuneStyle(map: MapLibreMap, dark = false) {
   const layers = map.getStyle().layers ?? []
 
   const setPaint = (id: string, prop: string, value: unknown) => {
@@ -100,64 +106,89 @@ function tuneStyle(map: MapLibreMap) {
   for (const layer of layers) {
     const id = layer.id
 
-    // 스프라이트 없는 POI 아이콘·미국 도로 방패는 숨김 (콘솔 경고 원인)
     if (layer.type === 'symbol' && /poi|housenumber|shield/i.test(id)) {
       hide(id)
       continue
     }
 
-    // 물 — 연한 파랑 (네이버 지도 톤)
-    if (id === 'water') setPaint(id, 'fill-color', '#A9CEE8')
-    if (/^waterway/.test(id)) setPaint(id, 'line-color', '#A9CEE8')
-
-    // 땅 — 밝은 회백색
-    if (id === 'background') setPaint(id, 'background-color', '#F5F5F1')
-    if (id === 'landuse_residential')
-      setPaint(id, 'fill-color', 'rgba(235, 235, 230, 0.6)')
-
-    // 초록 — 공원·숲은 연녹색
-    if (id === 'park') setPaint(id, 'fill-color', '#CBE5AE')
-    if (id === 'park_outline') setPaint(id, 'line-color', 'rgba(178, 210, 141, 0.7)')
-    if (id === 'landcover_wood') setPaint(id, 'fill-color', 'rgba(184, 218, 147, 0.8)')
-    if (id === 'landcover_grass') setPaint(id, 'fill-color', '#C8E3AB')
-    if (id === 'landcover_sand') setPaint(id, 'fill-color', '#EEEADA')
-    if (/landuse_(pitch|track)/.test(id)) setPaint(id, 'fill-color', '#D4E7BC')
-    if (id === 'landuse_school') setPaint(id, 'fill-color', '#EDEEE4')
-    if (id === 'landuse_hospital') setPaint(id, 'fill-color', '#F3E9E7')
-
-    // 도로 — 흰 도로 + 연회색 외곽선, 고속도로만 노랑
-    if (/^(road|bridge|tunnel)_(motorway|trunk_primary)($|_link$)/.test(id))
-      setPaint(id, 'line-color', '#FCD265')
-    if (/^(road|bridge|tunnel)_secondary_tertiary$/.test(id))
-      setPaint(id, 'line-color', '#FFFFFF')
-    if (/^(road|bridge|tunnel)_(minor|service_track|link|street)$/.test(id))
-      setPaint(id, 'line-color', '#FFFFFF')
-    if (/(motorway|trunk_primary).*casing$/.test(id))
-      setPaint(id, 'line-color', '#E8B94F')
-    else if (/casing$/.test(id)) setPaint(id, 'line-color', '#D9DBD6')
-    if (/rail/.test(id)) setPaint(id, 'line-color', '#C5C8C4')
+    if (dark) {
+      if (id === 'water') setPaint(id, 'fill-color', '#4a6d7c')
+      if (/^waterway/.test(id)) setPaint(id, 'line-color', '#4a6d7c')
+      if (id === 'background') setPaint(id, 'background-color', '#1c222b')
+      if (id === 'landuse_residential') setPaint(id, 'fill-color', 'rgba(40, 46, 56, 0.7)')
+      if (id === 'park') setPaint(id, 'fill-color', '#3d5240')
+      if (id === 'park_outline') setPaint(id, 'line-color', 'rgba(70, 100, 78, 0.6)')
+      if (id === 'landcover_wood') setPaint(id, 'fill-color', 'rgba(55, 78, 58, 0.85)')
+      if (id === 'landcover_grass') setPaint(id, 'fill-color', '#445844')
+      if (id === 'landcover_sand') setPaint(id, 'fill-color', '#4a463e')
+      if (/landuse_(pitch|track)/.test(id)) setPaint(id, 'fill-color', '#3f4f3f')
+      if (id === 'landuse_school') setPaint(id, 'fill-color', '#323842')
+      if (id === 'landuse_hospital') setPaint(id, 'fill-color', '#3a3234')
+      if (/^(road|bridge|tunnel)_(motorway|trunk_primary)($|_link$)/.test(id))
+        setPaint(id, 'line-color', '#c4a05a')
+      if (/^(road|bridge|tunnel)_secondary_tertiary$/.test(id))
+        setPaint(id, 'line-color', '#6a7382')
+      if (/^(road|bridge|tunnel)_(minor|service_track|link|street)$/.test(id))
+        setPaint(id, 'line-color', '#5a6472')
+      if (/(motorway|trunk_primary).*casing$/.test(id))
+        setPaint(id, 'line-color', '#8a7040')
+      else if (/casing$/.test(id)) setPaint(id, 'line-color', '#3a424e')
+      if (/rail/.test(id)) setPaint(id, 'line-color', '#4a5260')
+      if (layer.type === 'symbol') {
+        try {
+          map.setPaintProperty(id, 'text-color', '#a8b0bc' as never)
+          map.setPaintProperty(id, 'text-halo-color', 'rgba(20, 24, 30, 0.85)' as never)
+        } catch {
+          /* ignore */
+        }
+      }
+    } else {
+      if (id === 'water') setPaint(id, 'fill-color', '#A9CEE8')
+      if (/^waterway/.test(id)) setPaint(id, 'line-color', '#A9CEE8')
+      if (id === 'background') setPaint(id, 'background-color', '#F5F5F1')
+      if (id === 'landuse_residential')
+        setPaint(id, 'fill-color', 'rgba(235, 235, 230, 0.6)')
+      if (id === 'park') setPaint(id, 'fill-color', '#CBE5AE')
+      if (id === 'park_outline') setPaint(id, 'line-color', 'rgba(178, 210, 141, 0.7)')
+      if (id === 'landcover_wood') setPaint(id, 'fill-color', 'rgba(184, 218, 147, 0.8)')
+      if (id === 'landcover_grass') setPaint(id, 'fill-color', '#C8E3AB')
+      if (id === 'landcover_sand') setPaint(id, 'fill-color', '#EEEADA')
+      if (/landuse_(pitch|track)/.test(id)) setPaint(id, 'fill-color', '#D4E7BC')
+      if (id === 'landuse_school') setPaint(id, 'fill-color', '#EDEEE4')
+      if (id === 'landuse_hospital') setPaint(id, 'fill-color', '#F3E9E7')
+      if (/^(road|bridge|tunnel)_(motorway|trunk_primary)($|_link$)/.test(id))
+        setPaint(id, 'line-color', '#FCD265')
+      if (/^(road|bridge|tunnel)_secondary_tertiary$/.test(id))
+        setPaint(id, 'line-color', '#FFFFFF')
+      if (/^(road|bridge|tunnel)_(minor|service_track|link|street)$/.test(id))
+        setPaint(id, 'line-color', '#FFFFFF')
+      if (/(motorway|trunk_primary).*casing$/.test(id))
+        setPaint(id, 'line-color', '#E8B94F')
+      else if (/casing$/.test(id)) setPaint(id, 'line-color', '#D9DBD6')
+      if (/rail/.test(id)) setPaint(id, 'line-color', '#C5C8C4')
+    }
   }
 
   if (map.getLayer('building')) hide('building')
 
-  // 건물 — 중립적인 연회색, 높을수록 진하게
   if (map.getLayer('building-3d')) {
-    setPaint('building-3d', 'fill-extrusion-color', [
-      'interpolate',
-      ['linear'],
-      ['coalesce', ['get', 'render_height'], 10],
-      0,
-      '#E9E9E5',
-      20,
-      '#DDDDD8',
-      50,
-      '#CDCEC9',
-      100,
-      '#BCBEBA',
-      200,
-      '#A9ACA9',
-    ])
-    setPaint('building-3d', 'fill-extrusion-opacity', 0.95)
+    if (dark) {
+      setPaint('building-3d', 'fill-extrusion-color', [
+        'interpolate',
+        ['linear'],
+        ['coalesce', ['get', 'render_height'], 10],
+        0, '#c8cdd4', 20, '#b4bac4', 50, '#9aa3b0', 100, '#838c9a', 200, '#6c7584',
+      ])
+      setPaint('building-3d', 'fill-extrusion-opacity', 0.92)
+    } else {
+      setPaint('building-3d', 'fill-extrusion-color', [
+        'interpolate',
+        ['linear'],
+        ['coalesce', ['get', 'render_height'], 10],
+        0, '#E9E9E5', 20, '#DDDDD8', 50, '#CDCEC9', 100, '#BCBEBA', 200, '#A9ACA9',
+      ])
+      setPaint('building-3d', 'fill-extrusion-opacity', 0.95)
+    }
   }
 }
 
@@ -185,7 +216,7 @@ function setLayerVisible(map: MapLibreMap, id: string, visible: boolean) {
   }
 }
 
-function applyBasemap(map: MapLibreMap, mode: BasemapMode) {
+function applyBasemap(map: MapLibreMap, mode: BasemapMode, dark = false) {
   ensureSatelliteSource(map)
 
   const layers = map.getStyle().layers ?? []
@@ -241,7 +272,7 @@ function applyBasemap(map: MapLibreMap, mode: BasemapMode) {
     /* ignore */
   }
 
-  if (!satellite) tuneStyle(map)
+  if (!satellite) tuneStyle(map, dark)
 
   // 동선 헤일로: 위성에서는 어두운 테두리로
   try {
@@ -249,7 +280,7 @@ function applyBasemap(map: MapLibreMap, mode: BasemapMode) {
       map.setPaintProperty(
         'day-route-halo',
         'line-color',
-        satellite ? 'rgba(0, 0, 0, 0.55)' : 'rgba(255, 255, 255, 0.9)',
+        satellite || dark ? 'rgba(0, 0, 0, 0.55)' : 'rgba(255, 255, 255, 0.9)',
       )
     }
   } catch {
@@ -323,7 +354,13 @@ function flyToPlace(
   })
 }
 
-function fitDay(map: MapLibreMap, day: DayPlan, mode3d: boolean, reduceMotion: boolean) {
+function fitDay(
+  map: MapLibreMap,
+  day: DayPlan,
+  mode3d: boolean,
+  reduceMotion: boolean,
+  padding?: { top?: number; bottom?: number; left?: number; right?: number },
+) {
   if (day.places.length === 0) return
   if (day.places.length === 1) {
     flyToPlace(map, day.places[0], mode3d, reduceMotion)
@@ -335,7 +372,12 @@ function fitDay(map: MapLibreMap, day: DayPlan, mode3d: boolean, reduceMotion: b
   )
   day.places.forEach((p) => b.extend([p.lng, p.lat]))
   map.fitBounds(b, {
-    padding: { top: 64, bottom: 64, left: 64, right: 64 },
+    padding: {
+      top: padding?.top ?? 64,
+      bottom: padding?.bottom ?? 64,
+      left: padding?.left ?? 64,
+      right: padding?.right ?? 64,
+    },
     pitch: mode3d ? 48 : 0,
     bearing: mode3d ? -10 : 0,
     duration: reduceMotion ? 0 : 650,
@@ -356,6 +398,10 @@ export function MapView({
   onSelectPlace,
   onStatus,
   reduceMotion,
+  eager = false,
+  darkTheme = false,
+  zoomCmd,
+  fitPadding,
 }: Props) {
   const shellRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -376,14 +422,22 @@ export function MapView({
 
   const [retry, setRetry] = useState(0)
   const [mapEpoch, setMapEpoch] = useState(0)
-  const [nearViewport, setNearViewport] = useState(false)
+  const [nearViewport, setNearViewport] = useState(eager)
+  const darkRef = useRef(darkTheme)
+  darkRef.current = darkTheme
+  const fitPadRef = useRef(fitPadding)
+  fitPadRef.current = fitPadding
   const onSelectRef = useRef(onSelectPlace)
   onSelectRef.current = onSelectPlace
   const onStatusRef = useRef(onStatus)
   onStatusRef.current = onStatus
 
-  // 지도 섹션이 가까워질 때만 엔진 기동 (첫 로딩·타일 호출 지연)
+  // 지도 섹션이 가까워질 때만 엔진 기동 (eager면 즉시)
   useEffect(() => {
+    if (eager) {
+      setNearViewport(true)
+      return
+    }
     const el = shellRef.current
     if (!el) return
     const io = new IntersectionObserver(
@@ -397,7 +451,7 @@ export function MapView({
     )
     io.observe(el)
     return () => io.disconnect()
-  }, [])
+  }, [eager])
 
   useEffect(() => {
     if (!nearViewport) {
@@ -440,23 +494,24 @@ export function MapView({
       if (cancelled) return
       try {
         map.resize()
-        tuneStyle(map)
+        tuneStyle(map, darkRef.current)
         // 위성은 사용자가 켤 때만 소스 추가
-        if (basemapRef.current === 'satellite') applyBasemap(map, 'satellite')
-        else applyBasemap(map, 'map')
+        if (basemapRef.current === 'satellite') applyBasemap(map, 'satellite', darkRef.current)
+        else applyBasemap(map, 'map', darkRef.current)
         if (!map.getSource(ROUTE_SOURCE)) {
           map.addSource(ROUTE_SOURCE, {
             type: 'geojson',
             data: lineGeoJSON(dayRef.current.places, 0),
           })
+          const dark = darkRef.current
           map.addLayer({
             id: 'day-route-halo',
             type: 'line',
             source: ROUTE_SOURCE,
             layout: { 'line-cap': 'round', 'line-join': 'round' },
             paint: {
-              'line-color': 'rgba(255, 255, 255, 0.85)',
-              'line-width': 6,
+              'line-color': dark ? 'rgba(0, 0, 0, 0.45)' : 'rgba(255, 255, 255, 0.85)',
+              'line-width': dark ? 10 : 6,
               'line-opacity': 0.8,
             },
           })
@@ -466,10 +521,10 @@ export function MapView({
             source: ROUTE_SOURCE,
             layout: { 'line-cap': 'round', 'line-join': 'round' },
             paint: {
-              'line-color': '#AF402A',
-              'line-width': 3.2,
-              'line-opacity': 0.92,
-              'line-dasharray': [0.2, 1.6],
+              'line-color': '#e07a5f',
+              'line-width': dark ? 4.5 : 3.2,
+              'line-opacity': 0.95,
+              ...(dark ? {} : { 'line-dasharray': [0.2, 1.6] }),
             },
           })
         }
@@ -573,8 +628,8 @@ export function MapView({
   useEffect(() => {
     const map = mapRef.current
     if (!map || !readyRef.current) return
-    applyBasemap(map, basemap)
-  }, [basemap, mapEpoch])
+    applyBasemap(map, basemap, darkTheme)
+  }, [basemap, mapEpoch, darkTheme])
 
   useEffect(() => {
     const map = mapRef.current
@@ -597,7 +652,7 @@ export function MapView({
     if (!map || !readyRef.current) return
     const src = map.getSource(ROUTE_SOURCE) as GeoJSONSource | undefined
     if (src) src.setData(lineGeoJSON(day.places))
-    fitDay(map, day, mode3d, reduceMotion)
+    fitDay(map, day, mode3d, reduceMotion, fitPadRef.current)
   }, [fitRouteKey, day, mode3d, reduceMotion, mapEpoch])
 
   useEffect(() => {
@@ -620,7 +675,15 @@ export function MapView({
     }
   }, [orbit, reduceMotion, mapEpoch])
 
-  // 투어 중에는 지형 끄기 (끊김 원인)
+  useEffect(() => {
+    if (!zoomCmd || zoomCmd.n === 0) return
+    const map = mapRef.current
+    if (!map || !readyRef.current) return
+    const z = map.getZoom() + zoomCmd.dir * 0.7
+    map.easeTo({ zoom: Math.max(10, Math.min(18, z)), duration: reduceMotion ? 0 : 220 })
+  }, [zoomCmd, reduceMotion])
+
+    // 투어 중에는 지형 끄기 (끊김 원인)
   useEffect(() => {
     const map = mapRef.current
     if (!map || !readyRef.current) return
