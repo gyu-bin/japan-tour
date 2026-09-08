@@ -22,8 +22,32 @@ type Skin = 'cinema' | 'pocket'
 const CAUGHT_KEY = 'tokyo-walk-caught-v1'
 const SKIN_KEY = 'tokyo-walk-skin'
 
-const HERO_IMG =
-  'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260704_101902_e8f0f37b-18b7-4c14-bb5c-99f0724d2646.png&w=1600&q=85'
+const HERO_SLIDES = [
+  {
+    src: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=1800&q=80',
+    label: '도쿄 야경',
+  },
+  {
+    src: 'https://images.unsplash.com/photo-1545569341-9eb8b30979d9?auto=format&fit=crop&w=1800&q=80',
+    label: '센소지 · 아사쿠사',
+  },
+  {
+    src: 'https://images.unsplash.com/photo-1513407030348-c983a97b98d8?auto=format&fit=crop&w=1800&q=80',
+    label: '도쿄타워',
+  },
+  {
+    src: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=1800&q=80',
+    label: '시부야 스크램블',
+  },
+  {
+    src: 'https://images.unsplash.com/photo-1536098561742-ca998e48cbcc?auto=format&fit=crop&w=1800&q=80',
+    label: '신주쿠 네온',
+  },
+  {
+    src: 'https://images.unsplash.com/photo-1524413840807-0c3cb6fa808d?auto=format&fit=crop&w=1800&q=80',
+    label: '메이지 신궁 숲길',
+  },
+] as const
 
 function formatDate(iso: string) {
   const [, m, d] = iso.split('-')
@@ -69,6 +93,7 @@ export default function App() {
   const [catchFlash, setCatchFlash] = useState<{ name: string; cry: string } | null>(null)
   const [touring, setTouring] = useState(false)
   const [spotlightKey, setSpotlightKey] = useState(0)
+  const [heroIdx, setHeroIdx] = useState(0)
   const mapSectionRef = useRef<HTMLElement>(null)
   const daysSectionRef = useRef<HTMLElement>(null)
 
@@ -85,6 +110,15 @@ export default function App() {
     if (reduceMotion) return
     const t = window.setTimeout(() => setEntered(true), 60)
     return () => window.clearTimeout(t)
+  }, [reduceMotion])
+
+  // Hero landmark slideshow
+  useEffect(() => {
+    if (reduceMotion) return
+    const id = window.setInterval(() => {
+      setHeroIdx((i) => (i + 1) % HERO_SLIDES.length)
+    }, 5200)
+    return () => window.clearInterval(id)
   }, [reduceMotion])
 
   useEffect(() => {
@@ -242,7 +276,15 @@ export default function App() {
       {/* —— Hero —— */}
       <section id="top" className="hero" aria-label="소개">
         <div className="hero-media" aria-hidden="true">
-          <img src={HERO_IMG} alt="" />
+          {HERO_SLIDES.map((slide, i) => (
+            <img
+              key={slide.src}
+              src={slide.src}
+              alt=""
+              className={i === heroIdx ? 'is-active' : undefined}
+              loading={i === 0 ? 'eager' : 'lazy'}
+            />
+          ))}
           <div className="hero-shade" />
         </div>
         <div className="hero-copy reveal" style={{ '--d': '80ms' } as CSSProperties}>
@@ -268,6 +310,22 @@ export default function App() {
             <li>투어 재생</li>
             {skin === 'pocket' && <li>도감 {caughtCount}/{totalStops}</li>}
           </ul>
+          <div className="hero-slide-ui" aria-label="배경 랜드마크">
+            <p className="hero-slide-label">{HERO_SLIDES[heroIdx].label}</p>
+            <div className="hero-dots" role="tablist">
+              {HERO_SLIDES.map((slide, i) => (
+                <button
+                  key={slide.src}
+                  type="button"
+                  role="tab"
+                  aria-selected={i === heroIdx}
+                  aria-label={slide.label}
+                  className={i === heroIdx ? 'is-active' : undefined}
+                  onClick={() => setHeroIdx(i)}
+                />
+              ))}
+            </div>
+          </div>
         </div>
         <p className="hero-scroll" aria-hidden="true">
           Scroll
@@ -601,8 +659,8 @@ export default function App() {
 
       <footer className="site-footer">
         <p>
-          {TRIP.note} 지도 · OpenFreeMap / MapLibre. 위성 · Esri. 디자인 톤 · MotionSites
-          cinematic landing.
+          {TRIP.note} 지도 · OpenFreeMap / MapLibre. 위성 · Esri. 히어로 사진 · Unsplash
+          (도쿄 랜드마크).
         </p>
         <p>
           <a href="https://github.com/gyu-bin/japan-tour">GitHub</a>
