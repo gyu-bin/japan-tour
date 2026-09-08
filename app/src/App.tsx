@@ -26,26 +26,32 @@ const HERO_SLIDES = [
   {
     src: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=1800&q=80',
     label: '도쿄 야경',
+    pos: 'center 30%',
   },
   {
     src: 'https://images.unsplash.com/photo-1545569341-9eb8b30979d9?auto=format&fit=crop&w=1800&q=80',
     label: '센소지 · 아사쿠사',
+    pos: 'center 40%',
   },
   {
     src: 'https://images.unsplash.com/photo-1513407030348-c983a97b98d8?auto=format&fit=crop&w=1800&q=80',
     label: '도쿄타워',
+    pos: 'center 25%',
   },
   {
     src: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=1800&q=80',
     label: '시부야 스크램블',
+    pos: 'center 45%',
   },
   {
     src: 'https://images.unsplash.com/photo-1536098561742-ca998e48cbcc?auto=format&fit=crop&w=1800&q=80',
     label: '신주쿠 네온',
+    pos: 'center 35%',
   },
   {
     src: 'https://images.unsplash.com/photo-1524413840807-0c3cb6fa808d?auto=format&fit=crop&w=1800&q=80',
     label: '메이지 신궁 숲길',
+    pos: 'center 40%',
   },
 ] as const
 
@@ -282,6 +288,7 @@ export default function App() {
               src={slide.src}
               alt=""
               className={i === heroIdx ? 'is-active' : undefined}
+              style={{ objectPosition: slide.pos }}
               loading={i === 0 ? 'eager' : 'lazy'}
             />
           ))}
