@@ -4,10 +4,12 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type CSSProperties,
 } from 'react'
 import { DAYS, TRIP, mapsDirUrl, streetViewUrl } from './data/itinerary'
+import { MonFace, monForPlace, monTypeColor } from './data/pocketMons'
 import type { BasemapMode } from './components/MapView'
 import './App.css'
 
@@ -15,9 +17,32 @@ const MapView = lazy(() =>
   import('./components/MapView').then((m) => ({ default: m.MapView })),
 )
 
+type Skin = 'cinema' | 'pocket'
+
+const CAUGHT_KEY = 'tokyo-walk-caught-v1'
+const SKIN_KEY = 'tokyo-walk-skin'
+
 function formatDate(iso: string) {
   const [, m, d] = iso.split('-')
   return `${Number(m)}/${Number(d)}`
+}
+
+function loadCaught(): Set<string> {
+  try {
+    const raw = localStorage.getItem(CAUGHT_KEY)
+    if (!raw) return new Set()
+    return new Set(JSON.parse(raw) as string[])
+  } catch {
+    return new Set()
+  }
+}
+
+function loadSkin(): Skin {
+  try {
+    return localStorage.getItem(SKIN_KEY) === 'pocket' ? 'pocket' : 'cinema'
+  } catch {
+    return 'cinema'
+  }
 }
 
 export default function App() {
@@ -36,14 +61,55 @@ export default function App() {
   const [mapError, setMapError] = useState<string>()
   const [infoOpen, setInfoOpen] = useState(false)
   const [entered, setEntered] = useState(reduceMotion)
+  const [skin, setSkin] = useState<Skin>(loadSkin)
+  const [caught, setCaught] = useState<Set<string>>(loadCaught)
+  const [catchFlash, setCatchFlash] = useState<{ name: string; cry: string } | null>(null)
+  const [parallax, setParallax] = useState({ x: 0, y: 0 })
+  const filmRef = useRef<HTMLDivElement>(null)
 
   const day = DAYS[dayIdx]
   const place = day.places[placeIdx] ?? day.places[0]
+  const allPlaces = useMemo(() => DAYS.flatMap((d) => d.places), [])
+  const totalStops = allPlaces.length
+  const caughtCount = caught.size
+
+  const activeMon = place
+    ? monForPlace(place.id, place.name, place.activity, place.eat)
+    : null
 
   useEffect(() => {
     if (reduceMotion) return
     const t = window.setTimeout(() => setEntered(true), 60)
     return () => window.clearTimeout(t)
+  }, [reduceMotion])
+
+  useEffect(() => {
+    localStorage.setItem(SKIN_KEY, skin)
+  }, [skin])
+
+  useEffect(() => {
+    localStorage.setItem(CAUGHT_KEY, JSON.stringify([...caught]))
+  }, [caught])
+
+  // Filmstrip auto-scroll to active day
+  useEffect(() => {
+    const track = filmRef.current
+    if (!track) return
+    const card = track.children[dayIdx] as HTMLElement | undefined
+    card?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', inline: 'center', block: 'nearest' })
+  }, [dayIdx, reduceMotion])
+
+  // Pointer parallax (MotionSites Mostar-style)
+  useEffect(() => {
+    if (reduceMotion) return
+    const onMove = (e: PointerEvent) => {
+      setParallax({
+        x: e.clientX / window.innerWidth - 0.5,
+        y: e.clientY / window.innerHeight - 0.5,
+      })
+    }
+    window.addEventListener('pointermove', onMove, { passive: true })
+    return () => window.removeEventListener('pointermove', onMove)
   }, [reduceMotion])
 
   const selectDay = useCallback((i: number) => {
@@ -57,6 +123,20 @@ export default function App() {
     setPlaceIdx(i)
     setFocusToken((t) => t + 1)
   }, [])
+
+  const catchPlace = useCallback((placeId: string) => {
+    const p = allPlaces.find((x) => x.id === placeId)
+    if (!p) return
+    const mon = monForPlace(p.id, p.name, p.activity, p.eat)
+    setCaught((prev) => {
+      if (prev.has(placeId)) return prev
+      const next = new Set(prev)
+      next.add(placeId)
+      return next
+    })
+    setCatchFlash({ name: mon.nameKo, cry: mon.cry })
+    window.setTimeout(() => setCatchFlash(null), 1600)
+  }, [allPlaces])
 
   const onStatus = useCallback((s: 'loading' | 'ready' | 'error', message?: string) => {
     setMapStatus(s)
@@ -84,18 +164,30 @@ export default function App() {
         e.preventDefault()
         selectDay(Math.max(dayIdx - 1, 0))
       }
+      if (e.key === 'c' || e.key === 'C') {
+        if (place) catchPlace(place.id)
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [day, dayIdx, placeIdx, selectDay, selectPlace])
+  }, [day, dayIdx, placeIdx, place, selectDay, selectPlace, catchPlace])
+
+  const watermarkStyle = {
+    transform: `translate(calc(-50% + ${parallax.x * 28}px), calc(-50% + ${parallax.y * 18}px))`,
+  } as CSSProperties
 
   return (
-    <div className={'stage' + (entered ? ' is-ready' : '')}>
+    <div
+      className={
+        'stage' +
+        (entered ? ' is-ready' : '') +
+        (skin === 'pocket' ? ' theme-pocket' : ' theme-cinema')
+      }
+    >
       <a className="skip" href="#map-panel">
         지도로 건너뛰기
       </a>
 
-      {/* Full-bleed map — the whole page is the map */}
       <div id="map-panel" className="map-bleed" aria-label="여행 지도">
         {(mapStatus === 'loading' || mapStatus === 'error') && (
           <div className={'map-status is-' + mapStatus} role="status">
@@ -131,23 +223,29 @@ export default function App() {
         </Suspense>
       </div>
 
-      {/* Giant watermark title — Travel Journal / Mostar scale */}
-      <h1 className="watermark" aria-hidden="true">
-        {day.region.split('→')[0]?.trim() || 'Tokyo'}
+      <h1 className="watermark" aria-hidden="true" style={watermarkStyle}>
+        {skin === 'pocket' ? 'POCKET' : day.region.split('→')[0]?.trim() || 'Tokyo'}
       </h1>
 
-      {/* Top chrome */}
       <header className="topbar reveal" style={{ '--d': '0ms' } as CSSProperties}>
         <div className="brand-block">
           <p className="eyebrow">{TRIP.travelers}</p>
           <p className="brand-title">
-            <span className="en">{TRIP.titleEn}</span>
-            <span className="ko">{TRIP.titleKo}</span>
+            <span className="en">{skin === 'pocket' ? 'Pocket Walk' : TRIP.titleEn}</span>
+            <span className="ko">{skin === 'pocket' ? '포켓 산책 도감' : TRIP.titleKo}</span>
           </p>
           <p className="period">{TRIP.period}</p>
         </div>
 
         <div className="top-actions liquid-glass" role="toolbar" aria-label="지도 도구">
+          <button
+            type="button"
+            className="skin-toggle"
+            aria-pressed={skin === 'pocket'}
+            onClick={() => setSkin((s) => (s === 'pocket' ? 'cinema' : 'pocket'))}
+          >
+            {skin === 'pocket' ? '시네마' : '포켓'}
+          </button>
           <button type="button" onClick={() => setFitKey((k) => k + 1)}>
             동선
           </button>
@@ -177,7 +275,6 @@ export default function App() {
         </div>
       </header>
 
-      {/* Day story chip */}
       <div className="day-story liquid-glass reveal" style={{ '--d': '120ms' } as CSSProperties}>
         <div className="day-story-nav">
           <button
@@ -202,46 +299,93 @@ export default function App() {
         </p>
         <h2>{day.title}</h2>
         <p className="day-story-intro">{day.intro}</p>
-        <button
-          type="button"
-          className="info-chip"
-          aria-expanded={infoOpen}
-          onClick={() => setInfoOpen((v) => !v)}
-        >
-          {infoOpen ? '정보 닫기' : '이동 · 먹거리 · 예약'}
-        </button>
+
+        {skin === 'pocket' && (
+          <div className="dex-meter" aria-label="도감 진행">
+            <div className="dex-meter-bar">
+              <span style={{ width: `${(caughtCount / totalStops) * 100}%` }} />
+            </div>
+            <p>
+              도감 {caughtCount}/{totalStops}
+            </p>
+          </div>
+        )}
+
+        <div className="day-story-actions">
+          <button
+            type="button"
+            className="info-chip"
+            aria-expanded={infoOpen}
+            onClick={() => setInfoOpen((v) => !v)}
+          >
+            {infoOpen ? '정보 닫기' : '이동 · 먹거리 · 예약'}
+          </button>
+          {skin === 'pocket' && place && (
+            <button
+              type="button"
+              className={'catch-btn' + (caught.has(place.id) ? ' is-caught' : '')}
+              onClick={() => catchPlace(place.id)}
+              disabled={caught.has(place.id)}
+            >
+              {caught.has(place.id) ? '등록됨' : '볼로 잡기 (C)'}
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Places dock — right floating */}
       <aside
         className="places-dock liquid-glass reveal"
         style={{ '--d': '180ms' } as CSSProperties}
-        aria-label="오늘의 방문 장소"
+        aria-label={skin === 'pocket' ? '오늘의 도감' : '오늘의 방문 장소'}
       >
         <div className="places-dock-head">
-          <h3>Stops</h3>
-          <span>{day.places.length}</span>
+          <h3>{skin === 'pocket' ? 'Dex' : 'Stops'}</h3>
+          <span>
+            {day.places.filter((p) => caught.has(p.id)).length}/{day.places.length}
+          </span>
         </div>
         <ol>
-          {day.places.map((p, i) => (
-            <li key={p.id}>
-              <button
-                type="button"
-                className={'stop' + (i === placeIdx ? ' is-active' : '')}
-                onClick={() => selectPlace(i)}
-                aria-current={i === placeIdx ? 'true' : undefined}
-              >
-                <span className={'stop-no' + (p.eat ? ' eat' : '')}>{i + 1}</span>
-                <span className="stop-body">
-                  <strong>
-                    {p.time} · {p.name}
-                  </strong>
-                  {p.nameJp && <em>{p.nameJp}</em>}
-                  <span>{p.activity}</span>
-                </span>
-              </button>
-            </li>
-          ))}
+          {day.places.map((p, i) => {
+            const mon = monForPlace(p.id, p.name, p.activity, p.eat)
+            const isCaught = caught.has(p.id)
+            return (
+              <li key={p.id}>
+                <button
+                  type="button"
+                  className={'stop' + (i === placeIdx ? ' is-active' : '') + (isCaught ? ' is-caught' : '')}
+                  onClick={() => selectPlace(i)}
+                  aria-current={i === placeIdx ? 'true' : undefined}
+                >
+                  {skin === 'pocket' ? (
+                    <span className="stop-mon">
+                      <MonFace type={mon.type} caught={isCaught} />
+                    </span>
+                  ) : (
+                    <span className={'stop-no' + (p.eat ? ' eat' : '')}>{i + 1}</span>
+                  )}
+                  <span className="stop-body">
+                    <strong>
+                      {skin === 'pocket'
+                        ? isCaught
+                          ? `${mon.nameKo} · ${p.name}`
+                          : `??? · ${p.name}`
+                        : `${p.time} · ${p.name}`}
+                    </strong>
+                    {skin === 'pocket' ? (
+                      <em style={{ color: isCaught ? monTypeColor(mon.type) : undefined }}>
+                        {isCaught ? `${mon.typeKo} · ${p.time}` : '미발견 · 지도를 탐색하세요'}
+                      </em>
+                    ) : (
+                      <>
+                        {p.nameJp && <em>{p.nameJp}</em>}
+                        <span>{p.activity}</span>
+                      </>
+                    )}
+                  </span>
+                </button>
+              </li>
+            )
+          })}
         </ol>
         {place && (
           <a
@@ -255,9 +399,8 @@ export default function App() {
         )}
       </aside>
 
-      {/* Horizontal day filmstrip — Mostar sights slider */}
       <nav className="filmstrip reveal" style={{ '--d': '240ms' } as CSSProperties} aria-label="날짜 목록">
-        <div className="filmstrip-track">
+        <div className="filmstrip-track" ref={filmRef}>
           {DAYS.map((d, i) => (
             <button
               key={d.id}
@@ -266,17 +409,23 @@ export default function App() {
               onClick={() => selectDay(i)}
               aria-current={i === dayIdx ? 'date' : undefined}
             >
-              <span className="film-kicker">Day {d.no}</span>
+              <span className="film-kicker">
+                {skin === 'pocket' ? `Route ${d.no}` : `Day ${d.no}`}
+              </span>
               <strong>{d.title}</strong>
               <em>
                 {formatDate(d.date)} · {d.weekday} · {d.region}
               </em>
+              {skin === 'pocket' && (
+                <span className="film-caught">
+                  {d.places.filter((p) => caught.has(p.id)).length}/{d.places.length} caught
+                </span>
+              )}
             </button>
           ))}
         </div>
       </nav>
 
-      {/* Expandable info sheet */}
       {infoOpen && (
         <section className="info-sheet liquid-glass" aria-label="여행 정보">
           <div className="info-grid">
@@ -306,6 +455,12 @@ export default function App() {
               <p>{day.rainAlt}</p>
             </article>
           </div>
+          {activeMon && skin === 'pocket' && (
+            <p className="mon-hint">
+              현재 스팟 몬: {caught.has(place!.id) ? `${activeMon.nameKo} (${activeMon.typeKo})` : '???'} —
+              공식 포켓몬이 아닌 여행용 오리지널 캐릭터입니다.
+            </p>
+          )}
           <ul className="info-links">
             {day.links.map((l) => (
               <li key={l.url}>
@@ -316,9 +471,18 @@ export default function App() {
             ))}
           </ul>
           <p className="credits">
-            MotionSites 레이아웃 재구성 · OpenFreeMap / Esri / MapLibre · {TRIP.nights}
+            시네마 레이아웃 · MotionSites 톤. 포켓 모드는 오리지널 도감 테마(비공식). OpenFreeMap /
+            Esri / MapLibre · {TRIP.nights}
           </p>
         </section>
+      )}
+
+      {catchFlash && (
+        <div className="catch-flash" role="status" aria-live="polite">
+          <div className="catch-ball" aria-hidden="true" />
+          <p className="catch-cry">{catchFlash.cry}</p>
+          <p className="catch-name">{catchFlash.name} 을(를) 도감에 등록!</p>
+        </div>
       )}
     </div>
   )

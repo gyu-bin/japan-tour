@@ -727,3 +727,202 @@ a {
     padding: 8px 16px 16px;
   }
 }
+
+/* —— Interactive extras —— */
+.day-story-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.day-story-actions .info-chip {
+  margin-top: 0;
+}
+.skin-toggle[aria-pressed='true'] {
+  background: #ffe566 !important;
+  color: #1a1208 !important;
+}
+.dex-meter {
+  margin-top: 12px;
+}
+.dex-meter-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+}
+.dex-meter-bar span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #ff5a5a, #ffe566);
+  border-radius: inherit;
+  transition: width 0.45s var(--ease);
+}
+.dex-meter p {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: rgba(253, 241, 225, 0.7);
+}
+.catch-btn {
+  border: 0;
+  border-radius: 999px;
+  padding: 9px 14px;
+  min-height: 38px;
+  font-weight: 800;
+  font-size: 12.5px;
+  cursor: pointer;
+  background: radial-gradient(circle at 50% 35%, #fff 0 28%, #e63946 29% 52%, #1a1a1a 53% 100%);
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 22px rgba(230, 57, 70, 0.35);
+}
+.catch-btn.is-caught,
+.catch-btn:disabled {
+  background: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.7);
+  box-shadow: none;
+  cursor: default;
+}
+.stop-mon {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+}
+.mon-face {
+  display: block;
+}
+.stop.is-caught:not(.is-active) {
+  border-color: rgba(255, 229, 102, 0.35);
+}
+.film-caught {
+  display: block;
+  margin-top: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #c45c3e;
+}
+.mon-hint {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: rgba(253, 241, 225, 0.65);
+}
+
+.catch-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  background: rgba(7, 10, 9, 0.55);
+  backdrop-filter: blur(4px);
+  animation: flash-in 0.35s var(--ease);
+  pointer-events: none;
+}
+.catch-ball {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 32%, #fff 0 30%, #e63946 31% 55%, #111 56% 100%);
+  box-shadow: 0 0 0 3px #fff, 0 16px 40px rgba(0, 0, 0, 0.4);
+  animation: ball-bounce 0.7s var(--ease);
+}
+.catch-cry {
+  margin: 0;
+  font-family: var(--font-en);
+  font-size: 1.4rem;
+  color: #ffe566;
+}
+.catch-name {
+  margin: 0;
+  font-family: var(--font-ko);
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--paper);
+}
+
+@keyframes flash-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes ball-bounce {
+  0% {
+    transform: scale(0.4) translateY(40px);
+    opacity: 0;
+  }
+  55% {
+    transform: scale(1.12) translateY(-8px);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* —— Pocket theme skin —— */
+.theme-pocket {
+  --paper: #fff8e7;
+  --sky: #3d7dca;
+  --sky-deep: #e63946;
+  --glass: rgba(26, 18, 8, 0.62);
+}
+.theme-pocket .watermark {
+  color: rgba(255, 229, 102, 0.18);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+.theme-pocket .brand-title .en {
+  color: #ffe566;
+}
+.theme-pocket .film-card {
+  border-width: 3px;
+  border-color: #1a1208;
+  border-radius: 14px;
+  box-shadow:
+    4px 4px 0 #1a1208,
+    0 16px 32px rgba(0, 0, 0, 0.25);
+}
+.theme-pocket .film-card.is-active {
+  background: #ffe566;
+  box-shadow:
+    4px 4px 0 #e63946,
+    0 0 0 2px #e63946;
+}
+.theme-pocket .day-story,
+.theme-pocket .places-dock,
+.theme-pocket .top-actions,
+.theme-pocket .info-sheet {
+  border-radius: 16px;
+}
+.theme-pocket .places-dock-head h3 {
+  color: #ffe566;
+}
+.theme-pocket .maps-link {
+  background: #ffe566;
+  color: #1a1208;
+  font-weight: 800;
+  border: 2px solid #1a1208;
+  box-shadow: 3px 3px 0 #1a1208;
+}
+.theme-pocket .day-story-nav button {
+  border: 2px solid #1a1208;
+  box-shadow: 2px 2px 0 #1a1208;
+}
+.theme-pocket .stop.is-active {
+  background: #ffe566;
+  border-color: #1a1208;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .catch-flash,
+  .catch-ball {
+    animation: none;
+  }
+}
