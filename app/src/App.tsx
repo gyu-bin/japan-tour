@@ -1,4 +1,12 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+} from 'react'
 import { DAYS, TRIP, mapsDirUrl, streetViewUrl } from './data/itinerary'
 import type { BasemapMode } from './components/MapView'
 import './App.css'
@@ -8,7 +16,7 @@ const MapView = lazy(() =>
 )
 
 const HERO =
-  'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=900&q=80'
+  'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260704_101902_e8f0f37b-18b7-4c14-bb5c-99f0724d2646.png&w=1280&q=85'
 
 function formatDate(iso: string) {
   const [, m, d] = iso.split('-')
@@ -30,9 +38,16 @@ export default function App() {
   const [mapStatus, setMapStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [mapError, setMapError] = useState<string>()
   const [daysOpen, setDaysOpen] = useState(false)
+  const [entered, setEntered] = useState(reduceMotion)
 
   const day = DAYS[dayIdx]
   const place = day.places[placeIdx] ?? day.places[0]
+
+  useEffect(() => {
+    if (reduceMotion) return
+    const t = window.setTimeout(() => setEntered(true), 80)
+    return () => window.clearTimeout(t)
+  }, [reduceMotion])
 
   const selectDay = useCallback((i: number) => {
     setDayIdx(i)
@@ -79,13 +94,13 @@ export default function App() {
   }, [day, dayIdx, placeIdx, selectDay, selectPlace])
 
   return (
-    <div className="app">
+    <div className={'app' + (entered ? ' is-ready' : '')}>
       <a className="skip" href="#map-panel">
         지도로 건너뛰기
       </a>
 
       <aside className="sidebar" aria-label="여행 개요와 날짜">
-        <div className="brand">
+        <div className="brand reveal" style={{ '--d': '0ms' } as CSSProperties}>
           <p className="eyebrow">{TRIP.travelers}</p>
           <h1 className="title-en">{TRIP.titleEn}</h1>
           <h2 className="title-ko">{TRIP.titleKo}</h2>
@@ -93,16 +108,19 @@ export default function App() {
           <p className="nights">{TRIP.nights}</p>
         </div>
 
-        <figure className="hero-arch">
+        <figure className="hero-card reveal" style={{ '--d': '120ms' } as CSSProperties}>
           <img src={HERO} alt="도쿄 야경" width={420} height={280} loading="eager" />
-          <figcaption>사진 · Unsplash (Tokyo)</figcaption>
+          <div className="hero-fade" aria-hidden="true" />
+          <span className="liquid-glass hero-pill">{DAYS.length} days</span>
+          <strong className="hero-word" aria-hidden="true">
+            Tokyo
+          </strong>
+          <figcaption>MotionSites · Travel Journal 톤</figcaption>
         </figure>
-
-        <div className="mosaic-rule" aria-hidden="true" />
 
         <button
           type="button"
-          className="days-toggle"
+          className="days-toggle liquid-glass"
           aria-expanded={daysOpen}
           onClick={() => setDaysOpen((v) => !v)}
         >
@@ -114,17 +132,18 @@ export default function App() {
             <button
               key={d.id}
               type="button"
-              className={'day-stamp' + (i === dayIdx ? ' is-active' : '')}
+              className={
+                'day-stamp reveal' + (i === dayIdx ? ' is-active' : '')
+              }
+              style={{ '--d': `${180 + i * 70}ms` } as CSSProperties}
               onClick={() => selectDay(i)}
               aria-current={i === dayIdx ? 'date' : undefined}
             >
-              <span className="stamp-no">{d.no}</span>
-              <span className="stamp-meta">
-                <strong>
-                  {formatDate(d.date)} · {d.weekday}
-                </strong>
-                <em>{d.title}</em>
-              </span>
+              <span className="stamp-kicker">Day {d.no}</span>
+              <strong className="stamp-title">{d.title}</strong>
+              <em className="stamp-meta">
+                {formatDate(d.date)} · {d.weekday}
+              </em>
             </button>
           ))}
         </nav>
@@ -136,7 +155,7 @@ export default function App() {
       </aside>
 
       <main className="main">
-        <header className="day-head">
+        <header className="day-head reveal" style={{ '--d': '200ms' } as CSSProperties}>
           <div className="day-head-text">
             <p className="day-kicker">
               <span className="tile-date">
@@ -150,6 +169,7 @@ export default function App() {
           <div className="day-nav">
             <button
               type="button"
+              className="liquid-glass"
               disabled={dayIdx === 0}
               onClick={() => selectDay(dayIdx - 1)}
             >
@@ -157,6 +177,7 @@ export default function App() {
             </button>
             <button
               type="button"
+              className="liquid-glass"
               disabled={dayIdx === DAYS.length - 1}
               onClick={() => selectDay(dayIdx + 1)}
             >
@@ -166,7 +187,7 @@ export default function App() {
         </header>
 
         <section id="map-panel" className="map-panel">
-          <div className="map-toolbar" role="toolbar" aria-label="지도 도구">
+          <div className="map-toolbar liquid-glass" role="toolbar" aria-label="지도 도구">
             <button type="button" onClick={() => setFitKey((k) => k + 1)}>
               오늘 동선
             </button>
@@ -323,9 +344,8 @@ export default function App() {
             </div>
             <footer className="credits">
               <p>
-                지도 · OpenFreeMap / OpenMapTiles · MapLibre GL. 위성 · Esri World Imagery
-                (Esri, Maxar, Earthstar Geographics). 지형 DEM · Mapzen Terrarium (AWS).
-                사진은 Unsplash. 운영시간은 공식 안내 요약이며 방문 전 재확인하세요.
+                디자인 · MotionSites (Travel Journal / Mostar Guide / Place Saver). 지도 ·
+                OpenFreeMap · MapLibre. 위성 · Esri World Imagery. 지형 · Mapzen Terrarium.
               </p>
               <p>
                 Mapbox·Google 실사 3D는 API 키·결제가 필요합니다. 현재 빌드는 키 없이
