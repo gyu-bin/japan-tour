@@ -686,69 +686,7 @@ a {
   }
 }
 
-@media (max-width: 900px) {
-  body,
-  html,
-  #root {
-    overflow: auto;
-  }
-  .stage {
-    min-height: 100vh;
-    height: auto;
-  }
-  .map-bleed {
-    position: relative;
-    height: 58vh;
-    min-height: 320px;
-  }
-  .map-shell {
-    position: absolute !important;
-  }
-  .watermark {
-    top: 28vh;
-    font-size: clamp(3.2rem, 18vw, 5.5rem);
-  }
-  .topbar {
-    position: relative;
-    flex-direction: column;
-    padding: 16px;
-    background: linear-gradient(180deg, rgba(7, 10, 9, 0.85), transparent);
-  }
-  .day-story,
-  .places-dock,
-  .filmstrip,
-  .info-sheet,
-  .spotlight,
-  .timeline {
-    position: relative;
-    top: auto;
-    left: auto;
-    right: auto;
-    bottom: auto;
-    width: auto;
-    max-height: none;
-    margin: 12px 16px;
-    transform: none;
-  }
-  .spotlight {
-    pointer-events: auto;
-    animation: none;
-  }
-  .map-disclaimer,
-  .map-retry {
-    bottom: 12px;
-  }
-  .info-grid {
-    grid-template-columns: 1fr;
-  }
-  .filmstrip {
-    padding: 0 0 24px;
-    margin: 0;
-  }
-  .filmstrip-track {
-    padding: 8px 16px 16px;
-  }
-}
+/* 모바일 규칙은 파일 하단 최종 미디어쿼리 참고 */
 
 /* —— Interactive extras —— */
 .day-story-actions {
@@ -1136,5 +1074,226 @@ a {
   }
   to {
     opacity: 0;
+  }
+}
+
+/* —— Responsive (반드시 파일 하단에 둬 absolute 패널 규칙을 덮어씀) —— */
+@media (max-width: 1100px) {
+  .day-story {
+    width: min(320px, calc(100vw - 36px));
+  }
+  .places-dock {
+    width: min(260px, calc(100vw - 36px));
+    max-height: calc(100vh - 300px);
+  }
+  .watermark {
+    font-size: clamp(3.5rem, 12vw, 8rem);
+  }
+  .top-actions {
+    max-width: min(420px, 100%);
+  }
+  .timeline-hint {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  body,
+  html,
+  #root {
+    overflow: auto;
+    height: auto;
+    min-height: 100%;
+  }
+
+  .stage {
+    min-height: 100dvh;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  .map-bleed {
+    position: relative;
+    order: 2;
+    height: min(52dvh, 420px);
+    min-height: 280px;
+    flex: none;
+    z-index: 0;
+  }
+
+  .map-shell {
+    position: absolute !important;
+    inset: 0 !important;
+    height: 100% !important;
+    min-height: 100% !important;
+    border-radius: 0 !important;
+  }
+
+  .map-disclaimer {
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    max-width: none;
+    font-size: 10px;
+  }
+
+  .map-retry {
+    right: 10px;
+    bottom: 52px;
+    min-height: 40px;
+  }
+
+  .watermark {
+    position: absolute;
+    top: calc(env(safe-area-inset-top, 0px) + 72px);
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: clamp(2.8rem, 16vw, 4.2rem);
+    opacity: 0.55;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    order: 1;
+    z-index: 10;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: calc(12px + env(safe-area-inset-top, 0px)) 14px 12px;
+    background: rgba(7, 10, 9, 0.92);
+    backdrop-filter: blur(12px);
+    pointer-events: auto;
+  }
+
+  .topbar > * {
+    pointer-events: auto;
+  }
+
+  .brand-title .en {
+    font-size: 1.45rem;
+  }
+
+  .top-actions {
+    width: 100%;
+    max-width: none;
+    border-radius: 16px;
+    padding: 6px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+
+  .top-actions button,
+  .top-actions .btn-link {
+    min-height: 44px;
+    padding: 8px 6px;
+    font-size: 12px;
+    justify-content: center;
+  }
+
+  .day-flash {
+    position: fixed;
+  }
+
+  .day-story,
+  .places-dock,
+  .filmstrip,
+  .info-sheet,
+  .spotlight,
+  .timeline {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 10px 14px !important;
+    transform: none !important;
+    inset: auto !important;
+  }
+
+  .spotlight {
+    order: 3;
+    pointer-events: auto;
+    animation: none;
+    margin-top: -8px !important;
+  }
+
+  .timeline {
+    order: 4;
+    border-radius: 16px;
+    width: auto !important;
+  }
+
+  .day-story {
+    order: 5;
+  }
+
+  .places-dock {
+    order: 6;
+    max-height: none !important;
+  }
+
+  .places-dock ol {
+    max-height: none;
+  }
+
+  .info-sheet {
+    order: 7;
+    max-height: none;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .filmstrip {
+    order: 8;
+    padding: 0 0 calc(20px + env(safe-area-inset-bottom, 0px));
+    margin: 4px 0 0 !important;
+  }
+
+  .filmstrip-track {
+    padding: 8px 14px 16px;
+    gap: 10px;
+  }
+
+  .film-card {
+    flex-basis: min(78vw, 280px);
+    min-height: 104px;
+  }
+
+  .catch-flash {
+    position: fixed;
+  }
+
+  .timeline-hint {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .top-actions {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .day-story h2 {
+    font-size: 1.25rem;
+  }
+
+  .spotlight h3 {
+    font-size: 1.2rem;
+  }
+
+  .map-bleed {
+    height: 46dvh;
+    min-height: 240px;
   }
 }
