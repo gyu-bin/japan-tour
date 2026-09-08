@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { DAYS, TRIP, mapsDirUrl, streetViewUrl } from './data/itinerary'
+import type { BasemapMode } from './components/MapView'
 import './App.css'
 
 const MapView = lazy(() =>
@@ -22,6 +23,7 @@ export default function App() {
   const [dayIdx, setDayIdx] = useState(1)
   const [placeIdx, setPlaceIdx] = useState(0)
   const [mode3d, setMode3d] = useState(true)
+  const [basemap, setBasemap] = useState<BasemapMode>('satellite')
   const [orbit, setOrbit] = useState(false)
   const [fitKey, setFitKey] = useState(0)
   const [focusToken, setFocusToken] = useState(0)
@@ -170,6 +172,15 @@ export default function App() {
             </button>
             <button
               type="button"
+              aria-pressed={basemap === 'satellite'}
+              onClick={() =>
+                setBasemap((v) => (v === 'satellite' ? 'map' : 'satellite'))
+              }
+            >
+              {basemap === 'satellite' ? '위성' : '일반'}
+            </button>
+            <button
+              type="button"
               aria-pressed={mode3d}
               onClick={() => setMode3d((v) => !v)}
             >
@@ -219,6 +230,7 @@ export default function App() {
                 place={place}
                 placeIndex={placeIdx}
                 mode3d={mode3d}
+                basemap={basemap}
                 orbit={orbit}
                 fitRouteKey={fitKey}
                 focusToken={focusToken}
@@ -311,8 +323,9 @@ export default function App() {
             </div>
             <footer className="credits">
               <p>
-                지도 · OpenFreeMap / OpenMapTiles · MapLibre GL. 지형 DEM · Mapzen Terrarium
-                (AWS). 사진은 Unsplash. 운영시간은 공식 안내 요약이며 방문 전 재확인하세요.
+                지도 · OpenFreeMap / OpenMapTiles · MapLibre GL. 위성 · Esri World Imagery
+                (Esri, Maxar, Earthstar Geographics). 지형 DEM · Mapzen Terrarium (AWS).
+                사진은 Unsplash. 운영시간은 공식 안내 요약이며 방문 전 재확인하세요.
               </p>
               <p>
                 Mapbox·Google 실사 3D는 API 키·결제가 필요합니다. 현재 빌드는 키 없이

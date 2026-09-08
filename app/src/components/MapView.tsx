@@ -18,12 +18,22 @@ setWorkerUrl(workerUrl)
 const STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty'
 const ROUTE_SOURCE = 'day-route'
 const TERRAIN_SOURCE = 'terrain-dem'
+const SAT_SOURCE = 'esri-world-imagery'
+const SAT_LAYER = 'basemap-satellite'
+
+/** Esri World Imagery — 키 없이 사용 가능 (출처 표기 필요) */
+const SAT_TILES = [
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+]
+
+export type BasemapMode = 'map' | 'satellite'
 
 type Props = {
   day: DayPlan
   place: Place | null
   placeIndex: number
   mode3d: boolean
+  basemap: BasemapMode
   orbit: boolean
   fitRouteKey: number
   focusToken: number
@@ -43,7 +53,19 @@ function lineGeoJSON(places: Place[]) {
   }
 }
 
-/** 여행 수첩 팔레트를 지도에 입힌다 — 테라코타·청록·황토·크림 */
+function ensureSatelliteSource(map: MapLibreMap) {
+  if (map.getSource(SAT_SOURCE)) return
+  map.addSource(SAT_SOURCE, {
+    type: 'raster',
+    tiles: SAT_TILES,
+    tileSize: 256,
+    maxzoom: 19,
+    attribution:
+      'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community',
+  })
+}
+
+/** 일반 지도 색 보정 (네이버 일반지도 톤) */
 function tuneStyle(map: MapLibreMap) {
   const layers = map.getStyle().layers ?? []
 
@@ -126,6 +148,102 @@ function tuneStyle(map: MapLibreMap) {
   }
 }
 
+/** 지면·수면 등 위성 위를 가리는 벡터 레이어 */
+function isGroundCoverLayer(id: string) {
+  return (
+    id === 'background' ||
+    id === 'water' ||
+    /^landcover_/.test(id) ||
+    /^landuse_/.test(id) ||
+    id === 'park' ||
+    id === 'park_outline' ||
+    /^aeroway_/.test(id) ||
+    /^waterway/.test(id)
+  )
+}
+
+function setLayerVisible(map: MapLibreMap, id: string, visible: boolean) {
+  try {
+    if (map.getLayer(id)) {
+      map.setLayoutProperty(id, 'visibility', visible ? 'visible' : 'none')
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+function applyBasemap(map: MapLibreMap, mode: BasemapMode) {
+  ensureSatelliteSource(map)
+
+  const layers = map.getStyle().layers ?? []
+  const firstId = layers[0]?.id
+
+  if (!map.getLayer(SAT_LAYER)) {
+    map.addLayer(
+      {
+        id: SAT_LAYER,
+        type: 'raster',
+        source: SAT_SOURCE,
+        paint: { 'raster-opacity': 1, 'raster-fade-duration': 0 },
+      },
+      firstId,
+    )
+  }
+
+  const satellite = mode === 'satellite'
+  setLayerVisible(map, SAT_LAYER, satellite)
+
+  for (const layer of layers) {
+    if (layer.id === SAT_LAYER) continue
+    if (isGroundCoverLayer(layer.id)) {
+      setLayerVisible(map, layer.id, !satellite)
+    }
+  }
+
+  // 위성일 때 도로는 얇게만, 건물은 살짝 투명하게
+  try {
+    if (map.getLayer('building-3d')) {
+      map.setPaintProperty(
+        'building-3d',
+        'fill-extrusion-opacity',
+        satellite ? 0.72 : 0.95,
+      )
+      if (satellite) {
+        map.setPaintProperty('building-3d', 'fill-extrusion-color', [
+          'interpolate',
+          ['linear'],
+          ['coalesce', ['get', 'render_height'], 10],
+          0,
+          '#E8E4DC',
+          40,
+          '#D4CFC6',
+          100,
+          '#C2BDB4',
+          200,
+          '#AFAAA2',
+        ])
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+
+  if (!satellite) tuneStyle(map)
+
+  // 동선 헤일로: 위성에서는 어두운 테두리로
+  try {
+    if (map.getLayer('day-route-halo')) {
+      map.setPaintProperty(
+        'day-route-halo',
+        'line-color',
+        satellite ? 'rgba(0, 0, 0, 0.55)' : 'rgba(255, 255, 255, 0.9)',
+      )
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 function setTerrain(map: MapLibreMap, on: boolean) {
   try {
     if (on) {
@@ -196,6 +314,7 @@ export function MapView({
   place,
   placeIndex,
   mode3d,
+  basemap,
   orbit,
   fitRouteKey,
   focusToken,
@@ -211,9 +330,11 @@ export function MapView({
   const dayRef = useRef(day)
   const placeRef = useRef(place)
   const mode3dRef = useRef(mode3d)
+  const basemapRef = useRef(basemap)
   dayRef.current = day
   placeRef.current = place
   mode3dRef.current = mode3d
+  basemapRef.current = basemap
 
   const [retry, setRetry] = useState(0)
   const [mapEpoch, setMapEpoch] = useState(0)
@@ -256,6 +377,7 @@ export function MapView({
       try {
         map.resize()
         tuneStyle(map)
+        applyBasemap(map, basemapRef.current)
         if (!map.getSource(ROUTE_SOURCE)) {
           map.addSource(ROUTE_SOURCE, {
             type: 'geojson',
@@ -363,6 +485,12 @@ export function MapView({
   }, [day, mapEpoch, placeIndex])
 
   useEffect(() => {
+    const map = mapRef.current
+    if (!map || !readyRef.current) return
+    applyBasemap(map, basemap)
+  }, [basemap, mapEpoch])
+
+  useEffect(() => {
     markersRef.current.forEach((m, i) => {
       m.getElement().classList.toggle('is-active', i === placeIndex)
     })
@@ -408,8 +536,8 @@ export function MapView({
     <div className="map-shell">
       <div ref={containerRef} className="map-canvas" role="application" aria-label="도쿄 3D 지도" />
       <p className="map-disclaimer">
-        연결선은 방문 순서이며 실제 도로 경로가 아닙니다. 건물은 OpenFreeMap 높이 기반
-        입체(fill-extrusion)로, 실사 3D 메쉬가 아닙니다. 별도 API 키는 필요 없습니다.
+        연결선은 방문 순서이며 실제 도로 경로가 아닙니다. 위성은 Esri World Imagery,
+        건물은 OpenFreeMap 높이 입체(실사 3D 메쉬 아님)입니다. 별도 API 키는 필요 없습니다.
       </p>
       <button type="button" className="map-retry" onClick={() => setRetry((n) => n + 1)}>
         지도 다시 불러오기
