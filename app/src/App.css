@@ -661,6 +661,21 @@ a {
   width: 34px;
   height: 34px;
   z-index: 2;
+  animation: marker-pulse 1.4s ease-in-out infinite;
+}
+.map-marker.is-visited {
+  background: #7a9e8a;
+  opacity: 0.9;
+}
+
+@keyframes marker-pulse {
+  0%,
+  100% {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), 0 0 0 0 rgba(253, 241, 225, 0.55);
+  }
+  50% {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), 0 0 0 10px rgba(253, 241, 225, 0);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -702,7 +717,9 @@ a {
   .day-story,
   .places-dock,
   .filmstrip,
-  .info-sheet {
+  .info-sheet,
+  .spotlight,
+  .timeline {
     position: relative;
     top: auto;
     left: auto;
@@ -711,6 +728,11 @@ a {
     width: auto;
     max-height: none;
     margin: 12px 16px;
+    transform: none;
+  }
+  .spotlight {
+    pointer-events: auto;
+    animation: none;
   }
   .map-disclaimer,
   .map-retry {
@@ -922,7 +944,197 @@ a {
 
 @media (prefers-reduced-motion: reduce) {
   .catch-flash,
-  .catch-ball {
+  .catch-ball,
+  .spotlight,
+  .day-flash,
+  .map-marker.is-active {
     animation: none;
+  }
+}
+
+/* Spotlight + tour timeline */
+.spotlight {
+  position: absolute;
+  left: 50%;
+  bottom: 168px;
+  z-index: 5;
+  transform: translateX(-50%);
+  width: min(420px, calc(100vw - 48px));
+  border-radius: 20px;
+  padding: 16px 18px 14px;
+  animation: spotlight-in 0.55s var(--ease);
+  pointer-events: none;
+}
+.spotlight-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.spotlight-idx,
+.spotlight-time,
+.spotlight-live {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+.spotlight-idx {
+  color: rgba(253, 241, 225, 0.55);
+}
+.spotlight-time {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
+}
+.spotlight-live {
+  margin-left: auto;
+  color: #ff6b4a;
+  animation: live-blink 1s step-end infinite;
+}
+.spotlight h3 {
+  margin: 0;
+  font-family: var(--font-ko);
+  font-size: clamp(1.25rem, 2.4vw, 1.65rem);
+  line-height: 1.2;
+}
+.spotlight-jp {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: rgba(253, 241, 225, 0.55);
+}
+.spotlight-act {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: rgba(253, 241, 225, 0.75);
+  line-height: 1.45;
+}
+.spotlight-rail {
+  margin-top: 12px;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+.spotlight-rail span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #ff6b4a, #ffe566);
+  transition: width 0.45s var(--ease);
+}
+
+.timeline {
+  position: absolute;
+  left: 50%;
+  bottom: 138px;
+  z-index: 5;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(560px, calc(100vw - 48px));
+  border-radius: 999px;
+  padding: 10px 14px;
+}
+.timeline-play {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 12px;
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+}
+.timeline-play[aria-pressed='true'] {
+  background: #ff6b4a;
+  color: #fff;
+}
+.timeline-track {
+  position: relative;
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  margin: 0 8px;
+}
+.timeline-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #af402a, #ff6b4a);
+  transition: width 0.4s var(--ease);
+}
+.timeline-dot {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(253, 241, 225, 0.85);
+  background: rgba(7, 10, 9, 0.8);
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  padding: 0;
+  z-index: 1;
+  transition:
+    transform 0.15s,
+    background 0.15s;
+}
+.timeline-dot.is-done {
+  background: #af402a;
+  border-color: #ffb4a2;
+}
+.timeline-dot.is-active {
+  background: var(--paper);
+  border-color: #fff;
+  transform: translate(-50%, -50%) scale(1.35);
+  box-shadow: 0 0 0 4px rgba(255, 107, 74, 0.35);
+}
+.timeline-hint {
+  margin: 0;
+  flex: none;
+  font-size: 10px;
+  color: rgba(253, 241, 225, 0.45);
+  white-space: nowrap;
+  position: relative;
+  z-index: 1;
+}
+
+.day-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 40%, rgba(253, 241, 225, 0.22), transparent 55%);
+  animation: day-flash-out 0.7s var(--ease) forwards;
+}
+
+@keyframes spotlight-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(18px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+@keyframes live-blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+@keyframes day-flash-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
   }
 }

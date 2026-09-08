@@ -37,18 +37,31 @@ type Props = {
   orbit: boolean
   fitRouteKey: number
   focusToken: number
+  /** 투어 모드: 더 긴 시네마틱 비행 */
+  cinematic?: boolean
   onSelectPlace: (index: number) => void
   onStatus: (s: 'loading' | 'ready' | 'error', message?: string) => void
   reduceMotion: boolean
 }
 
-function lineGeoJSON(places: Place[]) {
+function lineGeoJSON(places: Place[], upToInclusive?: number) {
+  const slice =
+    typeof upToInclusive === 'number'
+      ? places.slice(0, Math.max(1, upToInclusive + 1))
+      : places
+  const coords =
+    slice.length === 1
+      ? [
+          [slice[0].lng, slice[0].lat],
+          [slice[0].lng + 0.00001, slice[0].lat],
+        ]
+      : slice.map((p) => [p.lng, p.lat])
   return {
     type: 'Feature' as const,
     properties: {},
     geometry: {
       type: 'LineString' as const,
-      coordinates: places.map((p) => [p.lng, p.lat]),
+      coordinates: coords,
     },
   }
 }
@@ -274,17 +287,25 @@ function jumpToPlace(map: MapLibreMap, place: Place, mode3d: boolean) {
   })
 }
 
-function flyToPlace(map: MapLibreMap, place: Place, mode3d: boolean, reduceMotion: boolean) {
+function flyToPlace(
+  map: MapLibreMap,
+  place: Place,
+  mode3d: boolean,
+  reduceMotion: boolean,
+  opts?: { cinematic?: boolean; index?: number },
+) {
   if (reduceMotion) {
     jumpToPlace(map, place, mode3d)
     return
   }
+  const i = opts?.index ?? 0
+  const cinematic = !!opts?.cinematic
   map.flyTo({
     center: [place.lng, place.lat],
-    zoom: 15.8,
-    pitch: mode3d ? 52 : 0,
-    bearing: mode3d ? -16 : map.getBearing(),
-    duration: 700,
+    zoom: cinematic ? 16.35 : 15.8,
+    pitch: mode3d ? (cinematic ? 58 : 52) : 0,
+    bearing: mode3d ? -18 + (i % 5) * 14 : map.getBearing(),
+    duration: cinematic ? 1600 : 750,
     essential: true,
   })
 }
@@ -318,6 +339,7 @@ export function MapView({
   orbit,
   fitRouteKey,
   focusToken,
+  cinematic = false,
   onSelectPlace,
   onStatus,
   reduceMotion,
@@ -381,9 +403,8 @@ export function MapView({
         if (!map.getSource(ROUTE_SOURCE)) {
           map.addSource(ROUTE_SOURCE, {
             type: 'geojson',
-            data: lineGeoJSON(dayRef.current.places),
+            data: lineGeoJSON(dayRef.current.places, 0),
           })
-          // 아래: 크림색 헤일로 / 위: 테라코타 점선
           map.addLayer({
             id: 'day-route-halo',
             type: 'line',
@@ -391,7 +412,8 @@ export function MapView({
             layout: { 'line-cap': 'round', 'line-join': 'round' },
             paint: {
               'line-color': 'rgba(255, 255, 255, 0.9)',
-              'line-width': 7,
+              'line-width': 8,
+              'line-opacity': 0.85,
             },
           })
           map.addLayer({
@@ -401,9 +423,21 @@ export function MapView({
             layout: { 'line-cap': 'round', 'line-join': 'round' },
             paint: {
               'line-color': '#AF402A',
-              'line-width': 3.2,
-              'line-opacity': 0.9,
-              'line-dasharray': [0.2, 1.8],
+              'line-width': 3.6,
+              'line-opacity': 0.95,
+              'line-dasharray': [0.15, 1.6],
+            },
+          })
+          map.addLayer({
+            id: 'day-route-glow',
+            type: 'line',
+            source: ROUTE_SOURCE,
+            layout: { 'line-cap': 'round', 'line-join': 'round' },
+            paint: {
+              'line-color': '#ff6b4a',
+              'line-width': 12,
+              'line-opacity': 0.22,
+              'line-blur': 4,
             },
           })
         }
@@ -463,13 +497,18 @@ export function MapView({
     if (!map || !readyRef.current) return
 
     const src = map.getSource(ROUTE_SOURCE) as GeoJSONSource | undefined
-    if (src) src.setData(lineGeoJSON(day.places))
+    if (src) src.setData(lineGeoJSON(day.places, placeIndex))
 
     markersRef.current.forEach((m) => m.remove())
     markersRef.current = day.places.map((p, i) => {
       const el = document.createElement('button')
       el.type = 'button'
-      el.className = 'map-marker' + (p.eat ? ' is-eat' : '') + (i === placeIndex ? ' is-active' : '')
+      const visited = i < placeIndex
+      el.className =
+        'map-marker' +
+        (p.eat ? ' is-eat' : '') +
+        (i === placeIndex ? ' is-active' : '') +
+        (visited ? ' is-visited' : '')
       el.innerHTML = `<span>${i + 1}</span>`
       el.setAttribute('aria-label', `${i + 1}. ${p.name}`)
       el.addEventListener('click', (ev) => {
@@ -492,15 +531,20 @@ export function MapView({
 
   useEffect(() => {
     markersRef.current.forEach((m, i) => {
-      m.getElement().classList.toggle('is-active', i === placeIndex)
+      const el = m.getElement()
+      el.classList.toggle('is-active', i === placeIndex)
+      el.classList.toggle('is-visited', i < placeIndex)
     })
   }, [placeIndex])
 
   useEffect(() => {
     const map = mapRef.current
     if (!map || !readyRef.current || !place) return
-    flyToPlace(map, place, mode3d, reduceMotion)
-  }, [focusToken, place, mode3d, reduceMotion, mapEpoch])
+    flyToPlace(map, place, mode3d, reduceMotion, {
+      cinematic,
+      index: placeIndex,
+    })
+  }, [focusToken, place, mode3d, reduceMotion, mapEpoch, cinematic, placeIndex])
 
   useEffect(() => {
     const map = mapRef.current
@@ -512,6 +556,8 @@ export function MapView({
     if (fitRouteKey === 0) return
     const map = mapRef.current
     if (!map || !readyRef.current) return
+    const src = map.getSource(ROUTE_SOURCE) as GeoJSONSource | undefined
+    if (src) src.setData(lineGeoJSON(day.places))
     fitDay(map, day, mode3d, reduceMotion)
   }, [fitRouteKey, day, mode3d, reduceMotion, mapEpoch])
 
