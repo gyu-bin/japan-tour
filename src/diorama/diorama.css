@@ -1,0 +1,233 @@
+@import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&family=Shippori+Mincho:wght@600;800&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --ink:#3a352e; --ink2:#7a7266; --cream:#faf7f0; --card:#ffffff;
+  --acc:#e8734a; --acc2:#c0392b; --leaf:#7fb069; --sky:#8fb4d9; --gold:#c9a24b;
+}
+html.diorama-mode,html.diorama-mode body{height:100%;overflow:hidden;background:var(--cream);
+  font-family:'Zen Maru Gothic',sans-serif;color:var(--ink)}
+.diorama-mode{font-family:'Zen Maru Gothic',sans-serif;color:var(--ink)}
+canvas{display:block}
+#scene{position:fixed;inset:0;touch-action:none}
+#labels{position:fixed;inset:0;pointer-events:none;z-index:3;overflow:hidden}
+
+/* 밤 프리셋: 크림색 칩이 야경 위에서 눈을 찌른다 */
+.diorama-mode.night .pinChip{background:rgba(30,38,58,.92);color:#f2f0ea;
+  border-color:rgba(255,255,255,.1);box-shadow:0 4px 16px rgba(0,0,0,.4)}
+.diorama-mode.night .pinChip.sel{background:#f7f3ea;color:#2a3247}
+.diorama-mode.night .pinChip.sel .no{background:var(--acc)}
+.diorama-mode.night .lmChip{background:#f4f1e8;color:#25304a}
+
+/* 지하철 역 이름 — 스팟 칩보다 조용하게 (확대했을 때만 뜬다) */
+.stChip{pointer-events:none;transform:translate(-50%,-50%);white-space:nowrap;
+  background:rgba(255,255,255,.82);border:1px solid rgba(58,53,46,.1);border-radius:6px;
+  padding:2px 7px;font-size:10px;font-weight:700;color:var(--ink2);letter-spacing:.02em}
+.diorama-mode.night .stChip{background:rgba(28,35,54,.82);color:#aab4c8;border-color:rgba(255,255,255,.08)}
+
+/* ---------- 스팟 라벨 칩 ---------- */
+.pinChip{pointer-events:auto;cursor:pointer;transform:translate(-50%,-130%);white-space:nowrap;
+  background:#fff;border-radius:20px;padding:5px 12px 5px 6px;display:flex;align-items:center;gap:7px;
+  font-size:12px;font-weight:700;color:var(--ink);box-shadow:0 4px 14px rgba(58,53,46,.18);
+  border:1.5px solid rgba(58,53,46,.06);transition:transform .15s, box-shadow .15s}
+.pinChip:hover{box-shadow:0 6px 18px rgba(58,53,46,.28)}
+.pinChip .no{width:20px;height:20px;border-radius:50%;background:var(--acc);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:11px}
+.pinChip.eat .no{background:var(--acc2)}
+.pinChip.sel{background:var(--ink);color:#fff}
+.pinChip.sel .no{background:var(--gold)}
+/* 자리가 없으면 번호 배지만 남긴다 */
+.pinChip.mini{width:28px;height:28px;padding:0;gap:0;font-size:0;justify-content:center}
+.pinChip.mini .no{font-size:11px}
+.lmChip{pointer-events:none;transform:translate(-50%,-140%);white-space:nowrap;text-align:center;
+  background:#2c3a55;color:#fff;border-radius:3px;padding:7px 15px;font-size:12px;font-weight:700;
+  box-shadow:0 4px 14px rgba(44,58,85,.3);letter-spacing:.03em}
+.lmChip .jp{display:block;font-family:'Shippori Mincho',serif;font-size:10px;font-weight:400;
+  letter-spacing:.2em;opacity:.72;margin-top:1px}
+
+/* ---------- 좌상단 타이틀 카드 ---------- */
+#head{position:fixed;top:20px;left:20px;z-index:10;width:min(430px,calc(100vw - 40px));
+  background:rgba(255,255,255,.95);backdrop-filter:blur(10px);border-radius:4px;
+  border:1px solid rgba(58,53,46,.13);
+  padding:22px 26px 18px;box-shadow:0 12px 38px rgba(58,53,46,.09)}
+#head .eyebrow{font-size:10px;letter-spacing:.3em;color:var(--ink2);margin-bottom:12px;
+  padding-bottom:10px;border-bottom:1px solid rgba(58,53,46,.1)}
+#head .titleRow{display:flex;align-items:baseline;gap:14px;margin-bottom:4px}
+#head .dayNo{font-family:'Shippori Mincho',serif;font-size:40px;font-weight:800;color:var(--acc);line-height:1}
+#head h1{font-family:'Shippori Mincho',serif;font-size:21px;font-weight:800;letter-spacing:.02em}
+#head .region{font-size:11.5px;color:var(--ink2);margin-bottom:14px;letter-spacing:.04em}
+#head .jp{font-family:'Shippori Mincho',serif;font-size:12px;color:var(--ink2);
+  letter-spacing:.24em;margin-top:3px}
+/* 한 줄 가로 스크롤 — 카드가 높아지면 그만큼 지도를 덮는다 */
+#chips{display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;padding-bottom:4px;
+  scrollbar-width:thin;scrollbar-color:rgba(58,53,46,.2) transparent}
+#chips::-webkit-scrollbar{height:5px}
+#chips::-webkit-scrollbar-thumb{background:rgba(58,53,46,.2);border-radius:3px}
+#chips .chip{flex:none;white-space:nowrap}
+.chip{cursor:pointer;border:1px solid rgba(58,53,46,.16);background:#fff;border-radius:3px;
+  padding:6px 12px;font-family:inherit;font-size:11.5px;font-weight:700;color:var(--ink);transition:.15s}
+.chip:hover{border-color:var(--acc);color:var(--acc)}
+.chip.sel{background:var(--ink);border-color:var(--ink);color:#fff}
+.chip .t{color:var(--ink2);font-weight:400;margin-right:4px}
+.chip.sel .t{color:rgba(255,255,255,.6)}
+
+/* ---------- 우측 상세 패널 ---------- */
+#panel{position:fixed;top:20px;right:20px;bottom:86px;z-index:10;width:min(356px,calc(100vw - 40px));
+  background:rgba(255,255,255,.97);backdrop-filter:blur(12px);border-radius:4px;
+  border:1px solid rgba(58,53,46,.13);
+  box-shadow:0 14px 40px rgba(58,53,46,.1);display:flex;flex-direction:column;overflow:hidden}
+#panel .tabs{display:flex;border-bottom:1px solid rgba(58,53,46,.08);padding:0 6px;background:rgba(250,247,240,.65)}
+#panel .tab{flex:1;border:none;background:transparent;font-family:inherit;font-size:12.5px;font-weight:800;
+  color:var(--ink2);padding:14px 8px 12px;cursor:pointer;position:relative;letter-spacing:.02em}
+#panel .tab.on{color:var(--ink)}
+#panel .tab.on::after{content:'';position:absolute;left:18%;right:18%;bottom:0;height:2.5px;
+  background:var(--acc);border-radius:2px}
+#panel .body{padding:24px 26px 26px;overflow-y:auto;flex:1}
+#panel .pane{display:none}
+#panel .pane.on{display:block}
+#panel .plno{font-size:10px;letter-spacing:.26em;color:var(--acc);margin-bottom:10px}
+#panel h2{font-family:'Shippori Mincho',serif;font-size:23px;font-weight:800;margin-bottom:2px;
+  letter-spacing:.01em}
+#panel .pjp{font-family:'Shippori Mincho',serif;font-size:12.5px;color:var(--ink2);
+  letter-spacing:.2em;margin-bottom:10px;min-height:1em}
+#panel .meta{font-size:12px;color:var(--ink2);margin-bottom:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#panel .tag{font-size:10px;background:rgba(192,57,43,.12);color:var(--acc2);border-radius:10px;padding:2px 8px;font-weight:700}
+#panel .sec{margin-bottom:16px}
+#panel .sec .sh{font-size:10px;letter-spacing:.2em;color:var(--ink2);font-weight:800;margin-bottom:10px;
+  padding-bottom:7px;border-bottom:1px solid rgba(58,53,46,.1)}
+#panel .sec .st{font-size:13px;line-height:1.95;color:var(--ink);background:transparent;
+  border-radius:0;padding:0 0 2px}
+#panel .links{display:flex;flex-direction:column;gap:6px;margin-top:4px;margin-bottom:4px}
+#panel .links a{font-size:12px;font-weight:700;color:#3a6a9a;text-decoration:none}
+#panel .links a:hover{color:var(--acc)}
+#panel .schedHead{font-size:11px;letter-spacing:.14em;color:var(--ink2);margin-bottom:10px;font-weight:800}
+.row{display:flex;gap:9px;padding:9px 10px;border-radius:12px;cursor:pointer;align-items:baseline;transition:.15s}
+.row:hover{background:var(--cream)}
+.row.sel{background:rgba(232,115,74,.12)}
+.row .tm{font-size:11px;color:var(--sky);min-width:36px;font-weight:700}
+.row .nm{font-size:12.5px;font-weight:700}
+.row.eat .nm::after{content:'먹기';font-size:9px;background:rgba(192,57,43,.12);color:var(--acc2);
+  padding:1px 6px;border-radius:8px;margin-left:6px;font-weight:700}
+
+/* ---------- 하단 일차 페이지네이션 ---------- */
+#pager{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:10;
+  background:rgba(255,255,255,.95);backdrop-filter:blur(10px);border-radius:4px;
+  border:1px solid rgba(58,53,46,.13);
+  padding:8px 16px;display:flex;gap:2px;align-items:center;box-shadow:0 10px 30px rgba(58,53,46,.1);
+  max-width:94vw;overflow-x:auto}
+.pbtn{cursor:pointer;border:none;background:transparent;font-family:'Shippori Mincho',serif;
+  font-size:13px;font-weight:800;color:var(--ink2);width:42px;height:40px;border-radius:3px;
+  transition:.18s;flex:none;letter-spacing:.06em}
+.pbtn:hover{color:var(--acc)}
+.pbtn.on{background:var(--ink);color:#fff}
+#pager .sep{width:1px;height:18px;background:rgba(58,53,46,.14);margin:0 4px;flex:none}
+#pager .lbl{font-size:10.5px;color:var(--ink2);white-space:nowrap;padding:0 4px 0 10px;
+  line-height:1.5}
+#pager .lbl b{display:block;font-family:'Shippori Mincho',serif;font-weight:800;
+  letter-spacing:.18em;color:var(--ink)}
+
+/* ---------- 미니맵 (실측) ---------- */
+#mini{position:fixed;left:20px;bottom:20px;z-index:10;width:200px;
+  background:rgba(255,255,255,.95);backdrop-filter:blur(10px);border-radius:4px;
+  border:1px solid rgba(58,53,46,.13);
+  padding:13px 15px 11px;box-shadow:0 10px 30px rgba(58,53,46,.1)}
+#mini .mh{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+#mini .mt{font-size:10px;font-weight:700;letter-spacing:.2em;color:var(--ink)}
+#mini .north{width:22px;height:22px;display:flex;align-items:center;justify-content:center}
+#mini .north svg{display:block;transition:transform .1s linear}
+#mini svg.map{display:block;width:100%;height:auto;background:var(--cream);border-radius:10px}
+#mini .ms{font-size:10px;color:var(--ink2);margin-top:6px;text-align:right}
+#mini .mdot{cursor:pointer}
+@media(max-width:900px){#mini{display:none}}
+
+/* ---------- 안내 ---------- */
+#hint{position:fixed;right:20px;bottom:20px;z-index:9;font-size:11px;color:var(--ink2);
+  background:rgba(255,255,255,.85);border-radius:12px;padding:8px 12px;line-height:1.7;
+  box-shadow:0 6px 20px rgba(58,53,46,.1)}
+#hint b{color:var(--ink)}
+#panel .via{font-size:12px;line-height:1.65;color:#3a6a9a;background:rgba(143,180,217,.18);
+  border-radius:12px;padding:10px 12px;margin-bottom:12px}
+#panel .via b{color:var(--ink);font-weight:700}
+#panel .acts{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+#panel .acts a,#panel .acts button{flex:1;min-width:calc(50% - 4px);text-align:center;text-decoration:none;border:none;cursor:pointer;
+  font-family:inherit;font-size:12.5px;font-weight:700;border-radius:12px;padding:11px 10px}
+#panel .acts .maps{background:#1a73e8;color:#fff}
+#panel .acts .maps[hidden]{display:none}
+#panel .acts .closeup{background:var(--ink);color:#fff}
+#panel .acts .closeup.on{background:var(--acc)}
+#panel .acts .overview{background:var(--cream);color:var(--ink);border:1.5px solid rgba(58,53,46,.12)}
+#zoomBadge{position:fixed;left:50%;bottom:72px;transform:translateX(-50%);z-index:9;
+  font-size:11px;font-weight:700;color:var(--ink2);background:rgba(255,255,255,.9);
+  border-radius:999px;padding:6px 12px;box-shadow:0 6px 18px rgba(58,53,46,.1);
+  pointer-events:none;opacity:0;transition:opacity .2s}
+#zoomBadge.show{opacity:1}
+@media(max-width:900px){#zoomBadge{bottom:64px}}
+#alts{position:fixed;top:20px;right:min(380px,calc(100vw - 40px));z-index:11;display:flex;gap:6px}
+#alts a{font-size:11px;font-weight:700;color:var(--ink2);text-decoration:none;background:rgba(255,255,255,.92);
+  border-radius:999px;padding:7px 12px;box-shadow:0 6px 18px rgba(58,53,46,.1)}
+#alts a:hover{color:var(--acc)}
+
+/* ---------- 시간대 선택 ---------- */
+#timeBar{position:fixed;top:56px;right:min(380px,calc(100vw - 40px));z-index:11;
+  display:flex;gap:2px;background:rgba(255,255,255,.92);border-radius:999px;padding:3px;
+  box-shadow:0 6px 18px rgba(58,53,46,.1);max-width:min(360px,calc(100vw - 40px));overflow-x:auto;
+  scrollbar-width:none}
+#timeBar::-webkit-scrollbar{display:none}
+#timeBar button{flex:none;border:none;background:transparent;cursor:pointer;font-family:inherit;
+  font-size:11px;font-weight:700;color:var(--ink2);padding:6px 10px;border-radius:999px;transition:.15s}
+#timeBar button:hover{color:var(--acc)}
+#timeBar button.on{background:var(--ink);color:#fff}
+.diorama-mode.night #timeBar{background:rgba(32,40,60,.9)}
+.diorama-mode.night #timeBar button{color:#b9c2d6}
+.diorama-mode.night #timeBar button.on{background:#f4f1e8;color:#252d42}
+/* ---------- 모바일 시트 손잡이 (데스크톱에서는 숨김) ---------- */
+#panel .grab{display:none}
+
+@media(max-width:900px){
+  /* 헤드: 한 줄로 압축 — 지역·날짜는 시트로 넘긴다 */
+  #head{top:10px;left:10px;right:10px;width:auto;padding:10px 14px;border-radius:16px;
+    display:flex;align-items:baseline;gap:10px}
+  #head .eyebrow{display:none}
+  #head .titleRow{margin:0;flex:1;min-width:0;gap:10px}
+  #head .dayNo{font-size:24px}
+  #head h1{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #head .region{display:none}
+  #chips{display:none}
+  /* 링크는 헤드 아래로 — 더 이상 제목을 덮지 않는다 */
+  #alts{top:auto;bottom:calc(var(--sh) + 68px);right:10px;transition:bottom .28s cubic-bezier(.22,.61,.36,1)}
+  #alts a{font-size:10.5px;padding:6px 10px}
+  #timeBar{top:auto;bottom:calc(var(--sh) + 106px);right:10px;left:10px;max-width:none;
+    transition:bottom .28s cubic-bezier(.22,.61,.36,1)}
+  #timeBar button{padding:6px 9px;font-size:10.5px}
+  #hint{display:none}
+  #pager{bottom:calc(env(safe-area-inset-bottom, 0px) + 8px);padding:6px 10px}
+  .pbtn{width:34px;height:34px;font-size:12px}
+
+  /* ---------- 접히는 하단 시트: peek / half / full ----------
+   * --sh 는 body 에 둔다. #alts 같은 형제 요소도 시트 높이를 따라가야 하기 때문. */
+  .diorama-mode{--sh:84px}
+  .diorama-mode.sheet-half{--sh:44vh}
+  .diorama-mode.sheet-full{--sh:78vh}
+  #panel{
+    top:auto;left:0;right:0;width:auto;
+    bottom:calc(env(safe-area-inset-bottom, 0px) + 54px);
+    height:78vh;max-height:78vh;
+    border-radius:20px 20px 0 0;
+    transform:translateY(calc(78vh - var(--sh)));
+    transition:transform .28s cubic-bezier(.22,.61,.36,1);
+  }
+
+  #panel .grab{display:block;flex:none;padding:8px 18px 10px;cursor:grab;touch-action:none;
+    background:rgba(255,255,255,.98);border-radius:20px 20px 0 0}
+  #panel .grab:active{cursor:grabbing}
+  #panel .grab .bar{display:block;width:38px;height:4px;border-radius:2px;
+    background:rgba(58,53,46,.22);margin:0 auto 8px}
+  #panel .grab .peek{display:flex;align-items:baseline;gap:8px;font-size:13px;font-weight:700;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #panel .grab .peek b{color:var(--acc);font-size:11.5px;flex:none}
+  /* peek 상태에서는 손잡이 줄만 보이면 된다 */
+  .diorama-mode:not(.sheet-half):not(.sheet-full) #panel .tabs,
+  .diorama-mode:not(.sheet-half):not(.sheet-full) #panel .body{opacity:0;pointer-events:none}
+  #panel .tabs,#panel .body{transition:opacity .18s}
+  #panel .tab{padding:11px 8px 10px}
+  #panel .body{padding:14px 18px 24px}
+}

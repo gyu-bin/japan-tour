@@ -1,0 +1,300 @@
+@import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&family=Shippori+Mincho:ital,wght@0,600;0,800;1,600&display=swap');
+
+.dio-root {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  font-family: 'Zen Maru Gothic', sans-serif;
+  color: #3a352e;
+  background: linear-gradient(180deg, #dde6ee 0%, #f6f1e7 65%, #f3ecdf 100%);
+}
+
+.dio-scene {
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+  cursor: grab;
+}
+.dio-scene:active { cursor: grabbing; }
+.dio-scene canvas { display: block; }
+
+.dio-labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  overflow: hidden;
+}
+
+/* ---------- 3D 핀 라벨 ---------- */
+.dio-pin {
+  pointer-events: auto;
+  cursor: pointer;
+  transform: translate(-50%, -130%);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(32, 30, 27, 0.92);
+  color: #f7f3ea;
+  border-radius: 999px;
+  padding: 4px 12px 4px 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(40, 36, 30, 0.28);
+  transition: opacity 0.18s, transform 0.15s;
+  max-width: 210px;
+}
+.dio-pin .nm { overflow: hidden; text-overflow: ellipsis; }
+.dio-pin .no {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #4a76a8;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5px;
+}
+.dio-pin.eat .no { background: #d9714f; }
+.dio-pin.eat { background: rgba(160, 74, 42, 0.94); }
+.dio-pin.dim { opacity: 0.55; }
+.dio-pin.sel { opacity: 1; transform: translate(-50%, -130%) scale(1.08); }
+.dio-pin:hover { opacity: 1; }
+
+/* ---------- 좌상단 타이틀 카드 ---------- */
+.dio-head {
+  position: absolute;
+  top: 22px;
+  left: 22px;
+  z-index: 10;
+  width: min(420px, calc(100vw - 44px));
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(58, 53, 46, 0.12);
+  border-radius: 8px;
+  box-shadow: 0 14px 40px rgba(58, 53, 46, 0.12);
+  padding: 20px 24px 16px;
+}
+.dio-head .eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.26em;
+  color: #7a7266;
+  border-bottom: 1px solid rgba(58, 53, 46, 0.1);
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+}
+.dio-head .title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+}
+.dio-head .day-no {
+  font-family: 'Shippori Mincho', serif;
+  font-style: italic;
+  font-size: 42px;
+  font-weight: 800;
+  line-height: 1;
+  color: #d9714f;
+}
+.dio-head h1 {
+  font-family: 'Shippori Mincho', serif;
+  font-size: 21px;
+  font-weight: 800;
+  margin: 0;
+}
+.dio-head .region {
+  font-size: 11.5px;
+  color: #7a7266;
+  margin: 6px 0 4px;
+}
+.dio-head .route {
+  font-size: 11px;
+  line-height: 1.7;
+  color: #9a9182;
+  margin: 0 0 12px;
+}
+
+/* 번호 칩 */
+.dio-head .chips {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 36vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(58, 53, 46, 0.14);
+  background: #fff;
+  border-radius: 999px;
+  padding: 7px 14px 7px 7px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: #3a352e;
+  cursor: pointer;
+  text-align: left;
+  transition: 0.15s;
+}
+.chip .n {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #eee9de;
+  color: #3a352e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+}
+.chip .t {
+  color: #9a9182;
+  font-weight: 400;
+  font-size: 11px;
+}
+.chip:hover { border-color: #d9714f; }
+.chip.sel { background: #2d2a25; border-color: #2d2a25; color: #fff; }
+.chip.sel .n { background: #d9714f; color: #fff; }
+.chip.sel .t { color: rgba(255, 255, 255, 0.6); }
+.chip.eat .n { background: rgba(217, 113, 79, 0.18); color: #c05a34; }
+.chip.sel.eat .n { background: #d9714f; color: #fff; }
+
+/* ---------- 우상단 링크 ---------- */
+.dio-alts {
+  position: absolute;
+  top: 22px;
+  right: 22px;
+  z-index: 10;
+  display: flex;
+  gap: 8px;
+}
+.dio-alts a {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #3a352e;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(58, 53, 46, 0.12);
+  border-radius: 999px;
+  padding: 8px 14px;
+  box-shadow: 0 6px 18px rgba(58, 53, 46, 0.12);
+}
+.dio-alts a:hover { color: #d9714f; }
+
+/* ---------- 하단 날짜 선택 ---------- */
+.dio-pager {
+  position: absolute;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(58, 53, 46, 0.12);
+  border-radius: 12px;
+  padding: 7px 10px;
+  box-shadow: 0 10px 30px rgba(58, 53, 46, 0.14);
+  max-width: 94vw;
+  overflow-x: auto;
+}
+.dio-pager .arrow {
+  border: none;
+  background: transparent;
+  font-size: 20px;
+  color: #7a7266;
+  cursor: pointer;
+  padding: 2px 8px;
+  line-height: 1;
+}
+.dio-pager .arrow:hover { color: #d9714f; }
+.pday {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: 'Shippori Mincho', serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  border-radius: 8px;
+  padding: 6px 10px;
+  transition: 0.16s;
+  color: #7a7266;
+}
+.pday .no { font-size: 15px; font-weight: 800; letter-spacing: 0.04em; }
+.pday .dt { font-size: 9.5px; font-family: 'Zen Maru Gothic', sans-serif; }
+.pday:hover { color: #d9714f; }
+.pday.on { background: #2d2a25; color: #fff; }
+
+/* ---------- 우하단 컨트롤 ---------- */
+.dio-ctrl {
+  position: absolute;
+  right: 22px;
+  bottom: 20px;
+  z-index: 10;
+  display: flex;
+  gap: 6px;
+}
+.dio-ctrl button {
+  border: 1px solid rgba(58, 53, 46, 0.12);
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(8px);
+  border-radius: 999px;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 12px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: #3a352e;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(58, 53, 46, 0.12);
+  transition: 0.15s;
+}
+.dio-ctrl button:hover { color: #d9714f; border-color: #d9714f; }
+
+/* ---------- 좌하단 안내 ---------- */
+.dio-help {
+  position: absolute;
+  left: 22px;
+  bottom: 20px;
+  z-index: 9;
+  margin: 0;
+  font-size: 11px;
+  color: #7a7266;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 10px;
+  padding: 8px 12px;
+  box-shadow: 0 6px 20px rgba(58, 53, 46, 0.1);
+}
+.dio-help b { color: #3a352e; }
+
+/* ---------- 반응형 ---------- */
+@media (max-width: 900px) {
+  .dio-head {
+    top: 10px;
+    left: 10px;
+    width: min(300px, calc(100vw - 20px));
+    padding: 14px 16px 12px;
+  }
+  .dio-head .day-no { font-size: 30px; }
+  .dio-head h1 { font-size: 16px; }
+  .dio-head .route { display: none; }
+  .dio-head .chips { max-height: 26vh; }
+  .dio-help { display: none; }
+  .dio-alts { top: 10px; right: 10px; }
+  .dio-ctrl { right: 10px; bottom: 14px; }
+  .dio-ctrl button { font-size: 11px; padding: 0 9px; }
+  .dio-pager { bottom: 60px; }
+}
