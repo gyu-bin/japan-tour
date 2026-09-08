@@ -72,7 +72,7 @@ function ensureSatelliteSource(map: MapLibreMap) {
     type: 'raster',
     tiles: SAT_TILES,
     tileSize: 256,
-    maxzoom: 19,
+    maxzoom: 18,
     attribution:
       'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community',
   })
@@ -298,15 +298,28 @@ function flyToPlace(
     jumpToPlace(map, place, mode3d)
     return
   }
+  // 이전 비행·타일 요청을 끊고 짧게 이동 (끊김 완화)
+  try {
+    map.stop()
+  } catch {
+    /* ignore */
+  }
   const i = opts?.index ?? 0
   const cinematic = !!opts?.cinematic
-  map.flyTo({
+  const center = map.getCenter()
+  const dist =
+    Math.hypot(center.lng - place.lng, center.lat - place.lat) * 111_000 // ~meters
+  const duration = cinematic
+    ? 850
+    : Math.round(Math.min(620, Math.max(280, dist * 0.08)))
+  map.easeTo({
     center: [place.lng, place.lat],
-    zoom: cinematic ? 16.35 : 15.8,
-    pitch: mode3d ? (cinematic ? 58 : 52) : 0,
-    bearing: mode3d ? -18 + (i % 5) * 14 : map.getBearing(),
-    duration: cinematic ? 1600 : 750,
+    zoom: cinematic ? 16.1 : 15.6,
+    pitch: mode3d ? (cinematic ? 52 : 48) : 0,
+    bearing: mode3d ? -12 + (i % 4) * 8 : map.getBearing(),
+    duration,
     essential: true,
+    easing: (t) => 1 - Math.pow(1 - t, 2.2),
   })
 }
 
@@ -344,6 +357,7 @@ export function MapView({
   onStatus,
   reduceMotion,
 }: Props) {
+  const shellRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const markersRef = useRef<Marker[]>([])
@@ -353,19 +367,43 @@ export function MapView({
   const placeRef = useRef(place)
   const mode3dRef = useRef(mode3d)
   const basemapRef = useRef(basemap)
+  const cinematicRef = useRef(cinematic)
   dayRef.current = day
   placeRef.current = place
   mode3dRef.current = mode3d
   basemapRef.current = basemap
+  cinematicRef.current = cinematic
 
   const [retry, setRetry] = useState(0)
   const [mapEpoch, setMapEpoch] = useState(0)
+  const [nearViewport, setNearViewport] = useState(false)
   const onSelectRef = useRef(onSelectPlace)
   onSelectRef.current = onSelectPlace
   const onStatusRef = useRef(onStatus)
   onStatusRef.current = onStatus
 
+  // 지도 섹션이 가까워질 때만 엔진 기동 (첫 로딩·타일 호출 지연)
   useEffect(() => {
+    const el = shellRef.current
+    if (!el) return
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setNearViewport(true)
+          io.disconnect()
+        }
+      },
+      { rootMargin: '280px 0px', threshold: 0.01 },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
+
+  useEffect(() => {
+    if (!nearViewport) {
+      onStatusRef.current('loading', '지도 준비 중…')
+      return
+    }
     if (!containerRef.current) return
     let cancelled = false
     readyRef.current = false
@@ -376,11 +414,15 @@ export function MapView({
       container: containerRef.current,
       style: STYLE_URL,
       center: start ? [start.lng, start.lat] : [139.77, 35.68],
-      zoom: 15.2,
-      pitch: mode3dRef.current ? 52 : 0,
-      bearing: -16,
-      maxPitch: 80,
+      zoom: 14.8,
+      pitch: mode3dRef.current ? 48 : 0,
+      bearing: -12,
+      maxPitch: 65,
       fadeDuration: 0,
+      maxTileCacheSize: 80,
+      refreshExpiredTiles: false,
+      cancelPendingTileRequestsWhileZooming: true,
+      localIdeographFontFamily: '"Noto Sans KR", "Apple SD Gothic Neo", sans-serif',
       canvasContextAttributes: { antialias: false, powerPreference: 'high-performance' },
     })
     mapRef.current = map
@@ -399,7 +441,9 @@ export function MapView({
       try {
         map.resize()
         tuneStyle(map)
-        applyBasemap(map, basemapRef.current)
+        // 위성은 사용자가 켤 때만 소스 추가
+        if (basemapRef.current === 'satellite') applyBasemap(map, 'satellite')
+        else applyBasemap(map, 'map')
         if (!map.getSource(ROUTE_SOURCE)) {
           map.addSource(ROUTE_SOURCE, {
             type: 'geojson',
@@ -411,9 +455,9 @@ export function MapView({
             source: ROUTE_SOURCE,
             layout: { 'line-cap': 'round', 'line-join': 'round' },
             paint: {
-              'line-color': 'rgba(255, 255, 255, 0.9)',
-              'line-width': 8,
-              'line-opacity': 0.85,
+              'line-color': 'rgba(255, 255, 255, 0.85)',
+              'line-width': 6,
+              'line-opacity': 0.8,
             },
           })
           map.addLayer({
@@ -423,30 +467,13 @@ export function MapView({
             layout: { 'line-cap': 'round', 'line-join': 'round' },
             paint: {
               'line-color': '#AF402A',
-              'line-width': 3.6,
-              'line-opacity': 0.95,
-              'line-dasharray': [0.15, 1.6],
-            },
-          })
-          map.addLayer({
-            id: 'day-route-glow',
-            type: 'line',
-            source: ROUTE_SOURCE,
-            layout: { 'line-cap': 'round', 'line-join': 'round' },
-            paint: {
-              'line-color': '#ff6b4a',
-              'line-width': 12,
-              'line-opacity': 0.22,
-              'line-blur': 4,
+              'line-width': 3.2,
+              'line-opacity': 0.92,
+              'line-dasharray': [0.2, 1.6],
             },
           })
         }
         finishReady()
-        if (dayRef.current.terrain) {
-          map.once('idle', () => {
-            if (!cancelled) setTerrain(map, true)
-          })
-        }
       } catch (e) {
         onStatusRef.current('error', e instanceof Error ? e.message : '지도 레이어 오류')
       }
@@ -463,10 +490,16 @@ export function MapView({
           '지도 엔진(워커) 연결이 지연되고 있습니다. 다시 불러오기를 눌러 주세요.',
         )
       }
-    }, 8000)
+    }, 10000)
 
+    let resizeQueued = false
     const ro = new ResizeObserver(() => {
-      if (!cancelled) map.resize()
+      if (cancelled || resizeQueued) return
+      resizeQueued = true
+      requestAnimationFrame(() => {
+        resizeQueued = false
+        if (!cancelled) map.resize()
+      })
     })
     ro.observe(containerRef.current)
 
@@ -489,26 +522,22 @@ export function MapView({
       mapRef.current = null
       readyRef.current = false
     }
-  }, [retry])
+  }, [retry, nearViewport])
 
-  // Sync route/markers whenever day changes OR map becomes ready
+  // 날짜가 바뀔 때만 마커 재생성
   useEffect(() => {
     const map = mapRef.current
     if (!map || !readyRef.current) return
-
-    const src = map.getSource(ROUTE_SOURCE) as GeoJSONSource | undefined
-    if (src) src.setData(lineGeoJSON(day.places, placeIndex))
 
     markersRef.current.forEach((m) => m.remove())
     markersRef.current = day.places.map((p, i) => {
       const el = document.createElement('button')
       el.type = 'button'
-      const visited = i < placeIndex
       el.className =
         'map-marker' +
         (p.eat ? ' is-eat' : '') +
         (i === placeIndex ? ' is-active' : '') +
-        (visited ? ' is-visited' : '')
+        (i < placeIndex ? ' is-visited' : '')
       el.innerHTML = `<span>${i + 1}</span>`
       el.setAttribute('aria-label', `${i + 1}. ${p.name}`)
       el.addEventListener('click', (ev) => {
@@ -518,24 +547,34 @@ export function MapView({
       return new Marker({ element: el, anchor: 'bottom' }).setLngLat([p.lng, p.lat]).addTo(map)
     })
 
-    requestAnimationFrame(() => {
-      if (mapRef.current === map) setTerrain(map, !!day.terrain)
+    // 지형은 후지 일정만, 투어 중이 아닐 때 idle 후 적용
+    if (day.terrain && !cinematicRef.current) {
+      map.once('idle', () => {
+        if (mapRef.current === map && !cinematicRef.current) setTerrain(map, true)
+      })
+    } else {
+      setTerrain(map, false)
+    }
+  }, [day, mapEpoch])
+
+  // 동선·마커 상태만 가볍게 갱신
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !readyRef.current) return
+    const src = map.getSource(ROUTE_SOURCE) as GeoJSONSource | undefined
+    if (src) src.setData(lineGeoJSON(day.places, placeIndex))
+    markersRef.current.forEach((m, i) => {
+      const el = m.getElement()
+      el.classList.toggle('is-active', i === placeIndex)
+      el.classList.toggle('is-visited', i < placeIndex)
     })
-  }, [day, mapEpoch, placeIndex])
+  }, [day, placeIndex, mapEpoch])
 
   useEffect(() => {
     const map = mapRef.current
     if (!map || !readyRef.current) return
     applyBasemap(map, basemap)
   }, [basemap, mapEpoch])
-
-  useEffect(() => {
-    markersRef.current.forEach((m, i) => {
-      const el = m.getElement()
-      el.classList.toggle('is-active', i === placeIndex)
-      el.classList.toggle('is-visited', i < placeIndex)
-    })
-  }, [placeIndex])
 
   useEffect(() => {
     const map = mapRef.current
@@ -549,7 +588,7 @@ export function MapView({
   useEffect(() => {
     const map = mapRef.current
     if (!map || !readyRef.current) return
-    map.easeTo({ pitch: mode3d ? 52 : 0, duration: reduceMotion ? 0 : 400 })
+    map.easeTo({ pitch: mode3d ? 48 : 0, duration: reduceMotion ? 0 : 280 })
   }, [mode3d, reduceMotion, mapEpoch])
 
   useEffect(() => {
@@ -568,22 +607,43 @@ export function MapView({
       orbitRef.current = null
     }
     if (!orbit || !map || !readyRef.current || reduceMotion) return
+    let frame = 0
     const tick = () => {
-      map.setBearing(map.getBearing() + 0.08)
+      frame += 1
+      // 2프레임에 한 번만 회전 → GPU/타일 부담 감소
+      if (frame % 2 === 0) map.setBearing(map.getBearing() + 0.1)
       orbitRef.current = requestAnimationFrame(tick)
     }
     orbitRef.current = requestAnimationFrame(tick)
     return () => {
       if (orbitRef.current) cancelAnimationFrame(orbitRef.current)
     }
-  }, [orbit, reduceMotion, placeIndex, mapEpoch])
+  }, [orbit, reduceMotion, mapEpoch])
+
+  // 투어 중에는 지형 끄기 (끊김 원인)
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !readyRef.current) return
+    if (cinematic) setTerrain(map, false)
+    else if (day.terrain) {
+      map.once('idle', () => {
+        if (mapRef.current === map && !cinematicRef.current) setTerrain(map, true)
+      })
+    }
+  }, [cinematic, day.terrain, mapEpoch])
 
   return (
-    <div className="map-shell">
-      <div ref={containerRef} className="map-canvas" role="application" aria-label="도쿄 3D 지도" />
+    <div className="map-shell" ref={shellRef}>
+      {!nearViewport ? (
+        <div className="map-shell-fallback">
+          <p>지도는 이 근처로 스크롤하면 불러옵니다</p>
+        </div>
+      ) : (
+        <div ref={containerRef} className="map-canvas" role="application" aria-label="도쿄 3D 지도" />
+      )}
       <p className="map-disclaimer">
-        연결선은 방문 순서이며 실제 도로 경로가 아닙니다. 위성은 Esri World Imagery,
-        건물은 OpenFreeMap 높이 입체(실사 3D 메쉬 아님)입니다. 별도 API 키는 필요 없습니다.
+        연결선은 방문 순서이며 실제 도로 경로가 아닙니다. 기본은 일반 지도(빠름), 위성은 필요할 때
+        켜 주세요. 건물은 OpenFreeMap 높이 입체입니다.
       </p>
       <button type="button" className="map-retry" onClick={() => setRetry((n) => n + 1)}>
         지도 다시 불러오기

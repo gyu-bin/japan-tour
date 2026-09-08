@@ -945,7 +945,6 @@ a {
   width: 34px;
   height: 34px;
   z-index: 2;
-  animation: marker-pulse 1.4s ease-in-out infinite;
 }
 .map-marker.is-visited {
   background: #7a9e8a;

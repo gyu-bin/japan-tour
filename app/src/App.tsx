@@ -86,7 +86,7 @@ export default function App() {
   const [dayIdx, setDayIdx] = useState(1)
   const [placeIdx, setPlaceIdx] = useState(0)
   const [mode3d, setMode3d] = useState(true)
-  const [basemap, setBasemap] = useState<BasemapMode>('satellite')
+  const [basemap, setBasemap] = useState<BasemapMode>('map')
   const [orbit, setOrbit] = useState(false)
   const [fitKey, setFitKey] = useState(0)
   const [focusToken, setFocusToken] = useState(0)
@@ -186,7 +186,7 @@ export default function App() {
       setTouring(false)
       return
     }
-    const wait = placeIdx === 0 ? 2200 : 3400
+    const wait = placeIdx === 0 ? 2000 : 2600
     const t = window.setTimeout(() => {
       if (placeIdx < day.places.length - 1) selectPlace(placeIdx + 1)
       else if (dayIdx < DAYS.length - 1) selectDay(dayIdx + 1)
