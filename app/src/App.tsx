@@ -22,6 +22,9 @@ type Skin = 'cinema' | 'pocket'
 const CAUGHT_KEY = 'tokyo-walk-caught-v1'
 const SKIN_KEY = 'tokyo-walk-skin'
 
+const HERO_IMG =
+  'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260704_101902_e8f0f37b-18b7-4c14-bb5c-99f0724d2646.png&w=1600&q=85'
+
 function formatDate(iso: string) {
   const [, m, d] = iso.split('-')
   return `${Number(m)}/${Number(d)}`
@@ -64,18 +67,16 @@ export default function App() {
   const [skin, setSkin] = useState<Skin>(loadSkin)
   const [caught, setCaught] = useState<Set<string>>(loadCaught)
   const [catchFlash, setCatchFlash] = useState<{ name: string; cry: string } | null>(null)
-  const [parallax, setParallax] = useState({ x: 0, y: 0 })
   const [touring, setTouring] = useState(false)
-  const [dayFlash, setDayFlash] = useState(false)
   const [spotlightKey, setSpotlightKey] = useState(0)
-  const filmRef = useRef<HTMLDivElement>(null)
+  const mapSectionRef = useRef<HTMLElement>(null)
+  const daysSectionRef = useRef<HTMLElement>(null)
 
   const day = DAYS[dayIdx]
   const place = day.places[placeIdx] ?? day.places[0]
   const allPlaces = useMemo(() => DAYS.flatMap((d) => d.places), [])
   const totalStops = allPlaces.length
   const caughtCount = caught.size
-
   const activeMon = place
     ? monForPlace(place.id, place.name, place.activity, place.eat)
     : null
@@ -94,35 +95,31 @@ export default function App() {
     localStorage.setItem(CAUGHT_KEY, JSON.stringify([...caught]))
   }, [caught])
 
-  // Filmstrip auto-scroll to active day
-  useEffect(() => {
-    const track = filmRef.current
-    if (!track) return
-    const card = track.children[dayIdx] as HTMLElement | undefined
-    card?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', inline: 'center', block: 'nearest' })
-  }, [dayIdx, reduceMotion])
-
-  // Pointer parallax (MotionSites Mostar-style)
-  useEffect(() => {
-    if (reduceMotion) return
-    const onMove = (e: PointerEvent) => {
-      setParallax({
-        x: e.clientX / window.innerWidth - 0.5,
-        y: e.clientY / window.innerHeight - 0.5,
-      })
-    }
-    window.addEventListener('pointermove', onMove, { passive: true })
-    return () => window.removeEventListener('pointermove', onMove)
+  const scrollToMap = useCallback(() => {
+    mapSectionRef.current?.scrollIntoView({
+      behavior: reduceMotion ? 'auto' : 'smooth',
+      block: 'start',
+    })
   }, [reduceMotion])
 
-  const selectDay = useCallback((i: number) => {
-    setDayIdx(i)
-    setPlaceIdx(0)
-    setOrbit(false)
-    setFocusToken((t) => t + 1)
-    setDayFlash(true)
-    window.setTimeout(() => setDayFlash(false), reduceMotion ? 0 : 700)
+  const scrollToDays = useCallback(() => {
+    daysSectionRef.current?.scrollIntoView({
+      behavior: reduceMotion ? 'auto' : 'smooth',
+      block: 'start',
+    })
   }, [reduceMotion])
+
+  const selectDay = useCallback(
+    (i: number, opts?: { scrollMap?: boolean }) => {
+      setDayIdx(i)
+      setPlaceIdx(0)
+      setOrbit(false)
+      setFocusToken((t) => t + 1)
+      setSpotlightKey((k) => k + 1)
+      if (opts?.scrollMap) scrollToMap()
+    },
+    [scrollToMap],
+  )
 
   const selectPlace = useCallback((i: number) => {
     setPlaceIdx(i)
@@ -137,12 +134,12 @@ export default function App() {
         setMode3d(true)
         setFocusToken((t) => t + 1)
         setSpotlightKey((k) => k + 1)
+        scrollToMap()
       }
       return !v
     })
-  }, [])
+  }, [scrollToMap])
 
-  // Auto tour: advance stops, then next day
   useEffect(() => {
     if (!touring) return
     if (reduceMotion) {
@@ -151,11 +148,9 @@ export default function App() {
     }
     const wait = placeIdx === 0 ? 2200 : 3400
     const t = window.setTimeout(() => {
-      if (placeIdx < day.places.length - 1) {
-        selectPlace(placeIdx + 1)
-      } else if (dayIdx < DAYS.length - 1) {
-        selectDay(dayIdx + 1)
-      } else {
+      if (placeIdx < day.places.length - 1) selectPlace(placeIdx + 1)
+      else if (dayIdx < DAYS.length - 1) selectDay(dayIdx + 1)
+      else {
         setTouring(false)
         setFitKey((k) => k + 1)
       }
@@ -163,19 +158,22 @@ export default function App() {
     return () => window.clearTimeout(t)
   }, [touring, placeIdx, dayIdx, day.places.length, reduceMotion, selectPlace, selectDay])
 
-  const catchPlace = useCallback((placeId: string) => {
-    const p = allPlaces.find((x) => x.id === placeId)
-    if (!p) return
-    const mon = monForPlace(p.id, p.name, p.activity, p.eat)
-    setCaught((prev) => {
-      if (prev.has(placeId)) return prev
-      const next = new Set(prev)
-      next.add(placeId)
-      return next
-    })
-    setCatchFlash({ name: mon.nameKo, cry: mon.cry })
-    window.setTimeout(() => setCatchFlash(null), 1600)
-  }, [allPlaces])
+  const catchPlace = useCallback(
+    (placeId: string) => {
+      const p = allPlaces.find((x) => x.id === placeId)
+      if (!p) return
+      const mon = monForPlace(p.id, p.name, p.activity, p.eat)
+      setCaught((prev) => {
+        if (prev.has(placeId)) return prev
+        const next = new Set(prev)
+        next.add(placeId)
+        return next
+      })
+      setCatchFlash({ name: mon.nameKo, cry: mon.cry })
+      window.setTimeout(() => setCatchFlash(null), 1600)
+    },
+    [allPlaces],
+  )
 
   const onStatus = useCallback((s: 'loading' | 'ready' | 'error', message?: string) => {
     setMapStatus(s)
@@ -195,117 +193,41 @@ export default function App() {
         if (placeIdx > 0) selectPlace(placeIdx - 1)
         else if (dayIdx > 0) selectDay(dayIdx - 1)
       }
-      if (e.key === 'ArrowDown') {
-        e.preventDefault()
-        selectDay(Math.min(dayIdx + 1, DAYS.length - 1))
-      }
-      if (e.key === 'ArrowUp') {
-        e.preventDefault()
-        selectDay(Math.max(dayIdx - 1, 0))
-      }
-      if (e.key === 'c' || e.key === 'C') {
-        if (place) catchPlace(place.id)
-      }
-      if (e.key === ' ' || e.code === 'Space') {
+      if (e.key === ' ') {
         e.preventDefault()
         toggleTour()
       }
+      if ((e.key === 'c' || e.key === 'C') && skin === 'pocket' && place) catchPlace(place.id)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [day, dayIdx, placeIdx, place, selectDay, selectPlace, catchPlace, toggleTour])
-
-  const watermarkStyle = {
-    transform: `translate(calc(-50% + ${parallax.x * 28}px), calc(-50% + ${parallax.y * 18}px))`,
-  } as CSSProperties
+  }, [day, dayIdx, placeIdx, place, skin, selectDay, selectPlace, catchPlace, toggleTour])
 
   return (
     <div
       className={
-        'stage' +
+        'site' +
         (entered ? ' is-ready' : '') +
         (skin === 'pocket' ? ' theme-pocket' : ' theme-cinema')
       }
     >
-      <a className="skip" href="#map-panel">
+      <a className="skip" href="#map">
         지도로 건너뛰기
       </a>
 
-      <div id="map-panel" className="map-bleed" aria-label="여행 지도">
-        {(mapStatus === 'loading' || mapStatus === 'error') && (
-          <div className={'map-status is-' + mapStatus} role="status">
-            {mapStatus === 'loading' && <p>지도를 불러오는 중…</p>}
-            {mapStatus === 'error' && (
-              <>
-                <p>{mapError ?? '지도를 표시할 수 없습니다.'}</p>
-                <p className="hint">다시 불러오기를 눌러 주세요.</p>
-              </>
-            )}
-          </div>
-        )}
-        <Suspense
-          fallback={
-            <div className="map-shell map-shell-fallback">
-              <p>지도 엔진 준비 중…</p>
-            </div>
-          }
-        >
-          <MapView
-            day={day}
-            place={place}
-            placeIndex={placeIdx}
-            mode3d={mode3d}
-            basemap={basemap}
-            orbit={orbit}
-            fitRouteKey={fitKey}
-            focusToken={focusToken}
-            cinematic={touring}
-            onSelectPlace={selectPlace}
-            onStatus={onStatus}
-            reduceMotion={reduceMotion}
-          />
-        </Suspense>
-      </div>
-
-      <h1 className="watermark" aria-hidden="true" style={watermarkStyle}>
-        {skin === 'pocket' ? 'POCKET' : day.region.split('→')[0]?.trim() || 'Tokyo'}
-      </h1>
-
-      {dayFlash && <div className="day-flash" aria-hidden="true" />}
-
-      {place && (
-        <div className="spotlight liquid-glass" key={spotlightKey} role="status">
-          <div className="spotlight-top">
-            <span className="spotlight-idx">
-              {placeIdx + 1}/{day.places.length}
-            </span>
-            <span className="spotlight-time">{place.time}</span>
-            {touring && <span className="spotlight-live">LIVE TOUR</span>}
-          </div>
-          <h3>{place.name}</h3>
-          {place.nameJp && <p className="spotlight-jp">{place.nameJp}</p>}
-          <p className="spotlight-act">{place.activity}</p>
-          <div className="spotlight-rail" aria-hidden="true">
-            <span
-              style={{
-                width: `${((placeIdx + 1) / Math.max(day.places.length, 1)) * 100}%`,
-              }}
-            />
-          </div>
-        </div>
-      )}
-
-      <header className="topbar reveal" style={{ '--d': '0ms' } as CSSProperties}>
-        <div className="brand-block">
-          <p className="eyebrow">{TRIP.travelers}</p>
-          <p className="brand-title">
-            <span className="en">{skin === 'pocket' ? 'Pocket Walk' : TRIP.titleEn}</span>
-            <span className="ko">{skin === 'pocket' ? '포켓 산책 도감' : TRIP.titleKo}</span>
-          </p>
-          <p className="period">{TRIP.period}</p>
-        </div>
-
-        <div className="top-actions liquid-glass" role="toolbar" aria-label="지도 도구">
+      {/* —— Site nav —— */}
+      <header className="site-nav reveal" style={{ '--d': '0ms' } as CSSProperties}>
+        <a className="nav-brand" href="#top">
+          <span className="en">{skin === 'pocket' ? 'Pocket Walk' : TRIP.titleEn}</span>
+          <span className="ko">{skin === 'pocket' ? '포켓 산책' : TRIP.titleKo}</span>
+        </a>
+        <nav className="nav-links" aria-label="주요 메뉴">
+          <button type="button" onClick={scrollToDays}>
+            일정
+          </button>
+          <button type="button" onClick={scrollToMap}>
+            지도
+          </button>
           <button
             type="button"
             className="skin-toggle"
@@ -314,285 +236,380 @@ export default function App() {
           >
             {skin === 'pocket' ? '시네마' : '포켓'}
           </button>
-          <button type="button" aria-pressed={touring} onClick={toggleTour}>
-            {touring ? '투어 정지' : '투어 재생'}
-          </button>
-          <button type="button" onClick={() => setFitKey((k) => k + 1)}>
-            동선
-          </button>
-          <button
-            type="button"
-            aria-pressed={basemap === 'satellite'}
-            onClick={() => setBasemap((v) => (v === 'satellite' ? 'map' : 'satellite'))}
-          >
-            {basemap === 'satellite' ? '위성' : '일반'}
-          </button>
-          <button type="button" aria-pressed={mode3d} onClick={() => setMode3d((v) => !v)}>
-            {mode3d ? '3D' : '2D'}
-          </button>
-          <button type="button" aria-pressed={orbit} onClick={() => setOrbit((v) => !v)}>
-            {orbit ? '멈춤' : '회전'}
-          </button>
-          {place && (
-            <a
-              className="btn-link"
-              href={streetViewUrl(place.lat, place.lng)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              거리뷰
-            </a>
-          )}
-        </div>
+        </nav>
       </header>
 
-      <div className="day-story liquid-glass reveal" style={{ '--d': '120ms' } as CSSProperties}>
-        <div className="day-story-nav">
-          <button
-            type="button"
-            disabled={dayIdx === 0}
-            onClick={() => selectDay(dayIdx - 1)}
-            aria-label="이전 날"
-          >
-            ←
-          </button>
-          <button
-            type="button"
-            disabled={dayIdx === DAYS.length - 1}
-            onClick={() => selectDay(dayIdx + 1)}
-            aria-label="다음 날"
-          >
-            →
-          </button>
+      {/* —— Hero —— */}
+      <section id="top" className="hero" aria-label="소개">
+        <div className="hero-media" aria-hidden="true">
+          <img src={HERO_IMG} alt="" />
+          <div className="hero-shade" />
         </div>
-        <p className="day-story-kicker">
-          Day {day.no} · {formatDate(day.date)} {day.weekday}
-        </p>
-        <h2>{day.title}</h2>
-        <p className="day-story-intro">{day.intro}</p>
-
-        {skin === 'pocket' && (
-          <div className="dex-meter" aria-label="도감 진행">
-            <div className="dex-meter-bar">
-              <span style={{ width: `${(caughtCount / totalStops) * 100}%` }} />
-            </div>
-            <p>
-              도감 {caughtCount}/{totalStops}
-            </p>
-          </div>
-        )}
-
-        <div className="day-story-actions">
-          <button
-            type="button"
-            className="info-chip"
-            aria-expanded={infoOpen}
-            onClick={() => setInfoOpen((v) => !v)}
-          >
-            {infoOpen ? '정보 닫기' : '이동 · 먹거리 · 예약'}
-          </button>
-          {skin === 'pocket' && place && (
-            <button
-              type="button"
-              className={'catch-btn' + (caught.has(place.id) ? ' is-caught' : '')}
-              onClick={() => catchPlace(place.id)}
-              disabled={caught.has(place.id)}
-            >
-              {caught.has(place.id) ? '등록됨' : '볼로 잡기 (C)'}
+        <div className="hero-copy reveal" style={{ '--d': '80ms' } as CSSProperties}>
+          <p className="hero-eyebrow">{TRIP.travelers} · {TRIP.nights}</p>
+          <h1>
+            <span className="hero-en">{TRIP.titleEn}</span>
+            <span className="hero-ko">{TRIP.titleKo}</span>
+          </h1>
+          <p className="hero-lead">
+            {TRIP.period}. 날짜를 고르고, 지도에서 동선을 미리 걸어보세요.
+          </p>
+          <div className="hero-cta">
+            <button type="button" className="btn-primary" onClick={scrollToMap}>
+              지도에서 둘러보기
             </button>
-          )}
+            <button type="button" className="btn-ghost" onClick={scrollToDays}>
+              6일 일정 보기
+            </button>
+          </div>
+          <ul className="hero-tags" aria-label="하이라이트">
+            <li>OpenFreeMap 3D</li>
+            <li>위성 · Esri</li>
+            <li>투어 재생</li>
+            {skin === 'pocket' && <li>도감 {caughtCount}/{totalStops}</li>}
+          </ul>
         </div>
-      </div>
+        <p className="hero-scroll" aria-hidden="true">
+          Scroll
+        </p>
+      </section>
 
-      <aside
-        className="places-dock liquid-glass reveal"
-        style={{ '--d': '180ms' } as CSSProperties}
-        aria-label={skin === 'pocket' ? '오늘의 도감' : '오늘의 방문 장소'}
+      {/* —— Days —— */}
+      <section
+        id="days"
+        ref={daysSectionRef}
+        className="section days-section"
+        aria-label="여행 일정"
       >
-        <div className="places-dock-head">
-          <h3>{skin === 'pocket' ? 'Dex' : 'Stops'}</h3>
-          <span>
-            {day.places.filter((p) => caught.has(p.id)).length}/{day.places.length}
-          </span>
+        <div className="section-head reveal" style={{ '--d': '60ms' } as CSSProperties}>
+          <p className="section-kicker">Itinerary</p>
+          <h2>6일의 발자국</h2>
+          <p>카드를 누르면 그날 지도로 이동합니다.</p>
         </div>
-        <ol>
-          {day.places.map((p, i) => {
-            const mon = monForPlace(p.id, p.name, p.activity, p.eat)
-            const isCaught = caught.has(p.id)
-            return (
-              <li key={p.id}>
-                <button
-                  type="button"
-                  className={'stop' + (i === placeIdx ? ' is-active' : '') + (isCaught ? ' is-caught' : '')}
-                  onClick={() => selectPlace(i)}
-                  aria-current={i === placeIdx ? 'true' : undefined}
-                >
-                  {skin === 'pocket' ? (
-                    <span className="stop-mon">
-                      <MonFace type={mon.type} caught={isCaught} />
-                    </span>
-                  ) : (
-                    <span className={'stop-no' + (p.eat ? ' eat' : '')}>{i + 1}</span>
-                  )}
-                  <span className="stop-body">
-                    <strong>
-                      {skin === 'pocket'
-                        ? isCaught
-                          ? `${mon.nameKo} · ${p.name}`
-                          : `??? · ${p.name}`
-                        : `${p.time} · ${p.name}`}
-                    </strong>
-                    {skin === 'pocket' ? (
-                      <em style={{ color: isCaught ? monTypeColor(mon.type) : undefined }}>
-                        {isCaught ? `${mon.typeKo} · ${p.time}` : '미발견 · 지도를 탐색하세요'}
-                      </em>
-                    ) : (
-                      <>
-                        {p.nameJp && <em>{p.nameJp}</em>}
-                        <span>{p.activity}</span>
-                      </>
-                    )}
-                  </span>
-                </button>
-              </li>
-            )
-          })}
-        </ol>
-        {place && (
-          <a
-            className="maps-link"
-            href={mapsDirUrl(place.lat, place.lng, place.name)}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Maps · {place.name}
-          </a>
-        )}
-      </aside>
-
-      <div
-        className="timeline liquid-glass reveal"
-        style={{ '--d': '200ms' } as CSSProperties}
-        role="group"
-        aria-label="오늘 일정 타임라인"
-      >
-        <button
-          type="button"
-          className="timeline-play"
-          aria-pressed={touring}
-          onClick={toggleTour}
-        >
-          {touring ? '❚❚' : '▶'}
-        </button>
-        <div className="timeline-track">
-          <div
-            className="timeline-fill"
-            style={{
-              width: `${(placeIdx / Math.max(day.places.length - 1, 1)) * 100}%`,
-            }}
-          />
-          {day.places.map((p, i) => (
-            <button
-              key={p.id}
-              type="button"
-              className={
-                'timeline-dot' +
-                (i === placeIdx ? ' is-active' : '') +
-                (i < placeIdx ? ' is-done' : '')
-              }
-              style={{ left: `${(i / Math.max(day.places.length - 1, 1)) * 100}%` }}
-              onClick={() => {
-                setTouring(false)
-                selectPlace(i)
-              }}
-              aria-label={`${p.time} ${p.name}`}
-              title={`${p.time} · ${p.name}`}
-            />
-          ))}
-        </div>
-        <p className="timeline-hint">스페이스 · 투어</p>
-      </div>
-
-      <nav className="filmstrip reveal" style={{ '--d': '240ms' } as CSSProperties} aria-label="날짜 목록">
-        <div className="filmstrip-track" ref={filmRef}>
+        <div className="days-grid">
           {DAYS.map((d, i) => (
             <button
               key={d.id}
               type="button"
-              className={'film-card' + (i === dayIdx ? ' is-active' : '')}
+              className={'day-card reveal' + (i === dayIdx ? ' is-active' : '')}
+              style={{ '--d': `${100 + i * 70}ms` } as CSSProperties}
               onClick={() => {
                 setTouring(false)
-                selectDay(i)
+                selectDay(i, { scrollMap: true })
               }}
               aria-current={i === dayIdx ? 'date' : undefined}
             >
-              <span className="film-kicker">
-                {skin === 'pocket' ? `Route ${d.no}` : `Day ${d.no}`}
+              <span className="day-card-kicker">
+                Day {d.no} · {formatDate(d.date)} {d.weekday}
               </span>
               <strong>{d.title}</strong>
-              <em>
-                {formatDate(d.date)} · {d.weekday} · {d.region}
-              </em>
-              {skin === 'pocket' && (
-                <span className="film-caught">
-                  {d.places.filter((p) => caught.has(p.id)).length}/{d.places.length} caught
-                </span>
-              )}
+              <em>{d.region}</em>
+              <span className="day-card-meta">{d.places.length} stops</span>
             </button>
           ))}
         </div>
-      </nav>
+      </section>
 
-      {infoOpen && (
-        <section className="info-sheet liquid-glass" aria-label="여행 정보">
-          <div className="info-grid">
-            <article>
-              <h3>이동</h3>
-              <p>{day.transport}</p>
-            </article>
-            <article>
-              <h3>먹거리</h3>
-              <ul>
-                {day.food.map((f) => (
-                  <li key={f}>{f}</li>
-                ))}
-              </ul>
-            </article>
-            <article>
-              <h3>예약 · 운영</h3>
-              <p>{day.booking}</p>
-              {place?.hoursNote && (
-                <p className="muted">
-                  {place.name}: {place.hoursNote}
-                </p>
-              )}
-            </article>
-            <article>
-              <h3>비 오는 날</h3>
-              <p>{day.rainAlt}</p>
-            </article>
+      {/* —— Map stage —— */}
+      <section id="map" ref={mapSectionRef} className="section map-section" aria-label="지도">
+        <div className="section-head map-section-head">
+          <div>
+            <p className="section-kicker">Explore</p>
+            <h2>
+              Day {day.no} · {day.title}
+            </h2>
+            <p>{day.intro}</p>
           </div>
-          {activeMon && skin === 'pocket' && (
-            <p className="mon-hint">
-              현재 스팟 몬: {caught.has(place!.id) ? `${activeMon.nameKo} (${activeMon.typeKo})` : '???'} —
-              공식 포켓몬이 아닌 여행용 오리지널 캐릭터입니다.
-            </p>
+          <div className="map-tools liquid-glass" role="toolbar" aria-label="지도 도구">
+            <button type="button" aria-pressed={touring} onClick={toggleTour}>
+              {touring ? '투어 정지' : '투어 재생'}
+            </button>
+            <button type="button" onClick={() => setFitKey((k) => k + 1)}>
+              동선
+            </button>
+            <button
+              type="button"
+              aria-pressed={basemap === 'satellite'}
+              onClick={() => setBasemap((v) => (v === 'satellite' ? 'map' : 'satellite'))}
+            >
+              {basemap === 'satellite' ? '위성' : '일반'}
+            </button>
+            <button type="button" aria-pressed={mode3d} onClick={() => setMode3d((v) => !v)}>
+              {mode3d ? '3D' : '2D'}
+            </button>
+            <button type="button" aria-pressed={orbit} onClick={() => setOrbit((v) => !v)}>
+              {orbit ? '멈춤' : '회전'}
+            </button>
+            {place && (
+              <a
+                className="btn-link"
+                href={streetViewUrl(place.lat, place.lng)}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                거리뷰
+              </a>
+            )}
+          </div>
+        </div>
+
+        <div className="map-stage">
+          <div className="map-bleed" id="map-panel">
+            {(mapStatus === 'loading' || mapStatus === 'error') && (
+              <div className={'map-status is-' + mapStatus} role="status">
+                {mapStatus === 'loading' && <p>지도를 불러오는 중…</p>}
+                {mapStatus === 'error' && (
+                  <>
+                    <p>{mapError ?? '지도를 표시할 수 없습니다.'}</p>
+                    <p className="hint">다시 불러오기를 눌러 주세요.</p>
+                  </>
+                )}
+              </div>
+            )}
+            <Suspense
+              fallback={
+                <div className="map-shell map-shell-fallback">
+                  <p>지도 엔진 준비 중…</p>
+                </div>
+              }
+            >
+              <MapView
+                day={day}
+                place={place}
+                placeIndex={placeIdx}
+                mode3d={mode3d}
+                basemap={basemap}
+                orbit={orbit}
+                fitRouteKey={fitKey}
+                focusToken={focusToken}
+                cinematic={touring}
+                onSelectPlace={selectPlace}
+                onStatus={onStatus}
+                reduceMotion={reduceMotion}
+              />
+            </Suspense>
+          </div>
+
+          {place && (
+            <div className="spotlight liquid-glass" key={spotlightKey} role="status">
+              <div className="spotlight-top">
+                <span className="spotlight-idx">
+                  {placeIdx + 1}/{day.places.length}
+                </span>
+                <span className="spotlight-time">{place.time}</span>
+                {touring && <span className="spotlight-live">LIVE TOUR</span>}
+              </div>
+              <h3>{place.name}</h3>
+              {place.nameJp && <p className="spotlight-jp">{place.nameJp}</p>}
+              <p className="spotlight-act">{place.activity}</p>
+              <div className="spotlight-rail" aria-hidden="true">
+                <span
+                  style={{
+                    width: `${((placeIdx + 1) / Math.max(day.places.length, 1)) * 100}%`,
+                  }}
+                />
+              </div>
+            </div>
           )}
-          <ul className="info-links">
-            {day.links.map((l) => (
-              <li key={l.url}>
-                <a href={l.url} target="_blank" rel="noopener noreferrer">
-                  {l.label}
+
+          <div className="timeline liquid-glass" role="group" aria-label="오늘 일정 타임라인">
+            <button
+              type="button"
+              className="timeline-play"
+              aria-pressed={touring}
+              onClick={toggleTour}
+            >
+              {touring ? '❚❚' : '▶'}
+            </button>
+            <div className="timeline-track">
+              <div
+                className="timeline-fill"
+                style={{
+                  width: `${(placeIdx / Math.max(day.places.length - 1, 1)) * 100}%`,
+                }}
+              />
+              {day.places.map((p, i) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className={
+                    'timeline-dot' +
+                    (i === placeIdx ? ' is-active' : '') +
+                    (i < placeIdx ? ' is-done' : '')
+                  }
+                  style={{ left: `${(i / Math.max(day.places.length - 1, 1)) * 100}%` }}
+                  onClick={() => {
+                    setTouring(false)
+                    selectPlace(i)
+                  }}
+                  aria-label={`${p.time} ${p.name}`}
+                  title={`${p.time} · ${p.name}`}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="map-lower">
+          <aside className="places-dock liquid-glass" aria-label="방문 장소">
+            <div className="places-dock-head">
+              <h3>{skin === 'pocket' ? 'Dex' : 'Stops'}</h3>
+              <span>
+                {day.places.filter((p) => caught.has(p.id)).length}/{day.places.length}
+              </span>
+            </div>
+            {skin === 'pocket' && (
+              <div className="dex-meter">
+                <div className="dex-meter-bar">
+                  <span style={{ width: `${(caughtCount / totalStops) * 100}%` }} />
+                </div>
+                <p>
+                  전체 도감 {caughtCount}/{totalStops}
+                </p>
+              </div>
+            )}
+            <ol>
+              {day.places.map((p, i) => {
+                const mon = monForPlace(p.id, p.name, p.activity, p.eat)
+                const isCaught = caught.has(p.id)
+                return (
+                  <li key={p.id}>
+                    <button
+                      type="button"
+                      className={
+                        'stop' +
+                        (i === placeIdx ? ' is-active' : '') +
+                        (isCaught ? ' is-caught' : '')
+                      }
+                      onClick={() => selectPlace(i)}
+                      aria-current={i === placeIdx ? 'true' : undefined}
+                    >
+                      {skin === 'pocket' ? (
+                        <span className="stop-mon">
+                          <MonFace type={mon.type} caught={isCaught} />
+                        </span>
+                      ) : (
+                        <span className={'stop-no' + (p.eat ? ' eat' : '')}>{i + 1}</span>
+                      )}
+                      <span className="stop-body">
+                        <strong>
+                          {skin === 'pocket'
+                            ? isCaught
+                              ? `${mon.nameKo} · ${p.name}`
+                              : `??? · ${p.name}`
+                            : `${p.time} · ${p.name}`}
+                        </strong>
+                        {skin === 'pocket' ? (
+                          <em style={{ color: isCaught ? monTypeColor(mon.type) : undefined }}>
+                            {isCaught ? `${mon.typeKo} · ${p.time}` : '미발견'}
+                          </em>
+                        ) : (
+                          <>
+                            {p.nameJp && <em>{p.nameJp}</em>}
+                            <span>{p.activity}</span>
+                          </>
+                        )}
+                      </span>
+                    </button>
+                  </li>
+                )
+              })}
+            </ol>
+            <div className="day-story-actions">
+              {skin === 'pocket' && place && (
+                <button
+                  type="button"
+                  className={'catch-btn' + (caught.has(place.id) ? ' is-caught' : '')}
+                  onClick={() => catchPlace(place.id)}
+                  disabled={caught.has(place.id)}
+                >
+                  {caught.has(place.id) ? '등록됨' : '볼로 잡기 (C)'}
+                </button>
+              )}
+              {place && (
+                <a
+                  className="maps-link"
+                  href={mapsDirUrl(place.lat, place.lng, place.name)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Maps · {place.name}
                 </a>
-              </li>
-            ))}
-          </ul>
-          <p className="credits">
-            시네마 레이아웃 · MotionSites 톤. 포켓 모드는 오리지널 도감 테마(비공식). OpenFreeMap /
-            Esri / MapLibre · {TRIP.nights}
-          </p>
-        </section>
-      )}
+              )}
+            </div>
+          </aside>
+
+          <section className="info-panel liquid-glass" aria-label="여행 정보">
+            <button
+              type="button"
+              className="info-chip"
+              aria-expanded={infoOpen}
+              onClick={() => setInfoOpen((v) => !v)}
+            >
+              {infoOpen ? '정보 접기' : '이동 · 먹거리 · 예약 · 우천'}
+            </button>
+            {infoOpen && (
+              <div className="info-grid">
+                <article>
+                  <h3>이동</h3>
+                  <p>{day.transport}</p>
+                </article>
+                <article>
+                  <h3>먹거리</h3>
+                  <ul>
+                    {day.food.map((f) => (
+                      <li key={f}>{f}</li>
+                    ))}
+                  </ul>
+                </article>
+                <article>
+                  <h3>예약 · 운영</h3>
+                  <p>{day.booking}</p>
+                  {place?.hoursNote && (
+                    <p className="muted">
+                      {place.name}: {place.hoursNote}
+                    </p>
+                  )}
+                </article>
+                <article>
+                  <h3>비 오는 날</h3>
+                  <p>{day.rainAlt}</p>
+                </article>
+              </div>
+            )}
+            <ul className="info-links">
+              {day.links.map((l) => (
+                <li key={l.url}>
+                  <a href={l.url} target="_blank" rel="noopener noreferrer">
+                    {l.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+            {activeMon && skin === 'pocket' && (
+              <p className="mon-hint">
+                스팟 몬:{' '}
+                {caught.has(place!.id)
+                  ? `${activeMon.nameKo} (${activeMon.typeKo})`
+                  : '???'}{' '}
+                · 오리지널 캐릭터(비공식)
+              </p>
+            )}
+          </section>
+        </div>
+      </section>
+
+      <footer className="site-footer">
+        <p>
+          {TRIP.note} 지도 · OpenFreeMap / MapLibre. 위성 · Esri. 디자인 톤 · MotionSites
+          cinematic landing.
+        </p>
+        <p>
+          <a href="https://github.com/gyu-bin/japan-tour">GitHub</a>
+          {' · '}
+          <a href="https://motionsites.ai/unlimited">MotionSites</a>
+        </p>
+      </footer>
 
       {catchFlash && (
         <div className="catch-flash" role="status" aria-live="polite">

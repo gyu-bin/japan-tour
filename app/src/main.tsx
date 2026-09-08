@@ -12,8 +12,8 @@ createRoot(document.getElementById('root')!).render(
           minHeight: '100vh',
           display: 'grid',
           placeItems: 'center',
-          background: '#FAF6EC',
-          color: '#2a2622',
+          background: '#070a09',
+          color: '#fdf1e1',
           fontFamily: 'system-ui, sans-serif',
         }}
       >
