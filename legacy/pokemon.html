@@ -300,7 +300,7 @@ const SAVE_KEY = 'tokyo-pixel-v4';
 let save;
 try { save = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null') || {}; } catch { save = {}; }
 save.day = Math.min(save.day || 0, LAST_DAY);
-save.unlocked = Math.max(save.unlocked || 0, save.day);
+save.unlocked = LAST_DAY; // 일차는 언제든 자유롭게 이동
 save.visited = save.visited || {};
 function persist() { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }
 
@@ -1980,112 +1980,110 @@ function drawJakae(ctx, sx, sy, dir, frame, p, tag) {
   ctx.fillRect(sx + 4 * u, sy + (17 - 6) * u, 8 * u, 1 * u);
 
   const walk = frame === 1;
-  const bob = walk ? 1 : ((bounce / 400 | 0) % 2); // 서 있을 때도 살짝 숨쉬기
+  const bob = walk ? 1 : ((bounce / 400 | 0) % 2);
   const armL = walk ? 1 : 0;
   const armR = walk ? 0 : 1;
 
-  // ── 신발 (빨간 갑피 + 노란 스트랩/버클 + 회색 밑창) ──
+  // ── 통통한 빨간 신발 + 흰 스트랩 ──
   const shoe = (x, y) => {
     r(x, y, 5, 3, p.shoe);
     r(x, y, 5, 1, p.shoeHilite);
-    r(x + 1, y + 1, 3, 1, p.strap);     // 노란 스트랩
-    r(x + 2, y + 1, 1, 1, p.buckle);     // 금색 버클
+    r(x + 1, y + 1, 3, 1, p.strap);
+    r(x + 2, y + 1, 1, 1, p.buckle);
     r(x, y + 2, 5, 1, p.sole);
-    r(x + 4, y + 2, 1, 1, p.soleDark);
   };
   if (!walk) { shoe(3, 15); shoe(8, 15); }
-  else { shoe(2, 15); shoe(9, 16); } // 보폭
+  else { shoe(2, 15); shoe(9, 16); }
 
-  // ── 다리 (파란 발목) ──
-  if (!walk) { r(5, 14, 2, 2, p.blue); r(9, 14, 2, 2, p.blue); }
-  else { r(4, 14, 2, 2, p.blue); r(10, 14, 2, 1, p.blue); }
+  // ── 짧은 다리 ──
+  if (!walk) { r(5, 13, 2, 2, p.blue); r(9, 13, 2, 2, p.blue); }
+  else { r(4, 13, 2, 2, p.blue); r(10, 13, 2, 1, p.blue); }
 
-  // ── 몸통: 초록 니트 + 데이지 ──
-  r(4, 9, 8, 6, p.shirt);
-  r(4, 9, 8, 1, p.shirtHilite);
-  r(4, 14, 8, 1, p.shirtShade);
-  // 데이지 (흰 꽃잎 + 노란 수술)
-  const daisy = (x, y) => {
-    r(x, y, 1, 1, p.petal); r(x + 2, y, 1, 1, p.petal);
-    r(x + 1, y - 1, 1, 1, p.petal); r(x + 1, y + 1, 1, 1, p.petal);
-    r(x + 1, y, 1, 1, p.flowerCenter);
-  };
-  daisy(5, 11); daisy(9, 12);
+  // ── 통통한 몸 + 둥근 배 ──
+  r(4, 9, 8, 5, p.blue);
+  r(3, 10, 1, 3, p.blue); r(12, 10, 1, 3, p.blue);
+  r(4, 9, 8, 1, p.blueHilite);
+  r(5, 10, 6, 4, p.belly);
+  r(6, 10, 4, 1, p.bellyHilite);
+  r(6, 12, 2, 1, p.bellyHilite);
 
-  // ── 팔 + 흰 장갑 (통통한 봉제 손) ──
-  r(2, 10 + armL, 2, 3, p.blue);
-  r(12, 10 + armR, 2, 3, p.blue);
-  r(1, 12 + armL, 3, 3, p.glove);
-  r(12, 12 + armR, 3, 3, p.glove);
-  r(1, 12 + armL, 3, 1, p.gloveCuff);
-  r(12, 12 + armR, 3, 1, p.gloveCuff);
-  r(2, 14 + armL, 1, 1, p.gloveShade);
-  r(13, 14 + armR, 1, 1, p.gloveShade);
+  // ── 짧은 팔 + 통통한 흰 ──
+  r(2, 10 + armL, 2, 2, p.blue);
+  r(12, 10 + armR, 2, 2, p.blue);
+  r(1, 11 + armL, 3, 3, p.glove);
+  r(12, 11 + armR, 3, 3, p.glove);
+  r(1, 11 + armL, 3, 1, p.gloveCuff);
+  r(12, 11 + armR, 3, 1, p.gloveCuff);
 
-  const hy = bob; // 머리 y 오프셋
+  const hy = bob;
 
   if (dir === 'up') {
-    // 등: 가시 3개 세로 겹침이 실루엣
+    // 등: 부드러운 둥근 가시 3개
     r(4, 3 + hy, 8, 7, p.blue);
     r(3, 5 + hy, 2, 4, p.blue); r(11, 5 + hy, 2, 4, p.blue);
-    r(5, 1 + hy, 3, 4, p.quill); r(7, 0 + hy, 3, 5, p.quill); r(9, 1 + hy, 3, 4, p.quill);
-    r(6, 0 + hy, 1, 2, p.blueHilite); r(8, 1 + hy, 1, 2, p.blueHilite);
-    r(5, 8 + hy, 6, 2, p.blueShade);
+    r(5, 1 + hy, 3, 4, p.quill);
+    r(7, 0 + hy, 3, 4, p.quill);
+    r(9, 1 + hy, 3, 4, p.quill);
+    r(6, 0 + hy, 1, 2, p.blueHilite); r(8, 0 + hy, 1, 2, p.blueHilite);
+    r(5, 9 + hy, 6, 1, p.blueShade);
   } else if (dir === 'left') {
-    // 옆모습: 가시가 뒤로, 주둥이가 앞
     r(6, 3 + hy, 6, 7, p.blue);
-    r(10, 1 + hy, 4, 3, p.quill);
-    r(11, 3 + hy, 4, 4, p.quill);
-    r(12, 6 + hy, 3, 3, p.quill);
-    r(10, 2 + hy, 2, 1, p.blueHilite);
-    r(8, 2 + hy, 2, 2, p.blue); r(8, 3 + hy, 1, 1, p.earIn); // 귀
+    r(10, 1 + hy, 3, 3, p.quill);
+    r(11, 3 + hy, 3, 3, p.quill);
+    r(11, 6 + hy, 2, 2, p.quill);
+    r(10, 1 + hy, 1, 1, p.blueHilite);
+    r(8, 2 + hy, 2, 2, p.blue); r(8, 3 + hy, 1, 1, p.earIn);
     r(3, 5 + hy, 5, 4, p.muzzle);
     r(3, 5 + hy, 5, 1, p.muzzleHilite);
     r(3, 7 + hy, 1, 1, p.nose);
-    r(5, 5 + hy, 2, 2, p.eyeWhite);
-    r(5, 5 + hy, 1, 2, p.eye);
-    r(5, 5 + hy, 1, 1, p.pupil);
-    r(6, 5 + hy, 1, 1, p.spark);
-    r(6, 8 + hy, 1, 1, p.blush);
+    r(4, 8 + hy, 2, 1, p.smile);
+    r(5, 4 + hy, 3, 3, p.eyeWhite);
+    r(5, 4 + hy, 2, 2, p.eye);
+    r(5, 4 + hy, 1, 1, p.pupil);
+    r(6, 4 + hy, 1, 1, p.spark);
+    r(5, 8 + hy, 2, 1, p.blush);
   } else if (dir === 'right') {
     r(4, 3 + hy, 6, 7, p.blue);
-    r(2, 1 + hy, 4, 3, p.quill);
-    r(1, 3 + hy, 4, 4, p.quill);
-    r(1, 6 + hy, 3, 3, p.quill);
-    r(4, 2 + hy, 2, 1, p.blueHilite);
+    r(3, 1 + hy, 3, 3, p.quill);
+    r(2, 3 + hy, 3, 3, p.quill);
+    r(3, 6 + hy, 2, 2, p.quill);
+    r(5, 1 + hy, 1, 1, p.blueHilite);
     r(6, 2 + hy, 2, 2, p.blue); r(7, 3 + hy, 1, 1, p.earIn);
     r(8, 5 + hy, 5, 4, p.muzzle);
     r(8, 5 + hy, 5, 1, p.muzzleHilite);
     r(12, 7 + hy, 1, 1, p.nose);
-    r(9, 5 + hy, 2, 2, p.eyeWhite);
-    r(10, 5 + hy, 1, 2, p.eye);
-    r(10, 5 + hy, 1, 1, p.pupil);
-    r(9, 5 + hy, 1, 1, p.spark);
-    r(9, 8 + hy, 1, 1, p.blush);
+    r(10, 8 + hy, 2, 1, p.smile);
+    r(8, 4 + hy, 3, 3, p.eyeWhite);
+    r(9, 4 + hy, 2, 2, p.eye);
+    r(10, 4 + hy, 1, 1, p.pupil);
+    r(9, 4 + hy, 1, 1, p.spark);
+    r(9, 8 + hy, 2, 1, p.blush);
   } else {
-    // down 정면 — 큰 머리 + 가시 5방향 + 큰 초록 눈
-    // 머리 본체 (셔츠 위로 덮이도록 몸통보다 아래를 살짝만)
-    r(4, 1 + hy, 8, 8, p.blue);
+    // 정면: 큰 둥근 머리 + 부드러운 가시 + 큰 눈 + 미소
+    r(4, 2 + hy, 8, 7, p.blue);
     r(3, 3 + hy, 1, 5, p.blue); r(12, 3 + hy, 1, 5, p.blue);
-    r(4, 1 + hy, 8, 2, p.blueHilite);
+    r(4, 2 + hy, 8, 2, p.blueHilite);
     r(5, 8 + hy, 6, 1, p.blueShade);
-    // 가시: 위 3 + 옆 2 (둥근 봉제 실루엣)
-    r(3, 0 + hy, 3, 3, p.quill); r(6, 0 + hy, 4, 3, p.quill); r(10, 0 + hy, 3, 3, p.quill);
-    r(1, 2 + hy, 3, 4, p.quill); r(12, 2 + hy, 3, 4, p.quill);
-    r(4, 0 + hy, 1, 1, p.blueHilite); r(8, 0 + hy, 1, 1, p.blueHilite); r(11, 0 + hy, 1, 1, p.blueHilite);
+    // 둥근 가시 (짧고 통통)
+    r(6, 0 + hy, 4, 3, p.quill);
+    r(3, 0 + hy, 3, 3, p.quill); r(10, 0 + hy, 3, 3, p.quill);
+    r(1, 2 + hy, 3, 3, p.quill); r(12, 2 + hy, 3, 3, p.quill);
+    r(7, 0 + hy, 1, 1, p.blueHilite);
+    r(4, 0 + hy, 1, 1, p.blueHilite); r(11, 0 + hy, 1, 1, p.blueHilite);
     // 귀
     r(3, 2 + hy, 2, 2, p.blue); r(11, 2 + hy, 2, 2, p.blue);
     r(4, 2 + hy, 1, 1, p.earIn); r(11, 2 + hy, 1, 1, p.earIn);
-    // 주둥이
+    // 통통한 주둥이
     r(5, 5 + hy, 6, 4, p.muzzle);
     r(5, 5 + hy, 6, 1, p.muzzleHilite);
-    r(7, 7 + hy, 2, 1, p.nose);
-    r(6, 8 + hy, 1, 1, p.blush); r(9, 8 + hy, 1, 1, p.blush);
-    // 눈: 흰자 → 초록 → 동공 → 반짝
+    r(7, 6 + hy, 2, 1, p.nose);
+    r(6, 8 + hy, 4, 1, p.smile);
+    r(5, 8 + hy, 2, 1, p.blush); r(9, 8 + hy, 2, 1, p.blush);
+    // 큰 둥근 눈 + 작은 동공
     r(4, 3 + hy, 3, 3, p.eyeWhite); r(9, 3 + hy, 3, 3, p.eyeWhite);
     r(4, 3 + hy, 3, 1, '#fff'); r(9, 3 + hy, 3, 1, '#fff');
-    r(5, 3 + hy, 2, 3, p.eye); r(9, 3 + hy, 2, 3, p.eye);
-    r(5, 4 + hy, 1, 2, p.pupil); r(10, 4 + hy, 1, 2, p.pupil);
+    r(5, 3 + hy, 2, 2, p.eye); r(9, 3 + hy, 2, 2, p.eye);
+    r(5, 4 + hy, 1, 1, p.pupil); r(10, 4 + hy, 1, 1, p.pupil);
     r(6, 3 + hy, 1, 1, p.spark); r(9, 3 + hy, 1, 1, p.spark);
   }
 
@@ -2112,17 +2110,16 @@ function drawJakae(ctx, sx, sy, dir, frame, p, tag) {
 
 const PAL_ME = { cap: PAL.accentRed, hair: '#3a2618', skin: '#e8b878', shirt: '#e8e4dc', pants: '#3a5898' };
 const PAL_JAKAE = {
-  blue: '#3a6ad0', blueHilite: '#6a98e0', blueShade: '#2a4a98',
-  quill: '#2a58b8',
-  muzzle: '#f0d0a8', muzzleHilite: '#f8e0c0', earIn: '#e0b890',
-  blush: '#e89890',
-  eyeWhite: '#f8f8f0', eye: '#48a858', pupil: '#1a2018', spark: '#fff',
-  nose: '#2a2822',
-  shirt: '#3a9850', shirtHilite: '#58b068', shirtShade: '#2a7840',
-  petal: '#f4f0e8', flowerCenter: '#e0b030',
-  glove: '#f4f0e8', gloveCuff: '#e0d8c8', gloveShade: '#c8c0b0',
-  shoe: '#c04038', shoeHilite: '#d86858', sole: '#6a6860', soleDark: '#4a4840',
-  strap: '#e0c040', buckle: '#f0d868',
+  blue: '#3a7ae0', blueHilite: '#78b0f8', blueShade: '#2a58b0',
+  quill: '#2a68d0',
+  belly: '#f8d8b0', bellyHilite: '#fff0d8',
+  muzzle: '#f8d8b0', muzzleHilite: '#fff0d8', earIn: '#f0b888',
+  blush: '#f8a8a0', smile: '#e07068',
+  eyeWhite: '#fffef8', eye: '#58c868', pupil: '#203020', spark: '#fff',
+  nose: '#c89878',
+  glove: '#fffef8', gloveCuff: '#f0e8e0', gloveShade: '#d8d0c8',
+  shoe: '#e04840', shoeHilite: '#f07868', sole: '#787870', soleDark: '#585850',
+  strap: '#fffef8', buckle: '#ffffff',
 };
 const PAL_WIFE = { hair: '#5a3a20', skin: '#e8b888', shirt: '#f0ebe0', dress: '#d07088', pants: '#d07088', long: true };
 
@@ -2440,9 +2437,9 @@ function refreshList() {
 }
 function refreshDays() {
   daysEl.innerHTML = DAYS.map((d, i) =>
-    `<button type="button" data-i="${i}" ${i > save.unlocked ? 'disabled' : ''} class="${i === dayIdx ? 'cur' : ''}">${d.no}</button>`).join('');
+    `<button type="button" data-i="${i}" class="${i === dayIdx ? 'cur' : ''}">${d.no}</button>`).join('');
   daysEl.querySelectorAll('button').forEach(b =>
-    b.addEventListener('click', () => { const i = +b.dataset.i; if (i <= save.unlocked && i !== dayIdx) loadDay(i); }));
+    b.addEventListener('click', () => { const i = +b.dataset.i; if (i !== dayIdx) loadDay(i); }));
 }
 
 /** 같은 칸에 트리거가 여러 개일 때(숙소 출발/복귀) 올바른 인덱스 선택 */
