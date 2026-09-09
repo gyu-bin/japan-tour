@@ -28,6 +28,10 @@
   background: #1a2230;
 }
 .astra-scene:active { cursor: grabbing; }
+.astra-scene, .astra-labels { transition: opacity 125ms ease-in-out; }
+@media (prefers-reduced-motion: reduce) {
+  .astra-scene, .astra-labels { transition: none; }
+}
 .astra-scene canvas { display: block; }
 
 .astra-labels {
@@ -96,6 +100,7 @@
 
 /* 랜드마크 라벨: 어두운 카드, 한글 세리프 + 영어/일어 캡션 */
 .astra-lm {
+  transition: opacity 180ms ease;
   transform: translate(-50%, -110%);
   display: flex;
   flex-direction: column;
@@ -103,20 +108,20 @@
   gap: 2px;
   pointer-events: none;
   white-space: nowrap;
-  padding: 8px 14px;
-  border-radius: 10px;
-  background: rgba(20, 25, 34, 0.9);
+  padding: 4px 7px;
+  border-radius: 6px;
+  background: rgba(20, 25, 34, 0.58);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.15);
 }
 .astra-lm .t {
   font-family: var(--display);
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 700;
   color: #f2f4f7;
 }
 .astra-lm .j {
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 800;
   letter-spacing: 0.16em;
   color: var(--muted);
@@ -138,6 +143,7 @@
   pointer-events: none;
 }
 .astra-top > * { pointer-events: auto; }
+.astra-top-actions { white-space: nowrap; }
 
 .astra-brand .line {
   margin: 0;
@@ -223,6 +229,12 @@
 .astra-top-actions .explore.on .dot { animation: astra-blink 1s infinite; }
 @keyframes astra-blink { 50% { opacity: 0.3; } }
 .astra-top-actions .pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  white-space: nowrap;
+  flex-shrink: 0;
   text-decoration: none;
   background: #f2f4f7;
   color: #14171c;
@@ -450,6 +462,7 @@
 
 /* ── controls ── */
 .astra-ctrl {
+  pointer-events: none;
   position: absolute;
   right: 22px;
   bottom: 40px;
@@ -461,6 +474,7 @@
 }
 .astra-ctrl .row { display: flex; gap: 6px; }
 .astra-ctrl button {
+  pointer-events: auto;
   border: 1px solid var(--line);
   background: var(--panel);
   backdrop-filter: blur(12px);
@@ -536,4 +550,19 @@
   .astra-ctrl { top: 76px; bottom: auto; max-width: calc(100% - 20px); }
   .astra-ctrl .row { flex-wrap: wrap; justify-content: flex-end; }
   .astra-ctrl button { min-height: 44px; min-width: 44px; }
+}
+
+@media (max-width: 600px) {
+  .astra-top { display: flex; flex-direction: column; gap: 8px; }
+  .astra-brand .line { white-space: nowrap; }
+  .astra-brand .en { font-size: 20px; }
+  .astra-brand .ko { font-size: 11px; }
+  .astra-top-actions { width: 100%; justify-content: flex-start; gap: 7px; }
+  .astra-top-actions .pill { padding: 9px 12px; font-size: 10px; min-height: 38px; }
+  .astra-top-actions .explore { font-size: 10px; padding: 9px 10px; }
+  .astra-ctrl { top: 110px; }
+  .astra-side { max-height: 38vh; }
+  .astra-lm .t { font-size: 9px; }
+  .astra-lm .j { font-size: 7px; letter-spacing: 0.04em; }
+  .astra-lm { padding: 3px 5px; }
 }
