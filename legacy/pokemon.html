@@ -208,9 +208,9 @@ a.pill.alt{background:var(--parchment);color:var(--ink)}
 <div id="sleep"></div>
 <div id="ride"><canvas id="rideCv"></canvas></div>
 
-<div id="hint">방향키/WASD 이동 · 지도 클릭 이동 · 스페이스 = 확인/탑승/대화<br>역 앞에서 A → 지하철 탑승 · 스팟에서 A → 일정 보기 · 주민 옆에서 A/스페이스 → 대화 · 하루 끝은 숙소에서</div>
+<div id="hint">방향키/WASD 이동 · 지도 클릭 이동 · 스페이스 = 확인/탑승/대화<br>마을 역에서 A → 목적지 선택 · 스팟에서 A → 일정 보기 · 주민 옆에서 A/스페이스 → 대화 · 하루 끝은 숙소에서</div>
 
-<div id="toast" class="panel">주인공은 <b>규빈</b> · 뒤따라오는 파란 친구는 <b>작애</b>!<br>역 앞에서 <b>A</b> → 지하철 탑승 · 스팟에서 <b>A</b> → 일정 보기 🌱</div>
+<div id="toast" class="panel">주인공은 <b>규빈</b> · 뒤따라오는 파란 친구는 <b>작애</b>!<br>마을 역에서 <b>A</b> → 목적지 선택 · 스팟에서 <b>A</b> → 일정 보기 🌱</div>
 
 <div id="pad">
   <div id="dpad">
@@ -228,6 +228,7 @@ import { DAYS, haversineKm, projectDay } from './js/data.js';
 
 const TILE = 16, SCALE = 3, TS = TILE * SCALE;
 const DUR = 165;
+const NPC_DUR = 420; // 주민은 한 칸을 더 천천히
 const LAST_DAY = DAYS.length - 1;
 
 /* ═══ 스타듀×픽셀 팔레트 (밝은 목가) ═══ */
@@ -407,21 +408,35 @@ function shortStationFallback(name) {
   return (name || '역').replace(/\s*·.*/, '').replace(/^숙소 복귀\s*/, '')
     .replace(/^Section L\s*/, '').replace(/^점심\s*/, '').slice(0, 6) || '역';
 }
+/** 노선색 — 지도 위 안내선용으로 채도 낮춘 톤 */
 function lineColor(line) {
-  if (/히비야/.test(line)) return '#8c8c73';
-  if (/긴자/.test(line)) return '#c48a38';
-  if (/야마노테/.test(line)) return '#78a838';
-  if (/소부|게이힌/.test(line)) return '#d0a038';
-  if (/유리카모메/.test(line)) return '#48b0d0';
-  if (/난보쿠|미타|오에도/.test(line)) return '#2868a8';
-  if (/버스|고속/.test(line)) return '#c84838';
-  if (/택시/.test(line)) return '#d8b838';
-  return '#3a6aaa';
+  if (/히비야/.test(line)) return '#8a8878';
+  if (/긴자/.test(line)) return '#b8905a';
+  if (/야마노테/.test(line)) return '#7ea058';
+  if (/소부|게이힌/.test(line)) return '#c0a060';
+  if (/유리카모메/.test(line)) return '#68a8c0';
+  if (/난보쿠|미타|오에도/.test(line)) return '#4a70a0';
+  if (/버스|고속/.test(line)) return '#b86058';
+  if (/택시/.test(line)) return '#c8b060';
+  return '#5a78a0';
 }
 function vehicleKind(line) {
   if (/택시/.test(line || '')) return 'taxi';
   if (/버스|고속/.test(line || '')) return 'bus';
   return 'metro';
+}
+/** 일정 스팟 자체가 택시 승차 포인트인 경우 (별도 택시 정류장·라벨 중복 방지) */
+function isVehicleStop(s) {
+  if (!s) return false;
+  if (s.mode === 'taxi') return true;
+  return /(정액\s*)?택시/.test(s.name || '');
+}
+/** 정류장 라벨 — '택시 택시' 같은 중복 접미 제거 */
+function stationTag(name, vk) {
+  const n = (name || '').trim();
+  if (vk === 'taxi') return /택시/.test(n) ? n : n + ' 택시';
+  if (vk === 'bus') return /버스/.test(n) ? n : n + ' 버스';
+  return /역$/.test(n) ? n : n + '역';
 }
 /** L자 선로 셀 목록 */
 function railCells(x0, y0, x1, y1) {
@@ -458,8 +473,9 @@ function buildGeoMap(di) {
   if (maxZ - minZ < 0.08) { minZ -= 0.2; maxZ += 0.2; }
 
   const spanX = maxX - minX, spanZ = maxZ - minZ;
-  const inner = Math.max(44, Math.min(68, Math.round((day.layoutSpan || 48) * 1.05)));
-  const pad = 9;
+  // 포켓몬 마을·스타듀 타운처럼 한 화면에 밀도가 느껴지도록 압축
+  const inner = Math.max(26, Math.min(40, Math.round(day.layoutSpan || 34)));
+  const pad = 5;
   const w = inner + pad * 2, h = inner + pad * 2;
   const scale = inner / Math.max(spanX, spanZ);
 
@@ -468,8 +484,8 @@ function buildGeoMap(di) {
     y: pad + (p.z - minZ) * scale
   }));
 
-  // 스팟·건물이 덜 뭉치도록 최소 간격 넉넉히
-  const minGap = 10.5;
+  // 스팟이 겹치지 않을 정도만 벌림 — 넓은 들판이 되지 않게
+  const minGap = 6;
   for (let iter = 0; iter < 80; iter++) {
     for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
       let dx = pts[j].x - pts[i].x, dy = pts[j].y - pts[i].y;
@@ -502,8 +518,8 @@ function buildGeoMap(di) {
     for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
       let dx = spots[j].x - spots[i].x, dy = spots[j].y - spots[i].y;
       let d = Math.hypot(dx, dy) || 0.01;
-      if (d < 8) {
-        const push = Math.ceil((8 - d) / 2);
+      if (d < 5) {
+        const push = Math.ceil((5 - d) / 2);
         const sx = Math.sign(dx) || (i % 2 ? 1 : -1);
         const sy = Math.sign(dy) || (j % 2 ? 1 : -1);
         spots[i].x = clamp(spots[i].x - sx * push, pad, w - pad - 1);
@@ -515,11 +531,12 @@ function buildGeoMap(di) {
   }
 
   const gr = grid(w, h);
+  // 마을 큰길처럼 조금 더 두껍게
   const pave = (x0, y0, x1, y1) => {
     const mx = x0;
-    mkRect(gr, Math.min(x0, mx), y0, Math.abs(mx - x0) + 1, 2, 1);
-    mkRect(gr, mx, Math.min(y0, y1), 2, Math.abs(y1 - y0) + 1, 1);
-    mkRect(gr, Math.min(mx, x1), y1, Math.abs(x1 - mx) + 1, 2, 1);
+    mkRect(gr, Math.min(x0, mx), y0, Math.abs(mx - x0) + 1, 3, 1);
+    mkRect(gr, mx, Math.min(y0, y1), 3, Math.abs(y1 - y0) + 1, 1);
+    mkRect(gr, Math.min(mx, x1), y1, Math.abs(x1 - mx) + 1, 3, 1);
   };
   const paintedWater = new Map();
   const paintWater = (x0, y0, ww, hh) => {
@@ -570,109 +587,98 @@ function buildGeoMap(di) {
     placeBld(bx, by, st.w, st.h, st.s);
   });
 
-  // ── 환승 홉 수집 → 동일 역 이름 하나로 합침 ──
+  // ── 하루 1개 허브 역: 시작 스팟 근처, 갈 수 있는 교통 일정을 모두 등록 ──
   const hops = [];
-  const stnAnchors = new Map(); // name -> [{x,y}, ...]
-  const addAnchor = (name, pt) => {
-    if (!stnAnchors.has(name)) stnAnchors.set(name, []);
-    stnAnchors.get(name).push(pt);
-  };
   day.stops.forEach((s, i) => {
     if (i === 0) return;
-    const useVia = isTransit(s.via, s) ? s.via
+    if (isVehicleStop(s)) return;
+
+    let fromStop = i - 1;
+    let useVia = isTransit(s.via, s) ? s.via
       : ((day.stops[i - 1].mode === 'bus' || day.stops[i - 1].mode === 'taxi') ? day.stops[i - 1].via : s.via);
-    const longHop = haversineKm(day.stops[i - 1], s) >= 3;
-    if (!(isTransit(useVia, s) || (longHop && isTransit(useVia, day.stops[i - 1])))) return;
+    if (isVehicleStop(day.stops[i - 1]) && i >= 2) {
+      fromStop = i - 2;
+      useVia = day.stops[i - 1].via || s.via || useVia;
+    }
+    const longHop = haversineKm(day.stops[fromStop], s) >= 3;
+    if (!(isTransit(useVia, s) || (longHop && isTransit(useVia, day.stops[fromStop])))) return;
     const names = extractStations(useVia);
-    const fromName = names[0] || shortStationFallback(day.stops[i - 1].name);
+    const fromName = names[0] || shortStationFallback(day.stops[fromStop].name);
     const toName = names.length > 1 ? names[names.length - 1] : (names[0] || shortStationFallback(s.name));
-    if (fromName === toName) return;
     const line = extractLine(useVia);
-    hops.push({ from: fromName, to: toName, line, toStop: i, fromStop: i - 1 });
-    addAnchor(fromName, spots[i - 1]);
-    addAnchor(toName, spots[i]);
+    const vk = vehicleKind(line);
+    hops.push({ from: fromName, to: toName, line, toStop: i, fromStop, kind: vk });
   });
 
-  // 유니크 역사 배치
-  const stnByName = new Map();
-  const stnList = [...stnAnchors.keys()];
-  stnList.forEach((name, idx) => {
-    const pts = stnAnchors.get(name);
-    let ax = pts.reduce((s, p) => s + p.x, 0) / pts.length;
-    let ay = pts.reduce((s, p) => s + p.y, 0) / pts.length;
-    ax = clamp(Math.round(ax + 5), pad, w - pad - 5);
-    ay = clamp(Math.round(ay + 4), pad, h - pad - 4);
-    for (let guard = 0; guard < 28; guard++) {
-      let hit = false;
-      for (const o of stnByName.values()) {
-        if (Math.hypot(ax - (o.x + 2), ay - (o.y + 1.5)) < 8) {
-          ax = clamp(ax + ((guard & 1) ? 3 : -3), pad, w - pad - 5);
-          ay = clamp(ay + ((guard & 2) ? 3 : -2), pad, h - pad - 4);
-          hit = true;
-        }
-      }
-      for (const sp of spots) {
-        if (Math.hypot(ax + 2 - sp.x, ay + 1 - sp.y) < 7) {
-          ax = clamp(ax + 2, pad, w - pad - 5);
-          ay = clamp(ay + 2, pad, h - pad - 4);
-          hit = true;
-        }
-      }
-      if (!hit) break;
-    }
-    const related = hops.filter(h => h.from === name || h.to === name);
-    const kinds = related.map(h => vehicleKind(h.line));
+  if (hops.length) {
+    const kinds = hops.map(h => h.kind);
     const vk = kinds.every(k => k === 'bus') ? 'bus'
       : kinds.every(k => k === 'taxi') ? 'taxi' : 'metro';
-    const style = vk === 'bus' ? 'busStop' : vk === 'taxi' ? 'taxiStand' : 'station';
-    const hall = placeBld(ax, ay, vk === 'metro' ? 4 : 3, vk === 'metro' ? 3 : 2, style);
-    hall.name = name;
+    const hubName = (() => {
+      const region = (day.region.split(/[·→]/)[0] || '').trim();
+      if (region && region.length <= 6) return region;
+      return shortStationFallback(day.stops[0].name) || '마을';
+    })();
+
+    let hall = null;
+    if (vk === 'taxi') {
+      const taxiBld = bld.find(b => b.s === 'taxi' || b.s === 'taxiStand');
+      if (taxiBld) hall = taxiBld;
+    }
+    if (!hall) {
+      const sp0 = spots[0];
+      let ax = clamp(sp0.x + 4, pad, w - pad - 5);
+      let ay = clamp(sp0.y - 5, pad, h - pad - 4);
+      for (let guard = 0; guard < 24; guard++) {
+        let hit = spots.some(sp => Math.hypot(ax + 2 - sp.x, ay + 1.5 - sp.y) < 5);
+        if (!hit) break;
+        ax = clamp(ax + ((guard & 1) ? 2 : -2), pad, w - pad - 5);
+        ay = clamp(ay + ((guard & 2) ? 2 : -2), pad, h - pad - 4);
+      }
+      const style = vk === 'bus' ? 'busStop' : vk === 'taxi' ? 'taxiStand' : 'station';
+      hall = placeBld(ax, ay, vk === 'metro' ? 4 : 3, vk === 'metro' ? 3 : 2, style);
+      mkRect(gr, hall.x, hall.y + hall.h, hall.w, 2, 2);
+      // 허브만 라벨
+      if (vk === 'metro') lbl.push([hall.x + hall.w / 2, hall.y - 0.45, hubName + '역']);
+      else if (vk === 'bus') lbl.push([hall.x + hall.w / 2, hall.y - 0.45, hubName + ' 버스']);
+    } else {
+      mkRect(gr, hall.x, hall.y + hall.h, hall.w, 2, 2);
+    }
+    hall.name = hubName;
     hall.routes = [];
     hall.lines = new Set();
     hall.vKind = vk;
-    stnByName.set(name, hall);
     stns.push(hall);
-    mkRect(gr, hall.x, hall.y + hall.h, hall.w, 2, 2);
-    const tag = vk === 'bus' ? name + ' 버스' : vk === 'taxi' ? name + ' 택시' : name + '역';
-    lbl.push([hall.x + hall.w / 2, hall.y - 0.45, tag]);
-  });
 
-  // 홉 → 노선 등록 + 선로(역↔역, 중복 제거)
-  const railKey = new Set();
-  for (const hop of hops) {
-    const a = stnByName.get(hop.from);
-    const b = stnByName.get(hop.to);
-    if (!a || !b) continue;
-    a.routes.push({ toStop: hop.toStop, toName: hop.to, line: hop.line, fromStop: hop.fromStop });
-    a.lines.add(hop.line);
-    b.lines.add(hop.line);
-    // 스팟 ↔ 역사 보도
-    const fromSpot = spots[hop.fromStop];
-    const toSpot = spots[hop.toStop];
-    mkRect(gr, Math.min(fromSpot.x, a.x + 2), Math.min(fromSpot.y, a.y + a.h), 1, Math.abs(fromSpot.y - (a.y + a.h)) + 1, 1);
-    mkRect(gr, Math.min(fromSpot.x, a.x + 2), a.y + a.h, Math.abs(fromSpot.x - (a.x + 2)) + 1, 1, 1);
-    mkRect(gr, Math.min(toSpot.x, b.x + 2), Math.min(toSpot.y, b.y + b.h), 1, Math.abs(toSpot.y - (b.y + b.h)) + 1, 1);
-    mkRect(gr, Math.min(toSpot.x, b.x + 2), b.y + b.h, Math.abs(toSpot.x - (b.x + 2)) + 1, 1, 1);
+    // 허브 → 스팟 짧은 보도 + 장식용 안내선(역↔역 복수 선로 없음)
+    const hubDoor = [hall.x + (hall.w >> 1), hall.y + hall.h];
+    mkRect(gr, Math.min(spots[0].x, hubDoor[0]), Math.min(spots[0].y, hubDoor[1]), 1, Math.abs(spots[0].y - hubDoor[1]) + 1, 1);
+    mkRect(gr, Math.min(spots[0].x, hubDoor[0]), hubDoor[1], Math.abs(spots[0].x - hubDoor[0]) + 1, 1, 1);
 
-    const key = [hop.from, hop.to].sort().join('|') + '|' + hop.line;
-    if (railKey.has(key)) continue;
-    railKey.add(key);
-    const c0 = [a.x + 2, a.y + 1];
-    const c1 = [b.x + 2, b.y + 1];
-    const rail = railCells(c0[0], c0[1], c1[0], c1[1]);
-    rails.push({
-      cells: rail, line: hop.line, color: lineColor(hop.line),
-      kind: vehicleKind(hop.line),
-      from: hop.from, to: hop.to,
-      fromPos: c0, toPos: c1
-    });
-    for (const [rx, ry] of rail) {
-      if (gr[ry] && (gr[ry][rx] === 0 || gr[ry][rx] === 1)) gr[ry][rx] = 1;
+    const seenDest = new Set();
+    for (const hop of hops) {
+      if (seenDest.has(hop.toStop)) continue;
+      seenDest.add(hop.toStop);
+      hall.routes.push({
+        toStop: hop.toStop, toName: hop.to, line: hop.line,
+        fromStop: hop.fromStop, kind: hop.kind
+      });
+      hall.lines.add(hop.line);
+    }
+    hall.lines = [...hall.lines];
+    // 허브 앞 짧은 안내선 1개만 (여러 역↔역 선로 대신)
+    const tip = spots[hops[0].toStop] || spots[0];
+    const short = railCells(hubDoor[0], hubDoor[1], tip.x, tip.y).slice(0, 5);
+    if (short.length >= 2) {
+      rails.push({
+        cells: short, line: hops[0].line, color: lineColor(hops[0].line),
+        kind: vk, from: hubName, to: hops[0].to,
+        fromPos: hubDoor, toPos: [tip.x, tip.y]
+      });
     }
   }
-  for (const st of stns) st.lines = [...(st.lines || [])];
 
-  // 포켓몬식 중간 건물 — 길 옆·빈 땅에 집·상점
+  // 포켓몬식 중간 건물 — 길 옆에 촘촘히, 들판 랜덤 배치는 최소
   {
     let seed = 91 + di * 17;
     const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
@@ -694,14 +700,14 @@ function buildGeoMap(di) {
     };
     for (let i = 1; i < n; i++) {
       const path = railCells(spots[i - 1].x, spots[i - 1].y, spots[i].x, spots[i].y);
-      for (let k = 5; k < path.length - 5; k += 6) {
+      for (let k = 4; k < path.length - 4; k += 5) {
         const [px, py] = path[k];
         const side = (k + i) % 2 ? 1 : -1;
-        tryPlace(px + side * 3, py - 2, styles[(k + i) % styles.length]);
-        if (rnd() < 0.45) tryPlace(px - side * 3, py + 1, styles[(k + 2) % styles.length]);
+        tryPlace(px + side * 2, py - 2, styles[(k + i) % styles.length]);
+        if (rnd() < 0.3) tryPlace(px - side * 2, py + 1, styles[(k + 2) % styles.length]);
       }
     }
-    for (let t = 0; t < 16; t++) {
+    for (let t = 0; t < 6; t++) {
       const bx = 3 + (rnd() * (w - 8)) | 0;
       const by = 3 + (rnd() * (h - 8)) | 0;
       if (gr[by] && gr[by][bx] !== 0) continue;
@@ -748,7 +754,7 @@ function buildGeoMap(di) {
   zones.push([regionLabel, spots[0]?.x ?? (w >> 1), Math.max(3, (spots[0]?.y ?? 8) - 4)]);
 
   borderTrees(gr, w, h);
-  scatter(gr, w, h, 36, 13 + di);
+  scatter(gr, w, h, 16, 13 + di);
   // 스폰/트리거 발판은 나무에 덮이지 않게
   for (const [x, y] of trig) mkRect(gr, x - 1, y - 1, 3, 3, 2);
   for (let i = 1; i < n; i++) pave(spots[i - 1].x, spots[i - 1].y, spots[i].x, spots[i].y);
@@ -763,27 +769,648 @@ function buildGeoMap(di) {
 }
 
 /* ═══ 일차별 주민 — 화면의 DAY 번호 기준, stop은 일정의 0 기반 인덱스 ═══ */
+/* DAY 1 한산. DAY 2~ 등장. roam:true → 맵 배회.
+ * bags는 잡담·이야기·팁을 모아 두고, 말 걸 때마다 풀에서 랜덤으로 한 줄만 꺼낸다. */
 const NPC_BY_DAY = {
-  2: [{ stop: 1, name: '나카미세 상인', lines: [
-    '나카미세에 가을바람이 불어오네요.',
-    '오미쿠지를 펼치는 얼굴마다 작은 기대가 보여요.',
-  ] }],
-  3: [{ stop: 3, name: '해변 산책객', lines: [
-    '바닷바람을 맞으면 걸음이 조금 느려져요.',
-    '건너편 불빛이 물 위에 번지는 모습이 좋아요.',
-  ] }],
-  4: [{ stop: 0, name: '아침 러너', lines: [
-    '이른 아침에는 발소리도 또렷하게 들려요.',
-    '한 바퀴 돌고 나면 가을 공기가 더 달게 느껴져요.',
-  ] }],
-  5: [{ stop: 3, name: '호숫가 주민', lines: [
-    '산이 구름 뒤로 숨었다가 슬쩍 얼굴을 내미네요.',
-    '호숫가 나뭇잎이 어제보다 조금 더 붉어졌어요.',
-  ] }],
-  6: [{ stop: 0, name: '새벽 사진가', lines: [
-    '해가 뜰 때마다 후지산의 색이 조금씩 달라져요.',
-    '사진을 찍고도 한참 바라보게 되는 아침이에요.',
-  ] }],
+  2: [
+    { stop: 1, name: '나카미세 상인', bags: [
+      { kind: '잡담', lines: [
+        '센베 하나 드셔 보실래요? 방금 구운 거예요.',
+        '오미쿠지는 안 좋은 게 나와도 묶어 두면 된다고들 해요.',
+        '가을바람 부니까 가게 앞이 더 북적여요.',
+      ] },
+      { kind: '이야기', lines: [
+        '센소지는 628년경에 세워졌대요. 도쿄에서 제일 오래된 절이에요.',
+        '나카미세는 에도 때부터 참배객을 맞이하던 상점가예요.',
+        '가미나리몬 큰 초롱은 마츠시타 고노스케가 기증한 거래요.',
+      ] },
+      { kind: '팁', lines: [
+        '오미쿠지 100엔, 가미나리몬 쪽 출구가 사진 명소예요.',
+        '오전이 조금 한산하니 일찍 오시는 걸 추천해요.',
+        '부채·센베는 여행 선물로 무난해요.',
+      ] },
+    ] },
+    { stop: 1, name: '관광객', roam: true, pal: 1, bags: [
+      { kind: '잡담', lines: [
+        '가미나리몬 앞에서 사진만 스무 장은 찍은 것 같아요.',
+        '골목 안쪽이 의외로 한산해서 좋아요.',
+        '다음에 오면 아침 일찍 와야겠어요.',
+      ] },
+      { kind: '이야기', lines: [
+        '전설로는 스미다강에서 건진 관음상이 센소지의 시작이래요.',
+        '공습 때 많이 타버리고 전후에 다시 세운 건물도 많대요.',
+        '참배길은 신앙의 길이면서 에도의 시장이기도 했어요.',
+      ] },
+      { kind: '팁', lines: [
+        '붉은 등롱 아래가 제일 사진이 잘 나와요.',
+        '기념품은 큰길보다 안쪽 가게가 덜 붐벼요.',
+        '지도 앱이 여기선 가끔 길을 헷갈리니 이정표를 보세요.',
+      ] },
+    ] },
+    { stop: 2, name: '몬자야키 주인', bags: [
+      { kind: '잡담', lines: [
+        '불판 뜨거우니까 조심하세요!',
+        '해물은 마지막에 올리는 게 간이 맞아요.',
+        '맥주도 한 잔이면 하루가 둥글어져요.',
+      ] },
+      { kind: '이야기', lines: [
+        '몬자는 원래 아이들 간식이었는데, 전후에 어른 음식으로 컸어요.',
+        '이름 유래는 반죽으로 글자를 써서,라는 설이 있어요.',
+        '아사쿠사랑 쓰키시마가 양대 성지예요.',
+      ] },
+      { kind: '팁', lines: [
+        '웨이팅 싫으면 오픈 직후가 제일 편해요.',
+        '테이블에서 직접 굽는 재미가 반이에요.',
+        '양배추는 많이, 소스는 취향껏.',
+      ] },
+    ] },
+    { stop: 3, name: '말차 가게 점원', bags: [
+      { kind: '잡담', lines: [
+        '처음이면 3단계부터 천천히 올라가 보세요.',
+        '저도 매일 먹어요. 직업병이죠.',
+        '테이크아웃해도 향은 그대로예요.',
+      ] },
+      { kind: '이야기', lines: [
+        '말차는 선종과 함께 들어온 가루차에서 시작했어요.',
+        '에도 때는 상류층 다도였는데, 지금은 젤라토에도 들어가요.',
+        '아사쿠사는 에도부터 차·과자 상점가 전통이 길어요.',
+      ] },
+      { kind: '팁', lines: [
+        '진한 맛은 5단계부터가 진짜예요.',
+        '가을엔 고구마 토핑이 잘 나가요.',
+        '줄이 길면 옆 골목 지점부터 확인해 보세요.',
+      ] },
+    ] },
+    { stop: 4, name: '공원 산책객', roam: true, pal: 2, bags: [
+      { kind: '잡담', lines: [
+        '연못 쪽 벤치가 오늘따라 비었네요. 행운이에요.',
+        '도시락 펴기 좋은 그늘을 찾는 중이에요.',
+        '비둘기랑 아이들과의 전쟁은 여전해요.',
+      ] },
+      { kind: '이야기', lines: [
+        '우에노 공원은 1873년에 연 일본 최초의 공원 중 하나예요.',
+        '원래 도쿠가와 가문의 가네이지 경내였대요.',
+        '동물원도 1882년부터라서, 생각보다 역사가 길어요.',
+      ] },
+      { kind: '팁', lines: [
+        '박물관 입구는 역에서 도보 3분 안쪽이에요.',
+        '벚꽃 시즌엔 돗자리 자리가 전쟁터예요.',
+        '발 아프면 분수 앞에서 쉬는 게 국룰이에요.',
+      ] },
+    ] },
+    { stop: 4, name: '박물관 해설', roam: true, pal: 3, bags: [
+      { kind: '잡담', lines: [
+        '저도 도슨트보다 벤치가 더 좋아질 때가 있어요.',
+        '발 아프면 솔직히 말하세요. 다들 그래요.',
+        '오늘 하늘이 박물관 지붕보다 예쁜걸요.',
+      ] },
+      { kind: '이야기', lines: [
+        '도쿄국립박물관은 1872년 출발이에요. 일본에서 제일 오래된 축이에요.',
+        '우에노를 문화의 언덕이라고 부르는 이유가 있어요.',
+        '벽돌 건물은 메이지 문명개화의 얼굴을 보여 줘요.',
+      ] },
+      { kind: '팁', lines: [
+        '대표 전시만 봐도 반나절은 금방이에요.',
+        '월요일 휴관인 곳이 있으니 일정 확인하세요.',
+        '가방이 크면 코인 로커를 먼저 찾으세요.',
+      ] },
+    ] },
+    { stop: 5, name: '아메요코 상인', bags: [
+      { kind: '잡담', lines: [
+        '시식은 많지만 배만 채우진 마세요. 지갑이 울어요.',
+        '현금이 편해요. 흥정도 가끔 통해요.',
+        '비 오는 날은 천막 아래가 더 북적여요.',
+      ] },
+      { kind: '이야기', lines: [
+        '아메요코는 전후 암시장에서 시작된 골목이에요.',
+        '이름엔 아메리카설이랑 사탕(아메)설이 둘 다 있어요.',
+        '미군 물자가 오가던 자리가 지금의 먹거리 거리가 됐어요.',
+      ] },
+      { kind: '팁', lines: [
+        '건어물은 밀봉해서 가져가세요.',
+        '우에노역 쪽에서 들어오면 길이 덜 헷갈려요.',
+        '저녁 직전이 제일 냄새도 사람도 가득해요.',
+      ] },
+    ] },
+    { stop: 5, name: '구경꾼', roam: true, pal: 4, bags: [
+      { kind: '잡담', lines: [
+        '건어물 냄새 따라가다 길을 잃었어요.',
+        '간판만 읽어도 배가 불러요.',
+        '과일 가게 앞에서 또 발걸음이 느려지네요.',
+      ] },
+      { kind: '이야기', lines: [
+        '패전 직후엔 여기가 정말 북적이는 생존 시장이었대요.',
+        '지금은 관광지지만, 뿌리는 쇼와의 뒷골목이에요.',
+        '간판 글씨체만 봐도 시대가 조금씩 달라요.',
+      ] },
+      { kind: '팁', lines: [
+        '한 바퀴만 더 돌고 짐 무게를 재 보세요.',
+        '시식 연속은 배만 부르고 기억은 안 남아요.',
+        '사진 찍을 땐 가게 분께 한 번 양해를.',
+      ] },
+    ] },
+    { stop: 6, name: '오타쿠 학생', roam: true, pal: 5, bags: [
+      { kind: '잡담', lines: [
+        '피규어 코너만 둘러봐도 발이 안 움직여요.',
+        '오늘 예산… 이미 초과한 것 같아요.',
+        '메이드 카페 앞에서 줄이 길어요.',
+      ] },
+      { kind: '이야기', lines: [
+        '아키바는 전후 라디오 부품 시장에서 출발했어요.',
+        '아키바라는 이름은 원래 아키하 신사에서 왔대요.',
+        '가전 거리에서 오타쿠 거리로 바뀐 게 세계적으로도 희귀해요.',
+      ] },
+      { kind: '팁', lines: [
+        '중앙대로 양쪽을 다 보면 하루가 짧아요.',
+        '신작은 주말에 빨리 동나요.',
+        '지하도도 빼먹으면 아쉬워요.',
+      ] },
+    ] },
+    { stop: 7, name: '야키니쿠 홀 직원', bags: [
+      { kind: '잡담', lines: [
+        '고기 올라오면 먼저 냄새부터 맡아 보세요.',
+        '양념 고기는 불이 세면 타기 쉬워요.',
+        '식후 커피까지가 코스예요.',
+      ] },
+      { kind: '이야기', lines: [
+        '야키니쿠는 재일 코리안 문화와 전후 식탁이 만난 요리예요.',
+        '아사쿠사바시는 에도부터 상인·장인이 살던 동네예요.',
+        '소부선이 놓이며 시타마치와 야마노테가 이어졌어요.',
+      ] },
+      { kind: '팁', lines: [
+        '예약 있으면 조금 일찍 오시는 게 좋아요.',
+        '체험단·코스는 시간 엄수가 매너예요.',
+        '돌아가는 길은 아사쿠사바시역이 가까워요.',
+      ] },
+    ] },
+    { stop: 8, name: '귀가하는 직장인', roam: true, pal: 1, bags: [
+      { kind: '잡담', lines: [
+        '핫초보리는 밤에 발소리가 작아져요. 그게 좋아요.',
+        '편의점 커피 한 잔이면 하루가 끝나요.',
+        '내일 아침만 없으면 완벽한 밤인데.',
+      ] },
+      { kind: '이야기', lines: [
+        '여긴 에도 때 운하와 목재 상인으로 유명했대요.',
+        '핫초는 대략 870미터, 운하가 그만큼 곧았다는 뜻이에요.',
+        '옛 강가 마을이 사무 거리로 바뀐 게 현대 도쿄의 전형이에요.',
+      ] },
+      { kind: '팁', lines: [
+        '히비야선·게이요선 환승이 편해요.',
+        '긴자·도쿄역 접근성이 좋아요.',
+        '심야엔 편의점 위치가 보물이에요.',
+      ] },
+    ] },
+  ],
+  3: [
+    { stop: 0, name: '전시 안내원', bags: [
+      { kind: '잡담', lines: [
+        '물에 발을 담그면 처음엔 조금 차가워요.',
+        '예약 시간 맞춰 오시면 줄이 짧아져요.',
+        '휴대폰은 방수팩에 넣는 게 마음 편해요.',
+      ] },
+      { kind: '이야기', lines: [
+        '팀랩은 경계 없는 공간을 실험하는 디지털 아트 팀이에요.',
+        '이 일대는 원래 바다였고, 에도 말엔 포대가 있었어요.',
+        '도요스·오다이바는 매립지 위에 세워진 미래형 도시예요.',
+      ] },
+      { kind: '팁', lines: [
+        '마지막 방이 제일 기억에 남는 분들이 많아요.',
+        '여분은 사물함에 맡기고 들어가세요.',
+        '젖은 발 말릴 수건을 준비하면 좋아요.',
+      ] },
+    ] },
+    { stop: 0, name: '관람객', roam: true, pal: 2, bags: [
+      { kind: '잡담', lines: [
+        '신발을 벗는 순간부터 전시가 시작되는 느낌이에요.',
+        '사진보다 눈으로 담는 게 남는 것 같아요.',
+        '나가면 발이 시려워요. 그런데 또 오고 싶어요.',
+      ] },
+      { kind: '이야기', lines: [
+        '오다이바의 다이바는 해안 포대라는 뜻이래요.',
+        '페리 내항 이후 막부가 도쿄만에 포대를 쌓았대요.',
+        '지금의 인공섬은 그 포대와 매립의 역사를 이어받은 땅이에요.',
+      ] },
+      { kind: '팁', lines: [
+        '친구랑 오면 서로 찍어 주기 바빠요. 혼자도 좋아요.',
+        '물이 무릎까지 차면 웃음이 나와요.',
+        '퇴장 후 카페에서 발 녹이는 코스 추천.',
+      ] },
+    ] },
+    { stop: 1, name: '쇼핑몰 학생', roam: true, pal: 3, bags: [
+      { kind: '잡담', lines: [
+        '점심은 가볍게, 디저트는 무겁게가 제 룰이에요.',
+        '창밖으로 바다가 보여서 자주 와요.',
+        '쇼핑백이 늘어나면 다리가 먼저 아파요.',
+      ] },
+      { kind: '이야기', lines: [
+        '아쿠아시티·데크스는 1990년대 오다이바 붐의 상징이에요.',
+        '레인보우 브리지는 1993년 개통이래요.',
+        '미래 도시 이미지는 버블 전후 도쿄의 꿈이 투영된 거예요.',
+      ] },
+      { kind: '팁', lines: [
+        '디저트 층은 항상 줄이 있어요.',
+        '유리카모메 시간표 보고 움직이면 편해요.',
+        '바다 쪽 창가 자리가 포토 스팟이에요.',
+      ] },
+    ] },
+    { stop: 2, name: '테마파크 스태프', bags: [
+      { kind: '잡담', lines: [
+        '실내라서 비 와도 하루를 채울 수 있어요.',
+        '인기 기기는 오후에 줄이 길어져요.',
+        '스탬프 랠리 하시면 기념품이 생겨요.',
+      ] },
+      { kind: '이야기', lines: [
+        '조이폴리스는 세가가 만든 실내 테마파크예요.',
+        '오다이바는 게임·애니 기업이 모이던 헤이세이 문화의 무대였어요.',
+        '바닷바람 피하려고 실내로 지은 이유도 있어요.',
+      ] },
+      { kind: '팁', lines: [
+        '사물함은 입구 쪽이 빨리 차요.',
+        '오전에 인기 기기부터 도는 전략이 좋아요.',
+        '키 제한 있는 어트랙션은 입구에 표시돼요.',
+      ] },
+    ] },
+    { stop: 3, name: '해변 산책객', roam: true, pal: 4, bags: [
+      { kind: '잡담', lines: [
+        '바닷바람 맞으면 걸음이 느려져요. 일부러예요.',
+        '모래가 신발에 들어가도 기분이 좋아요.',
+        '해 질 녘 사진이 제일 잘 나와요.',
+      ] },
+      { kind: '이야기', lines: [
+        '인공 해안이지만, 만의 역사를 품은 공원이에요.',
+        '자유의 여신상은 일본·프랑스 우호 복제상이에요.',
+        '에도의 포대 터가 관광 해변으로 바뀐 아이러니가 있어요.',
+      ] },
+      { kind: '팁', lines: [
+        '여신상 앞이 사람 모임 장소예요.',
+        '바람 불면 재킷 하나 더 있으면 좋아요.',
+        '야경은 브리지 쪽이 포인트예요.',
+      ] },
+    ] },
+    { stop: 3, name: '조깅하는 사람', roam: true, pal: 5, bags: [
+      { kind: '잡담', lines: [
+        '해안 바람은 아침이 제일 상쾌해요.',
+        '레인보우 브리지 보이면 속도가 붙어요.',
+        '물 한 모금이 오늘 최고예요.',
+      ] },
+      { kind: '이야기', lines: [
+        '도쿄만은 에도부터 물류와 방어의 핵심이었어요.',
+        '매립으로 해안선이 계속 바다 쪽으로 나갔대요.',
+        '오다이바 개발은 새 부도심 구상의 일부였어요.',
+      ] },
+      { kind: '팁', lines: [
+        '이어폰보다 파도 소리가 나아요.',
+        '한 바퀴 돌고 스트레칭이 필수예요.',
+        '저녁엔 자전거·보행자가 많아져요.',
+      ] },
+    ] },
+    { stop: 4, name: '스시 바 손님', roam: true, pal: 1, bags: [
+      { kind: '잡담', lines: [
+        '저녁 바다 보고 오면 초밥이 더 달아요.',
+        '한 점씩 천천히. 그게 맞아요.',
+        '마지막은 계란으로 마무리하려요.',
+      ] },
+      { kind: '이야기', lines: [
+        '에도마에 스시는 원래 도쿄만 생선으로 만든 길거리 음식이었어요.',
+        '만의 어장은 줄었지만 문화는 남았죠.',
+        '간장에 살짝만 찍는 습관도 에도 풍속의 잔향이에요.',
+      ] },
+      { kind: '팁', lines: [
+        '예약 가능한 집이 마음 편해요.',
+        '생강으로 입 가시는 리듬을 즐겨 보세요.',
+        '취중엔 사진보다 맛에 집중!',
+      ] },
+    ] },
+  ],
+  4: [
+    { stop: 0, name: '아침 러너', roam: true, pal: 5, bags: [
+      { kind: '잡담', lines: [
+        '이른 아침엔 발소리도 또렷해요.',
+        '한 바퀴 돌면 공기가 달아져요.',
+        '스트레칭 안 하면 무릎이 항의해요.',
+      ] },
+      { kind: '이야기', lines: [
+        '여기 해자는 에도성 자린데, 메이지 이후 황거가 됐어요.',
+        '도심에 이런 녹지가 남은 건 성의 유산 덕분이에요.',
+        '돌담 기법은 전국~에도 성곽 기술을 보여 줘요.',
+      ] },
+      { kind: '팁', lines: [
+        '해자 순환이 제일 유명한 루트예요.',
+        '물병 채울 곳을 외워 두면 좋아요.',
+        '관광버스 시간대는 사람이 몰려요.',
+      ] },
+    ] },
+    { stop: 0, name: '황거 산책객', roam: true, pal: 2, bags: [
+      { kind: '잡담', lines: [
+        '돌담 따라 걸으면 마음이 정돈돼요.',
+        '느린 걸음이 여기선 정답이에요.',
+        '관광버스보다 걸음이 여유로워요.',
+      ] },
+      { kind: '이야기', lines: [
+        '에도성은 오타 도칸이 기초를 쌓았다는 이야기가 있어요.',
+        '도쿠가와 이에야스가 거대한 성으로 키웠어요.',
+        '천수각은 불에 타서 지금은 터만 남았대요.',
+      ] },
+      { kind: '팁', lines: [
+        '니주바시 쪽이 사진 명소예요.',
+        '단풍 시즌엔 돌 색깔이 더 진해 보여요.',
+        '모닝에 오면 공기가 맑아요.',
+      ] },
+    ] },
+    { stop: 1, name: '호텔 정원사', bags: [
+      { kind: '잡담', lines: [
+        '잎에 아침 이슬이 아직 남아 있어요.',
+        '카페 창가가 제일 고요해요.',
+        '손님들이 발소리를 낮추고 지나가요.',
+      ] },
+      { kind: '이야기', lines: [
+        '가조엔은 다이쇼~쇼와 연회·결혼식 문화의 상징이에요.',
+        '일본의 집과 서양식 연회장이 섞인 공간이었어요.',
+        '쇼와 모던 타일이 건물 안에 숨겨져 있어요.',
+      ] },
+      { kind: '팁', lines: [
+        '정원 관람 시간을 미리 확인하세요.',
+        '실내 장식도 놓치지 마세요.',
+        '비 오는 날엔 처마 밑 소리가 좋아요.',
+      ] },
+    ] },
+    { stop: 2, name: '라멘집 단골', roam: true, pal: 3, bags: [
+      { kind: '잡담', lines: [
+        '유자 향이 먼저 올라오면 제대로 온 거예요.',
+        '면은 좀 덜 익힌 게 제 취향이에요.',
+        '다 먹고 나서도 국물 한 모금이 남아요.',
+      ] },
+      { kind: '이야기', lines: [
+        '라멘은 중국 면에서 시작해 일본화한 국민 음식이에요.',
+        '이 동네는 메이지 이후 외교·국제 식문화와 인연이 깊어요.',
+        '전후 미군 시설 주변으로 세계 맛이 스며들었어요.',
+      ] },
+      { kind: '팁', lines: [
+        '점심 직전이 줄이 짧을 때가 많아요.',
+        '계란은 반숙이 국물에 잘 어울려요.',
+        '웨이팅 길면 옆 골목 지점도 있어요.',
+      ] },
+    ] },
+    { stop: 3, name: '미술관 관람객', roam: true, pal: 4, bags: [
+      { kind: '잡담', lines: [
+        '전시보다 창밖 전망에 눈이 가요. 들킨 거죠?',
+        '엘리베이터에서 귀가 먹먹해지는 건 통과의례예요.',
+        '도록을 사면 가방이 무거워져요.',
+      ] },
+      { kind: '이야기', lines: [
+        '모리미술관은 2003년 롯폰기힐스와 함께 열렸어요.',
+        '롯폰기는 전후 밤거리로 유명했다가, 지금은 복합 문화 지구예요.',
+        '고층에서 보는 도쿄는 평지 에도가 수직 도시로 자란 모습이에요.',
+      ] },
+      { kind: '팁', lines: [
+        '화요일은 일찍 닫으니 서두르는 게 좋아요.',
+        '시티뷰랑 묶으면 동선이 좋아요.',
+        '한 작품 앞에서 오래 서도 괜찮아요.',
+      ] },
+    ] },
+    { stop: 4, name: '야키니쿠 웨이터', bags: [
+      { kind: '잡담', lines: [
+        '불판 뜨거울 때 얇은 고기를 먼저 올려요.',
+        '소금만으로도 충분한 부위가 있어요.',
+        '마지막에 냉면 시키시는 분이 많아요.',
+      ] },
+      { kind: '이야기', lines: [
+        '롯폰기 이름은 에도 때 여섯 그루 나무에서 왔다는 설이 있어요.',
+        '메이지엔 군사 시설, 전후엔 외국인 거리가 들어섰어요.',
+        '야키니쿠는 전후 식탁과 재일 커뮤니티의 지혜가 닿아 있어요.',
+      ] },
+      { kind: '팁', lines: [
+        '저녁엔 발소리가 달라져요. 예약 추천.',
+        '환기 잘 되는 자리 부탁하셔도 돼요.',
+        '디저트까지가 풀코스라는 손님도 많아요.',
+      ] },
+    ] },
+    { stop: 4, name: '밤거리 데이트', roam: true, pal: 1, bags: [
+      { kind: '잡담', lines: [
+        '네온이 켜지면 골목 공기가 달라져요.',
+        '손 잡고 걸으면 길이 짧게 느껴져요.',
+        '야경 보고 디저트 하나면 충분해요.',
+      ] },
+      { kind: '이야기', lines: [
+        '힐스 아래엔 아직도 좁은 골목 술집이 남아 있어요.',
+        '재개발 전후의 도쿄가 한 지도에 포개진 느낌이에요.',
+        '밤 네온은 전후 부흥과 버블의 잔광이기도 해요.',
+      ] },
+      { kind: '팁', lines: [
+        '카페 창가 자리는 기다리기 가치가 있어요.',
+        '골목은 천천히 걸을수록 구경거리가 늘어요.',
+        '막차 시간은 미리 확인!',
+      ] },
+    ] },
+    { stop: 5, name: '전망대 커플', roam: true, pal: 2, bags: [
+      { kind: '잡담', lines: [
+        '도쿄타워가 정면으로 들어오는 창이 명당이에요.',
+        '야경 켜질 때까지 조금만 기다려 볼래요?',
+        '내려갈 때 다리가 후들거려요. 그래도 또 오고 싶어요.',
+      ] },
+      { kind: '이야기', lines: [
+        '도쿄타워는 1958년, 전후 부흥의 상징이기도 해요.',
+        '주황색은 항공 안전 규정 때문이에요. 에펠탑 카피만이 아니에요.',
+        '에도 사람들은 산과 불꽃으로 하늘을 봤는데, 지금은 타워로 봐요.',
+      ] },
+      { kind: '팁', lines: [
+        '일몰 30분 전이 제일 예뻐요.',
+        '바람 소리 생각보다 크니 얇은 겉옷 추천.',
+        '사진보다 눈으로 한 번 담아 보세요.',
+      ] },
+    ] },
+  ],
+  5: [
+    { stop: 1, name: '편의점 알바', bags: [
+      { kind: '잡담', lines: [
+        '사진 찍으실 땐 무단횡단만 안 해 주세요!',
+        '온천맨이랑 커피가 제일 많이 나가요.',
+        '삼각김밥은 아침에도 잘 나가요.',
+      ] },
+      { kind: '이야기', lines: [
+        '이 로손은 후지 뷰로 세계적으로 유명해진 점포예요.',
+        'SNS 시대에 일상의 창이 성지가 된 사례예요.',
+        '카와구치코는 후지 오호 중 하나예요.',
+      ] },
+      { kind: '팁', lines: [
+        '차 올 때 길 건너는 타이밍 조심하세요.',
+        '맑은 날 오전이 산이 잘 보여요.',
+        '핫팩은 겨울에 필수템이에요.',
+      ] },
+    ] },
+    { stop: 1, name: '인증샷 손님', roam: true, pal: 3, bags: [
+      { kind: '잡담', lines: [
+        '삼각대 자리 전쟁이네요.',
+        '구름만 걷히면… 제발.',
+        '한 장만 더,가 벌써 스무 장이에요.',
+      ] },
+      { kind: '이야기', lines: [
+        '후지산은 2013년 세계문화유산이 됐어요.',
+        '호쿠사이 그림 덕분에 세계가 후지를 알게 됐죠.',
+        '예부터 등산은 수행이었고, 지금은 관광이 이어 받아요.',
+      ] },
+      { kind: '팁', lines: [
+        '필터 끄면 산이 더 하얘 보여요.',
+        '로손 간판 넣으면 여행 느낌이 나요.',
+        '사람이 적을 때는 이른 아침이에요.',
+      ] },
+    ] },
+    { stop: 2, name: '호토 가게 주인', bags: [
+      { kind: '잡담', lines: [
+        '호박이 달면 국물도 달아요.',
+        '등산 다녀온 손님이 제일 잘 비워요.',
+        '김치랑 같이 드시면 더 잘 넘어가요.',
+      ] },
+      { kind: '이야기', lines: [
+        '호토는 야마나시 향토 요리예요. 넓적한 면이 특징이죠.',
+        '다케다 신겐이 좋아했다는 전설도 있어요.',
+        '산간에서 밀가루 음식을 든든히 먹던 전통이 남아 있어요.',
+      ] },
+      { kind: '팁', lines: [
+        '뜨거울 때 한 술, 식으면 또 다른 맛이에요.',
+        '가을 호박이 제철이에요.',
+        '배부르면 호수 한 바퀴가 소화제예요.',
+      ] },
+    ] },
+    { stop: 3, name: '호숫가 주민', roam: true, pal: 4, bags: [
+      { kind: '잡담', lines: [
+        '산이 구름 뒤로 숨었다가 슬쩍 나와요.',
+        '나뭇잎이 어제보다 조금 더 붉어졌어요.',
+        '산책은 짧게, 바라보기는 길게.',
+      ] },
+      { kind: '이야기', lines: [
+        '이 호수는 후지 분화와 지질 활동으로 생겼대요.',
+        '에도 때부터 순례자 휴식처였어요.',
+        '호수에 비친 후지를 거울 같다고 부르기도 해요.',
+      ] },
+      { kind: '팁', lines: [
+        '안개 낀 아침이 오히려 운치 있어요.',
+        '바람 센 날은 갈매기가 시끄러워요.',
+        '오호 순환 버스도 있어요.',
+      ] },
+    ] },
+    { stop: 3, name: '자전거 여행객', roam: true, pal: 5, bags: [
+      { kind: '잡담', lines: [
+        '호수 한 바퀴면 다리가 먼저 말해요.',
+        '바람이 차가워도 풍경이 데워 줘요.',
+        '안장에 앉으면 하루가 길어요.',
+      ] },
+      { kind: '이야기', lines: [
+        '로프웨이 쪽은 쇼와 관광 붐 때 놓인 시설이 많아요.',
+        '카치카치산은 동화 이름과 겹쳐 불러요.',
+        '고도에서 보는 후지는 옛 순례자가 바라던 풍경이에요.',
+      ] },
+      { kind: '팁', lines: [
+        '내리막은 조심, 오르막은 인내예요.',
+        '물통이 비면 로손이 그리워져요.',
+        '헬멧은 필수, 사진은 안전 확보 후.',
+      ] },
+    ] },
+  ],
+  6: [
+    { stop: 0, name: '새벽 사진가', roam: true, pal: 2, bags: [
+      { kind: '잡담', lines: [
+        '해가 뜰 때마다 후지 색이 달라요.',
+        '셔터보다 숨소리가 커요. 조용히.',
+        '찍고도 한참 바라보게 되는 아침이에요.',
+      ] },
+      { kind: '이야기', lines: [
+        '옛사람들은 새해 첫 해돋이를 상서로워했어요.',
+        '우키요에에도 새벽 후지가 자주 나와요.',
+        '세계유산이 된 뒤 보는 법 자체가 관광 문화가 됐어요.',
+      ] },
+      { kind: '팁', lines: [
+        '삼각대 다리는 차가우니 장갑 추천.',
+        '구름 한 장이 구도를 다 바꿔요.',
+        '일출 15분 전부터 자리를 잡으세요.',
+      ] },
+    ] },
+    { stop: 1, name: '아침 등산객', roam: true, pal: 5, bags: [
+      { kind: '잡담', lines: [
+        '로손 앞 인증샷은 거의 필수예요.',
+        '버스 타기 전 커피가 약이에요.',
+        '배낭 무게를 다시 재는 중이에요.',
+      ] },
+      { kind: '이야기', lines: [
+        '후지 등산로는 예부터 여러 입구가 있었어요.',
+        '산장 문화는 근대 등산 붐과 함께 커졌어요.',
+        '로손 샷은 긴 순례의 가장 가벼운 현대판 같아요.',
+      ] },
+      { kind: '팁', lines: [
+        '날씨 앱을 두 개 보세요.',
+        '레이어드 옷이 산에서는 정답이에요.',
+        '내려오면 호토가 생각날 거예요.',
+      ] },
+    ] },
+    { stop: 3, name: '신주쿠 직장인', roam: true, pal: 1, bags: [
+      { kind: '잡담', lines: [
+        '퇴근길에 스시 한 점이 하루를 정리해 줘요.',
+        '지하도는 출구 번호가 생명이에요.',
+        '내일 알람만 없으면 좋겠어요.',
+      ] },
+      { kind: '이야기', lines: [
+        '신주쿠는 메이지 철도와 함께 급성장한 역세권이에요.',
+        '도청이 1991년에 이리로 옮겼어요.',
+        '초고층 빌딩군은 버블기 도쿄의 하늘을 잘라 낸 풍경이에요.',
+      ] },
+      { kind: '팁', lines: [
+        '쇼핑은 캐리어 무게를 먼저 생각하세요.',
+        '빌딩 바람은 가을에 더 세요.',
+        '환승은 표지판만 따라가도 살아요.',
+      ] },
+    ] },
+    { stop: 4, name: '쇼핑객', roam: true, pal: 3, bags: [
+      { kind: '잡담', lines: [
+        '기념품은 마지막에 사야 짐을 덜 싸요.',
+        '세일 코너에 들어가면 시간이 사라져요.',
+        '카페에서 영수증 정리하는 중이에요.',
+      ] },
+      { kind: '이야기', lines: [
+        '신주쿠역 이용객 수는 세계 최정상급이에요.',
+        '가부키초·백화점 거리는 쇼와 대중문화의 무대였어요.',
+        '소비의 거리는 노동과 환락의 경계이기도 했어요.',
+      ] },
+      { kind: '팁', lines: [
+        '지하도는 출구 번호를 메모하세요.',
+        '종이봉투 많으면 에코백으로 합치세요.',
+        '면세는 여권 챙기는 게 먼저예요.',
+      ] },
+    ] },
+    { stop: 4, name: '짐가방 여행객', roam: true, pal: 4, bags: [
+      { kind: '잡담', lines: [
+        '바퀴 소리만 들어도 출국이 느껴져요.',
+        '캐리어가 문턱에서 자꾸 걸려요.',
+        '마지막으로 한 번만 더 둘러보려요.',
+      ] },
+      { kind: '이야기', lines: [
+        '신주쿠는 에도의 새 역참에서 이름이 왔대요.',
+        '나카센도 여행객이 쉬던 자리가 이 거대 터미널이 됐어요.',
+        '공습과 재건, 재개발이 세 번쯤 얼굴을 바꿨어요.',
+      ] },
+      { kind: '팁', lines: [
+        '면세점 전에 물부터 사세요.',
+        '항공편 앱 알림을 켜 두세요.',
+        '짐 무게는 편의점 앞에서 한 번 더 재요.',
+      ] },
+    ] },
+    { stop: 5, name: '출국 안내원', bags: [
+      { kind: '잡담', lines: [
+        '체크인은 여유 있게 오시는 편이 마음 편해요.',
+        '액체물은 미리 꺼내 두세요.',
+        '게이트는 생각보다 멀 때가 많아요.',
+      ] },
+      { kind: '이야기', lines: [
+        '하네다는 1931년 개항한 도쿄의 오래된 관문이에요.',
+        '국제선이 나리타로 갔다가 다시 돌아오는 흐름이 있어요.',
+        '도심 접근성이 하네다의 강점이에요.',
+      ] },
+      { kind: '팁', lines: [
+        '터미널 번호를 먼저 확인하세요.',
+        '기내식보다 여행의 여운이 더 오래가요.',
+        '출국장 와이파이는 마지막 인사에 딱이에요.',
+      ] },
+    ] },
+  ],
 };
 
 /* ═══ 일차별 팁 (당일 실전용) ═══ */
@@ -1340,7 +1967,10 @@ function drawChar(ctx, sx, sy, dir, frame, p, tag) {
 }
 /* 작애 (JAKAE) — 고퀄 GBC 스프라이트 (사진 턴어라운드 기준) */
 function drawJakae(ctx, sx, sy, dir, frame, p, tag) {
-  const u = Math.max(4, SCALE + 1);
+  // 사람보다 한 체급 작게 (발은 타일 바닥에 맞춤)
+  const uHuman = Math.max(4, SCALE + 1);
+  const u = Math.max(2, SCALE - 1);
+  sy += (uHuman - u) * 8;
   const rects = [];
   const r = (x, y, w, h, col) => { rects.push([x, y, w, h, col]); };
   // 타원 그림자
@@ -1462,20 +2092,20 @@ function drawJakae(ctx, sx, sy, dir, frame, p, tag) {
   paintOutlined(ctx, sx, sy, u, rects);
 
   if (tag) {
-    ctx.font = `bold ${Math.max(11, SCALE * 3.5)}px Galmuri11, monospace`;
+    ctx.font = `bold ${Math.max(10, SCALE * 3)}px Galmuri11, monospace`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
     const tw = ctx.measureText(tag).width;
-    const bx = sx + 7 * u - tw / 2 - 4, by = sy - 3 * u;
+    const bx = sx + 7 * u - tw / 2 - 4, by = sy - 2 * u;
     ctx.fillStyle = 'rgba(90,58,28,.94)';
-    ctx.fillRect(bx, by - 14, tw + 8, 16);
+    ctx.fillRect(bx, by - 12, tw + 8, 14);
     ctx.fillStyle = '#c48a48';
-    ctx.fillRect(bx, by - 14, tw + 8, 2);
+    ctx.fillRect(bx, by - 12, tw + 8, 2);
     ctx.fillStyle = '#fff';
     ctx.fillText(tag, sx + 7 * u, by);
     ctx.fillStyle = '#e8b848';
     ctx.beginPath();
-    const ax = sx + 7 * u, ay = by + 2 + Math.sin(bounce / 160) * 3;
-    ctx.moveTo(ax - 5, ay); ctx.lineTo(ax + 5, ay); ctx.lineTo(ax, ay + 7);
+    const ax = sx + 7 * u, ay = by + 2 + Math.sin(bounce / 160) * 2;
+    ctx.moveTo(ax - 4, ay); ctx.lineTo(ax + 4, ay); ctx.lineTo(ax, ay + 5);
     ctx.closePath(); ctx.fill();
   }
 }
@@ -1497,6 +2127,14 @@ const PAL_JAKAE = {
 const PAL_WIFE = { hair: '#5a3a20', skin: '#e8b888', shirt: '#f0ebe0', dress: '#d07088', pants: '#d07088', long: true };
 
 const PAL_NPC = { hair: '#483828', skin: '#e8b878', shirt: '#389890', pants: '#684878' };
+const NPC_PALS = [
+  PAL_NPC,
+  { hair: '#2a2420', skin: '#e0b070', shirt: '#c87048', pants: '#3a4868' },
+  { hair: '#5a4030', skin: '#f0c090', shirt: '#e8e0d0', pants: '#486060' },
+  { hair: '#3a3028', skin: '#e8b888', shirt: '#d07088', pants: '#584068' },
+  { hair: '#483028', skin: '#dca878', shirt: '#5890b0', pants: '#405048' },
+  { hair: '#282018', skin: '#e8c098', shirt: '#e0a040', pants: '#404858' },
+];
 
 /* ═══ 엔티티 ═══ */
 function makeEnt(x, y) {
@@ -1504,29 +2142,134 @@ function makeEnt(x, y) {
 }
 const me = makeEnt(2, 2), wife = makeEnt(3, 2), pet = makeEnt(4, 2);
 
-// 일정 스팟 주변의 넓은 잔디에 배치한다. 고정 좌표보다 맵 크기 변화에 안전하다.
+// 일정 스팟 주변의 넓은 잔디·길에 배치. 고정 좌표보다 맵 크기 변화에 안전하다.
 function placeNpcs(definitions) {
   for (const definition of definitions) {
     const anchor = TRIG[definition.stop] || TRIG[0];
     const candidates = [];
     for (let y = 2; y < H - 2; y++) for (let x = 2; x < W - 2; x++) {
-      if (g[y][x] !== 0) continue;
-      if (TRIG.some(([tx, ty]) => Math.abs(tx - x) + Math.abs(ty - y) <= 3)) continue;
+      // 잔디(0)·보도(1)만 — 광장·건물·물 제외
+      if (g[y][x] !== 0 && g[y][x] !== 1) continue;
+      if (npcBlocked.has(y * W + x)) continue;
+      if (TRIG.some(([tx, ty]) => Math.abs(tx - x) + Math.abs(ty - y) <= 2)) continue;
       if ([me, wife, pet].some(e => Math.abs(e.x - x) + Math.abs(e.y - y) <= 2)) continue;
-      // NPC의 인접 칸에서도 역 상호작용이 겹치지 않게 여유를 둔다.
-      if (STATIONS.some(st => x >= st.x - 2 && x <= st.x + st.w + 1 &&
-        y >= st.y - 2 && y <= st.y + st.h + 3)) continue;
+      if (STATIONS.some(st => x >= st.x - 1 && x <= st.x + st.w &&
+        y >= st.y - 1 && y <= st.y + st.h + 2)) continue;
+      // 본인 칸 + 사방만 통행 가능하면 충분 (3×3 전면은 너무 빡셈)
+      if (!walkable(x, y)) continue;
       let open = true;
-      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-        if (!walkable(x + dx, y + dy)) open = false;
+      for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+        if (!walkable(x + dx, y + dy)) { open = false; break; }
       }
-      if (open) candidates.push({ x, y, distance: Math.abs(anchor[0] - x) + Math.abs(anchor[1] - y) });
+      if (!open) continue;
+      candidates.push({ x, y, distance: Math.abs(anchor[0] - x) + Math.abs(anchor[1] - y) });
     }
     candidates.sort((a, b) => a.distance - b.distance);
-    const spot = candidates.find(p => findPath(me.x, me.y, p.x, p.y + 1).length);
-    if (!spot) continue;
-    npcs.push({ ...makeEnt(spot.x, spot.y), ...definition, lineIndex: 0 });
-    npcBlocked.add(spot.y * W + spot.x);
+    // 같은 스팟에 여러 명이면 가까운 후보를 조금씩 나눠 씀
+    const pick = candidates.find((p, i) => {
+      if (i < npcs.filter(n => n.stop === definition.stop).length) return false;
+      if (findPath(me.x, me.y, p.x, p.y + 1).length) return true;
+      if (findPath(me.x, me.y, p.x, p.y - 1).length) return true;
+      if (findPath(me.x, me.y, p.x + 1, p.y).length) return true;
+      return !!findPath(me.x, me.y, p.x - 1, p.y).length;
+    }) || candidates[npcs.length % Math.max(1, candidates.length)] || candidates[0];
+    if (!pick) continue;
+    const pal = NPC_PALS[(definition.pal ?? npcs.length) % NPC_PALS.length];
+    npcs.push({
+      ...makeEnt(pick.x, pick.y),
+      ...definition,
+      lastLineIndex: -1,
+      homeX: pick.x,
+      homeY: pick.y,
+      roam: !!definition.roam,
+      path: [],
+      wait: 600 + Math.random() * 1600,
+      moveDur: NPC_DUR,
+      pal
+    });
+    npcBlocked.add(pick.y * W + pick.x);
+  }
+}
+
+function stepNpc(npc, nx, ny) {
+  if (npc.moving || dlgOpen || ride) return false;
+  if ([me, wife, pet].some(e => e.x === nx && e.y === ny)) return false;
+  if (npcs.some(o => o !== npc && o.x === nx && o.y === ny)) return false;
+  if (TRIG.some(([tx, ty]) => tx === nx && ty === ny)) return false;
+  npcBlocked.delete(npc.y * W + npc.x);
+  const ok = walkable(nx, ny);
+  if (!ok) {
+    npcBlocked.add(npc.y * W + npc.x);
+    return false;
+  }
+  npc.dir = nx > npc.x ? 'right' : nx < npc.x ? 'left' : ny > npc.y ? 'down' : 'up';
+  npc.fx = npc.x; npc.fy = npc.y;
+  npc.x = nx; npc.y = ny;
+  npc.moving = true; npc.t = 0;
+  npcBlocked.add(ny * W + nx);
+  return true;
+}
+
+function pickNpcWanderTarget(npc) {
+  // 일정 스팟·허브·빈 길 중 먼 곳을 골라 맵 전체를 오가게 함
+  const goals = [];
+  for (const [tx, ty] of TRIG) {
+    for (const [dx, dy] of [[0, 2], [0, -2], [2, 0], [-2, 0], [1, 1], [-1, 1]]) {
+      const x = tx + dx, y = ty + dy;
+      if (walkable(x, y) || (g[y] && (g[y][x] === 0 || g[y][x] === 1))) goals.push([x, y]);
+    }
+  }
+  for (let t = 0; t < 12; t++) {
+    const x = 2 + ((Math.random() * (W - 4)) | 0);
+    const y = 2 + ((Math.random() * (H - 4)) | 0);
+    goals.push([x, y]);
+  }
+  // 자기 칸을 잠깐 열어 길찾기
+  npcBlocked.delete(npc.y * W + npc.x);
+  let best = null, bestLen = 0;
+  for (let i = 0; i < goals.length; i++) {
+    const [gx, gy] = goals[(Math.random() * goals.length) | 0];
+    if (!walkable(gx, gy)) continue;
+    if (Math.abs(gx - npc.x) + Math.abs(gy - npc.y) < 6) continue;
+    const p = findPath(npc.x, npc.y, gx, gy);
+    if (p.length > bestLen) { bestLen = p.length; best = p; }
+    if (bestLen >= 8) break;
+  }
+  npcBlocked.add(npc.y * W + npc.x);
+  return best || [];
+}
+
+function updateNpcs(dt) {
+  for (const npc of npcs) {
+    updateEnt(npc, dt);
+    if (!npc.roam || npc.moving || dlgOpen || ride) continue;
+
+    if (npc.path && npc.path.length) {
+      const [nx, ny] = npc.path.shift();
+      if (!stepNpc(npc, nx, ny)) npc.path = [];
+      else npc.wait = 220 + Math.random() * 280; // 칸 사이 여유
+      continue;
+    }
+
+    npc.wait -= dt;
+    if (npc.wait > 0) continue;
+    npc.wait = 1400 + Math.random() * 2200; // 다시 출발하기 전 한숨
+
+    if (Math.random() < 0.65) {
+      const path = pickNpcWanderTarget(npc);
+      if (path.length) {
+        npc.path = path.slice(0, 14);
+        continue;
+      }
+    }
+    const dirs = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+    for (let i = dirs.length - 1; i > 0; i--) {
+      const j = (Math.random() * (i + 1)) | 0;
+      [dirs[i], dirs[j]] = [dirs[j], dirs[i]];
+    }
+    for (const [dx, dy] of dirs) {
+      if (stepNpc(npc, npc.x + dx, npc.y + dy)) break;
+    }
   }
 }
 
@@ -1592,6 +2335,24 @@ const dlgNext = document.getElementById('dlgNext');
 const progEl = document.getElementById('prog');
 let dlgOpen = false, typing = null, fullText = '', dlgStop = -1;
 let pendingSleep = false, npcDialog = false;
+let talkingNpc = null;
+
+function clearHubButtons() {
+  dlgActs.querySelectorAll('[data-hub-to]').forEach(el => el.remove());
+  dlgOk.style.display = '';
+}
+
+function typeDialogBody(text) {
+  fullText = text;
+  dlgBody.textContent = '';
+  dlgNext.hidden = true;
+  let i = 0;
+  clearInterval(typing);
+  typing = setInterval(() => {
+    dlgBody.textContent = fullText.slice(0, ++i);
+    if (i >= fullText.length) { clearInterval(typing); typing = null; dlgNext.hidden = !dlgActs.hidden; }
+  }, 22);
+}
 
 function mapsUrl(s, q) {
   const dest = `${s.lat},${s.lng}`;
@@ -1601,9 +2362,10 @@ function mapsUrl(s, q) {
 }
 
 function openDialog(html, body, opts = {}) {
+  clearHubButtons();
+  if (!opts.npc) talkingNpc = null;
   npcDialog = opts.npc === true;
-  dlgName.innerHTML = html; fullText = body;
-  dlgBody.textContent = ''; dlgNext.hidden = true;
+  dlgName.innerHTML = html;
   dlgStop = opts.stop ?? -1;
   const hasMaps = opts.maps && opts.stop >= 0;
   if (opts.tip) { dlgTip.textContent = 'TIP · ' + opts.tip; dlgTip.classList.add('show'); }
@@ -1617,21 +2379,24 @@ function openDialog(html, body, opts = {}) {
   } else dlgMaps.style.display = 'none';
   dlgOk.textContent = opts.okLabel || '다음 ▼';
   dlgCancel.hidden = !opts.cancelable;
-  dlgActs.hidden = !(hasMaps || opts.showOk);
+  dlgActs.hidden = !(hasMaps || opts.showOk || opts.cancelable);
   dlg.style.display = 'block'; dlgOpen = true;
-  let i = 0;
-  clearInterval(typing);
-  typing = setInterval(() => {
-    dlgBody.textContent = fullText.slice(0, ++i);
-    if (i >= fullText.length) { clearInterval(typing); typing = null; dlgNext.hidden = !dlgActs.hidden; }
-  }, 22);
+  typeDialogBody(body);
 }
 function advanceDialog() {
   if (!dlgOpen) return;
   if (typing) { clearInterval(typing); typing = null; dlgBody.textContent = fullText; dlgNext.hidden = !dlgActs.hidden; return; }
+
+  // NPC 대사: 한 줄만 보여 주고 끝 (다음 말 걸 때 다음 줄)
+  if (npcDialog && talkingNpc) {
+    talkingNpc = null;
+  }
+
   const closed = dlgStop;
   const doSleep = pendingSleep;
   pendingSleep = false;
+  npcDialog = false;
+  clearHubButtons();
   dlg.style.display = 'none'; dlgOpen = false; dlgStop = -1;
   if (doSleep) { setAuto(false); sleepAndNext(); return; }
   // 자동여행으로 마지막 일정까지 마쳤을 때만 다음날
@@ -1647,6 +2412,9 @@ dlgCancel.addEventListener('pointerdown', e => {
   e.stopPropagation();
   pendingWarp = null;
   pendingSleep = false;
+  talkingNpc = null;
+  npcDialog = false;
+  clearHubButtons();
   dlg.style.display = 'none'; dlgOpen = false; dlgStop = -1;
 });
 dlgMaps.addEventListener('pointerdown', e => e.stopPropagation());
@@ -1743,19 +2511,67 @@ function openBoardDialog(i) {
   boardPending = null;
   const kind = rideKind(s.via);
   const names = extractStations(s.via);
-  const from = names[0] ? names[0] + '역' : stationLabel(s.via, '출발');
-  const to = names.length > 1 ? names[names.length - 1] + '역' : (s.jp ? s.jp + ( /역$/.test(s.jp) ? '' : '') : s.name);
+  const hub = STATIONS[0];
+  const from = hub ? `${hub.name}${hub.vKind === 'bus' ? '' : '역'}` : (names[0] ? names[0] + '역' : stationLabel(s.via, '출발'));
+  const to = names.length > 1 ? names[names.length - 1] + '역' : (s.jp ? s.jp : s.name);
   const line = extractLine(s.via);
   const title = kind === 'taxi' ? '🚕 택시 탑승' : kind === 'bus' ? `🚌 ${from}` : `🚇 ${from}`;
   const ok = kind === 'taxi' ? '🚕 출발' : kind === 'bus' ? '🚌 출발' : '🚇 출발';
   const body = kind === 'metro'
-    ? `${line} · ${from} → ${names.length > 1 ? names[names.length - 1] + '역' : to}`
+    ? `${line} · ${from} → ${s.time} ${shortName(s)}`
     : (s.via || '다음 장소로 이동');
   openDialog(title, body, {
     showOk: true, okLabel: ok, cancelable: !auto,
     tip: `다음 일정: ${s.time} ${s.name}`,
     via: kind === 'metro' ? s.via : undefined
   });
+}
+
+function openHubMenu(st) {
+  const routes = [];
+  const seen = new Set();
+  for (const r of st.routes || []) {
+    if (seen.has(r.toStop)) continue;
+    seen.add(r.toStop);
+    routes.push(r);
+  }
+  routes.sort((a, b) => a.toStop - b.toStop);
+
+  if (auto) {
+    const r = routes.find(x => x.toStop === target) || routes[0];
+    if (r) openBoardDialog(r.toStop);
+    else openDialog(`🚇 ${st.name}`, '이 역에서 갈 수 있는 일정이 없어요.', { showOk: true });
+    return;
+  }
+
+  if (!routes.length) {
+    openDialog(`🚇 ${st.name}`, '이 역에서 갈 수 있는 일정이 없어요.', { showOk: true });
+    return;
+  }
+
+  const icon0 = st.vKind === 'taxi' ? '🚕' : st.vKind === 'bus' ? '🚌' : '🚇';
+  openDialog(`${icon0} ${st.name}${st.vKind === 'metro' ? '역' : ''}`, '어디로 갈까요?', {
+    showOk: false, cancelable: true
+  });
+  dlgOk.style.display = 'none';
+  dlgActs.hidden = false;
+  dlgCancel.hidden = false;
+  for (const r of routes) {
+    const s = DAY.stops[r.toStop];
+    if (!s) continue;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.dataset.hubTo = String(r.toStop);
+    const kind = r.kind || vehicleKind(r.line);
+    const icon = kind === 'taxi' ? '🚕' : kind === 'bus' ? '🚌' : '🚇';
+    btn.textContent = `${icon} ${s.time} ${shortName(s)}`;
+    btn.addEventListener('pointerdown', e => {
+      e.stopPropagation();
+      openBoardDialog(r.toStop);
+    });
+    dlgActs.insertBefore(btn, dlgCancel);
+  }
+  dlgNext.hidden = true;
 }
 
 function rideKind(via) {
@@ -1854,33 +2670,62 @@ function updateMetroTrains(dt) {
 
 function drawMetroOverlay(camX, camY) {
   if (!RAILS.length) return;
-  // 선로 / 차도
+  // 선로 / 차도 — 길 타일 위에 옅게 얹는 안내선 (배경 박스·밝은 침목 없음)
+  const mid = TS * 0.5;
   for (const rail of RAILS) {
     const kind = rail.kind || 'metro';
-    for (const [x, y] of rail.cells) {
+    const cells = rail.cells;
+    // 플레이어가 노선 근처(2칸)면 살짝 강조, 평소엔 조용히
+    const near = auto || cells.some(([cx, cy]) => Math.abs(cx - me.x) + Math.abs(cy - me.y) <= 2);
+    const alpha = near ? 0.8 : 0.45;
+    const color = rail.color || '#5a78a0';
+
+    for (let i = 0; i < cells.length; i++) {
+      const [x, y] = cells[i];
       const px = x * TS - camX, py = y * TS - camY;
       if (px < -TS || py < -TS || px > cv.width + TS || py > cv.height + TS) continue;
+
+      // 이웃 셀로 진행 방향 판단 (L자 코너는 둘 다)
+      const p = cells[i - 1], n = cells[i + 1];
+      const horiz = (p && p[1] === y && p[0] !== x) || (n && n[1] === y && n[0] !== x);
+      const vert = (p && p[0] === x && p[1] !== y) || (n && n[0] === x && n[1] !== y);
+      const segH = horiz || !vert; // 단독 셀은 가로 취급
+
+      ctx.globalAlpha = alpha;
       if (kind === 'metro') {
-        ctx.fillStyle = '#3a4048';
-        ctx.fillRect(px + TS * 0.2, py + TS * 0.35, TS * 0.6, TS * 0.3);
-        ctx.fillStyle = rail.color || '#6a90c0';
-        ctx.fillRect(px + TS * 0.25, py + TS * 0.42, TS * 0.5, SCALE);
-        ctx.fillStyle = '#c8d0d8';
-        ctx.fillRect(px + TS * 0.28, py + TS * 0.38, TS * 0.12, TS * 0.24);
-        ctx.fillRect(px + TS * 0.58, py + TS * 0.38, TS * 0.12, TS * 0.24);
+        // 레일 2줄(팔레트 톤) + 가운데 노선색 한 줄
+        ctx.fillStyle = PAL.stoneDark;
+        if (segH) {
+          ctx.fillRect(px, py + mid - SCALE * 1.5, TS, 1);
+          ctx.fillRect(px, py + mid + SCALE * 1.5, TS, 1);
+        }
+        if (vert) {
+          ctx.fillRect(px + mid - SCALE * 1.5, py, 1, TS);
+          ctx.fillRect(px + mid + SCALE * 1.5, py, 1, TS);
+        }
+        ctx.fillStyle = color;
+        if (segH) ctx.fillRect(px, py + mid - 1, TS, 2);
+        if (vert) ctx.fillRect(px + mid - 1, py, 2, TS);
       } else if (kind === 'bus') {
-        ctx.fillStyle = '#5a5850';
-        ctx.fillRect(px + TS * 0.15, py + TS * 0.3, TS * 0.7, TS * 0.4);
-        ctx.fillStyle = '#c8a858';
-        ctx.fillRect(px + TS * 0.2, py + TS * 0.45, TS * 0.6, SCALE);
+        // 차도: 옅은 회색 띠 + 노선색 점선
+        ctx.fillStyle = 'rgba(58, 64, 72, 0.14)';
+        if (segH) ctx.fillRect(px, py + mid - SCALE * 2, TS, SCALE * 4);
+        if (vert) ctx.fillRect(px + mid - SCALE * 2, py, SCALE * 4, TS);
+        ctx.fillStyle = color;
+        if (segH) { ctx.fillRect(px + SCALE, py + mid - 1, TS * 0.35, 2); ctx.fillRect(px + TS * 0.6, py + mid - 1, TS * 0.35, 2); }
+        if (vert) { ctx.fillRect(px + mid - 1, py + SCALE, 2, TS * 0.35); ctx.fillRect(px + mid - 1, py + TS * 0.6, 2, TS * 0.35); }
       } else {
-        ctx.fillStyle = '#6a6860';
-        ctx.fillRect(px + TS * 0.2, py + TS * 0.35, TS * 0.6, TS * 0.3);
-        ctx.fillStyle = '#f0d848';
-        ctx.fillRect(px + TS * 0.35, py + TS * 0.42, TS * 0.3, SCALE);
+        // 택시: 옅은 띠 + 노선색 실선
+        ctx.fillStyle = 'rgba(58, 64, 72, 0.12)';
+        if (segH) ctx.fillRect(px, py + mid - SCALE * 1.5, TS, SCALE * 3);
+        if (vert) ctx.fillRect(px + mid - SCALE * 1.5, py, SCALE * 3, TS);
+        ctx.fillStyle = color;
+        if (segH) ctx.fillRect(px, py + mid - 1, TS, 2);
+        if (vert) ctx.fillRect(px + mid - 1, py, 2, TS);
       }
     }
   }
+  ctx.globalAlpha = 1;
   // 차량
   for (const tr of metroTrains) {
     const rail = RAILS[tr.rail];
@@ -2173,7 +3018,8 @@ function routeToTarget() {
   clickTarget = TRIG[target] ? [...TRIG[target]] : null;
 
   // 교통 구간: 먼저 역까지 걸어간 뒤 탑승(순간이동은 탑승 후에만)
-  if (isTransit(next.via, next) && target > 0) {
+  // 택시 승차 일정 스팟 자체는 걸어서 방문 — 중복 탑승 연출 없음
+  if (isTransit(next.via, next) && target > 0 && !isVehicleStop(next)) {
     if (STATIONS.length) {
       if (nearStation()) {
         openBoardDialog(target);
@@ -2258,25 +3104,53 @@ function pickRoute(st) {
 function nearbyNpc() {
   return npcs.find(npc => Math.abs(npc.x - me.x) + Math.abs(npc.y - me.y) === 1);
 }
+/** bags(잡담·이야기·팁)를 한데 모은 대사 풀 */
+function npcLinePool(npc) {
+  if (npc._linePool) return npc._linePool;
+  const pool = [];
+  if (npc.bags && npc.bags.length) {
+    for (const bag of npc.bags) {
+      for (const line of bag.lines || []) pool.push(line);
+    }
+  } else if (npc.lines && npc.lines.length) {
+    pool.push(...npc.lines);
+  }
+  if (!pool.length) pool.push('…….');
+  npc._linePool = pool;
+  return pool;
+}
+/** 직전에 쓴 줄은 피해서 랜덤으로 한 줄 고름 */
+function pickNpcLine(npc) {
+  const pool = npcLinePool(npc);
+  if (pool.length === 1) return pool[0];
+  let i = (Math.random() * pool.length) | 0;
+  if (i === npc.lastLineIndex) i = (i + 1 + ((Math.random() * (pool.length - 1)) | 0)) % pool.length;
+  npc.lastLineIndex = i;
+  return pool[i];
+}
 function openNpcDialog(npc) {
   if (me.moving) return;
   if (auto) setAuto(false);
   held.clear(); manualQueue = []; clickTarget = null;
   pendingWarp = null; boardPending = null; pendingSleep = false;
+  npc.path = [];
+  npc.wait = 1600 + Math.random() * 1200;
   npc.dir = me.x > npc.x ? 'right' : me.x < npc.x ? 'left' : me.y > npc.y ? 'down' : 'up';
-  const line = npc.lines[npc.lineIndex];
-  npc.lineIndex = (npc.lineIndex + 1) % npc.lines.length;
-  openDialog(npc.name, line, { showOk: true, okLabel: '닫기', npc: true });
+  talkingNpc = npc;
+  openDialog(npc.name, pickNpcLine(npc), {
+    showOk: true,
+    okLabel: '닫기',
+    cancelable: true,
+    npc: true
+  });
 }
 
 function interactA() {
   hideToast();
-  // 역사 우선 — 여기서만 지하철 탑승
+  // 허브 역 — 갈 수 있는 일정 목록
   const st = stationHere();
   if (st) {
-    const route = pickRoute(st);
-    if (route) openBoardDialog(route.toStop);
-    else openDialog(`🚇 ${st.name}역`, '이 역에서 갈 수 있는 일정이 없어요.', { showOk: true });
+    openHubMenu(st);
     return;
   }
   const near = trigAt(me.x, me.y, true);
@@ -2354,6 +3228,7 @@ function loadDay(i) {
   if (npcDialog) {
     clearInterval(typing); typing = null;
     dlg.style.display = 'none'; dlgOpen = false; dlgStop = -1; npcDialog = false;
+    talkingNpc = null;
   }
   npcs = []; npcBlocked = new Set();
   dayIdx = i; DAY = DAYS[i];
@@ -2435,7 +3310,8 @@ function updateLeaves(dt) {
 
 function updateEnt(ent, dt) {
   if (!ent.moving) return;
-  ent.t += dt / DUR;
+  const dur = ent.moveDur || DUR;
+  ent.t += dt / dur;
   if (ent.t >= 1) {
     ent.t = 0; ent.moving = false;
     ent.px = ent.x * TS; ent.py = ent.y * TS;
@@ -2463,6 +3339,7 @@ function loop(now) {
 
   const wasMoving = me.moving;
   updateEnt(me, dt); updateEnt(wife, dt); updateEnt(pet, dt);
+  updateNpcs(dt);
 
   if (wasMoving && !me.moving) {
     const ti = trigAt(me.x, me.y);
@@ -2581,7 +3458,7 @@ function draw() {
   }
   BLD.forEach(b => items.push({ y: (b.y + b.h) * TS, d: () => ctx.drawImage(bldCache.get(b), b.x * TS - camX, b.y * TS - camY, b.w * TS, b.h * TS) }));
   npcs.forEach(npc => items.push({ y: npc.py + TS, d: () =>
-    drawChar(ctx, npc.px - camX, npc.py - camY, npc.dir, npc.frame, PAL_NPC, npc.name) }));
+    drawChar(ctx, npc.px - camX, npc.py - camY, npc.dir, npc.frame, npc.pal || PAL_NPC, npc.name) }));
   items.push({ y: pet.py + TS - 2, d: () => drawJakae(ctx, pet.px - camX, pet.py - camY, pet.dir, pet.frame, PAL_JAKAE, '작애') });
   items.push({ y: wife.py + TS, d: () => drawChar(ctx, wife.px - camX, wife.py - camY, wife.dir, wife.frame, PAL_WIFE, '규원') });
   items.push({ y: me.py + TS + 2, d: () => drawChar(ctx, me.px - camX, me.py - camY, me.dir, me.frame, PAL_ME, '규빈') });

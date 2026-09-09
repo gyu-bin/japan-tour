@@ -1,6 +1,6 @@
 /** 도쿄 산책 · 일정 데이터 (실측 위경도 기준)
  *  배치는 전부 lat/lng 에서 나온다. 수동 모형 좌표는 없다.
- *    day.layoutSpan — 하루 맵 한 변 크기 (기본 50)
+ *    day.layoutSpan — 하루 맵 한 변 크기 (마을 밀도용, 기본 34)
  *    day.lm — 랜드마크의 실제 위경도. 스팟과 같은 투영을 탄다
  *  패널 문구:
  *    stop.why — 역사·왜 이곳인가
@@ -11,7 +11,7 @@ export const DAYS = [
     no: '01', jp: '羽田・八丁堀', d: '토 10/17', t: '자정의 도쿄에 내리다',
     region: '하네다 공항 → 핫초보리 숙소', theme: 'night', light: 'midnight',
     landmark: 'plane', lmName: '하네다공항', lmJp: '羽田空港',
-    layoutSpan: 42, lm: { lat: 35.5533, lng: 139.7811 },
+    layoutSpan: 30, lm: { lat: 35.5533, lng: 139.7811 },
     stops: [
       {
         time: '23:30', name: '하네다공항 도착', jp: '羽田空港',
@@ -42,7 +42,7 @@ export const DAYS = [
     no: '02', jp: '浅草・上野・秋葉原', d: '일 10/18', t: '옛 도쿄의 골목을 걷다',
     region: '핫초보리 · 아사쿠사 · 우에노 · 아키하바라', theme: 'asakusa', light: 'morning',
     landmark: 'pagoda', lmName: '센소지 오층탑', lmJp: '浅草寺 五重塔',
-    layoutSpan: 64, lm: { lat: 35.7149, lng: 139.7962 },
+    layoutSpan: 38, lm: { lat: 35.7149, lng: 139.7962 },
     stops: [
       {
         time: '09:20', name: 'Section L 핫초보리', jp: '八丁堀',
@@ -122,7 +122,7 @@ export const DAYS = [
     no: '03', jp: '豊洲・お台場', d: '월 10/19', t: '미래 도시의 바다를 만나다',
     region: '도요스 · 오다이바 베이', theme: 'odaiba', light: 'sunset',
     landmark: 'wheel', lmName: '오다이바 대관람차', lmJp: '大観覧車',
-    layoutSpan: 48, lm: { lat: 35.6256, lng: 139.7797 },
+    layoutSpan: 32, lm: { lat: 35.6256, lng: 139.7797 },
     stops: [
       {
         time: '10:00', name: 'teamLab Planets', jp: 'チームラボプラネッツ',
@@ -170,7 +170,7 @@ export const DAYS = [
     no: '04', jp: '皇居・目黒・六本木', d: '화 10/20', t: '도쿄의 하늘 위에 서다',
     region: '황거 · 메구로 · 롯폰기', theme: 'roppongi', light: 'night',
     landmark: 'tower', lmName: '모리타워', lmJp: '森タワー',
-    layoutSpan: 52, lm: { lat: 35.6605, lng: 139.7292 },
+    layoutSpan: 34, lm: { lat: 35.6605, lng: 139.7292 },
     stops: [
       {
         time: '07:30', name: '황거 러닝', jp: '皇居',
@@ -226,7 +226,7 @@ export const DAYS = [
     no: '05', jp: '河口湖', d: '수 10/21', t: '후지산 아래 잠들다',
     region: '카와구치코 · 온천 료칸', theme: 'fuji', light: 'evening',
     landmark: 'fuji', lmName: '후지산', lmJp: '富士山',
-    layoutSpan: 58, lm: { lat: 35.3606, lng: 138.7274 },
+    layoutSpan: 34, lm: { lat: 35.3606, lng: 138.7274 },
     stops: [
       {
         time: '09:00', name: '신주쿠 → 카와구치코', jp: '新宿 → 河口湖', mode: 'bus',
@@ -272,7 +272,7 @@ export const DAYS = [
     no: '06', jp: '河口湖・新宿・羽田', d: '목 10/22', t: '아침 후지에게 인사하고',
     region: '카와구치코 → 신주쿠 → 하네다', theme: 'fuji', light: 'dawn',
     landmark: 'fuji', lmName: '후지산', lmJp: '富士山',
-    layoutSpan: 58, lm: { lat: 35.3606, lng: 138.7274 },
+    layoutSpan: 34, lm: { lat: 35.3606, lng: 138.7274 },
     stops: [
       {
         time: '06:30', name: '일출 후지산 조망', jp: '富士山',
