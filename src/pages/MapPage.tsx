@@ -168,7 +168,7 @@ export default function MapPage() {
           <button type="button" className="ghost" onClick={toggleTour} aria-pressed={touring}>
             {touring ? '투어 정지' : 'EXPLORE'}
           </button>
-          <a className="pill alt" href="/pokemon.html">픽셀 ↗</a>
+          {/* <a className="pill alt" href="/pokemon.html">픽셀 ↗</a> */}
           <a className="pill alt" href="/pokemon2.html">골드 ↗</a>
           <Link className="pill" to="/">디오라마 ↗</Link>
         </div>

@@ -201,9 +201,9 @@ export default function AstraDioramaPage() {
           >
             {alternateLight ? '낮' : '밤'}
           </button>
-          <a className="pill alt" href="/pokemon.html">
+          {/* <a className="pill alt" href="/pokemon.html">
             픽셀
-          </a>
+          </a> */}
           <a className="pill alt" href="/pokemon2.html">
             골드
           </a>
