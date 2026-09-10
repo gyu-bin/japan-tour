@@ -204,6 +204,9 @@ export default function AstraDioramaPage() {
           <a className="pill alt" href="/pokemon.html">
             픽셀
           </a>
+          <a className="pill alt" href="/pokemon2.html">
+            골드
+          </a>
           <Link className="pill" to="/map">
             실제 지도
           </Link>

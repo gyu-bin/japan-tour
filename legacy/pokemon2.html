@@ -5,115 +5,167 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<title>도쿄 산책 · 스타듀 픽셀</title>
+<title>도쿄 산책 · 골드 픽셀</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri/dist/galmuri.css">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --wood-dark:#5c3418;--wood-mid:#8a5528;--wood-light:#c48a48;
-  --parchment:#fcebc4;--parchment-deep:#f0d49a;--ink:#3d2914;
-  --leaf:#3d7a3c;--leaf-light:#6aaa58;--sky:#7eb6d8;--gold:#e8b848;
-  --ember:#d06038;--cream:#fff6e0;
+  /* ── GBC 포켓몬 골드 팔레트 ── */
+  --gb-bg:#E0E8D0;--gb-bg-deep:#C8D0B8;--gb-shade:#A0A890;
+  --gb-ink:#202020;--gb-ink-soft:#484848;--gb-white:#F8F8F8;
+  --gb-gold:#D4A373;--gb-gold-deep:#A87848;--gb-gold-light:#F0D8B0;
+  --gb-navy:#283860;--gb-navy-deep:#182440;--gb-navy-light:#4A5A88;
+  --gb-red:#C84040;--gb-green:#587848;
+  /* 구 변수 호환 (JS/인라인에서 참조 가능) */
+  --ink:var(--gb-ink);--cream:var(--gb-white);--gold:var(--gb-gold);--ember:var(--gb-red);
+  --leaf:var(--gb-green);--wood-dark:var(--gb-ink);--wood-mid:var(--gb-navy);--wood-light:var(--gb-gold);
+  --parchment:var(--gb-bg);--parchment-deep:var(--gb-bg-deep);
+  /* UI는 읽기 좋은 고딕, 픽셀 폰트는 캔버스 장식용 */
+  --font:'Pretendard','Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;
+  --font-pixel:'Galmuri11','Galmuri9',monospace;
+  /* 납작한 GB 버튼 음영 */
+  --bevel:inset -2px -2px 0 var(--gb-shade),inset 2px 2px 0 var(--gb-white);
+  --bevel-in:inset 2px 2px 0 var(--gb-shade),inset -2px -2px 0 var(--gb-white);
+  --bevel-navy:inset -2px -2px 0 var(--gb-navy-deep),inset 2px 2px 0 var(--gb-navy-light);
+  --bevel-gold:inset -2px -2px 0 var(--gb-gold-deep),inset 2px 2px 0 var(--gb-gold-light);
 }
-html,body{height:100%;overflow:hidden;
-  background:
-    radial-gradient(ellipse 120% 60% at 50% -10%,#c8e4f4 0%,transparent 55%),
-    linear-gradient(180deg,#87b8d8 0%,#a8c878 38%,#6a9a58 72%,#4a7840 100%)}
-body{font-family:'Galmuri11','Galmuri9',monospace;-webkit-user-select:none;user-select:none;color:var(--ink)}
+html,body{height:100%;overflow:hidden;background:var(--gb-bg)}
+body{font-family:var(--font);font-weight:500;font-size:13px;line-height:1.55;letter-spacing:-.01em;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;
+  -webkit-user-select:none;user-select:none;color:var(--gb-ink)}
 canvas{display:block;image-rendering:pixelated}
+#cv{filter:saturate(1.08) contrast(1.06)}
+button,a{font-family:inherit;font-weight:600;border-radius:0;text-shadow:none;-webkit-tap-highlight-color:transparent}
+button:focus-visible,a:focus-visible{outline:2px solid var(--gb-navy);outline-offset:2px}
 
-/* 스타듀식 나무 프레임 패널 */
+/* ── 골드 대화창 프레임: 흰 상자 + 검은 두 줄 테두리 ── */
 .panel{
-  position:fixed;background:var(--parchment);
-  border:5px solid var(--wood-dark);border-radius:0;
-  box-shadow:
-    inset 0 0 0 3px var(--wood-light),
-    inset 0 0 0 6px var(--wood-mid),
-    0 6px 0 rgba(60,40,20,.4);
+  position:fixed;background:var(--gb-white);color:var(--gb-ink);
+  border:2px solid var(--gb-ink);border-radius:0;padding:12px;
+  box-shadow:inset 0 0 0 2px var(--gb-white),inset 0 0 0 4px var(--gb-ink);
+}
+/* ── 납작한 GB 버튼 ── */
+.wood-btn,#days button,#dlg .acts a,#dlg .acts button,#mStops button,#prog,.pill,#hudFold{
+  display:inline-block;font-family:inherit;font-size:12px;line-height:1.35;font-weight:600;
+  background:var(--gb-bg);color:var(--gb-ink);cursor:pointer;text-decoration:none;
+  border:2px solid var(--gb-ink);border-radius:0;box-shadow:var(--bevel);transition:none;
+}
+.wood-btn:active,#days button:not(:disabled):active,#dlg .acts a:active,
+#dlg .acts button:active,#mStops button:active,#prog:active,.pill:active,#hudFold:active{
+  transform:none;box-shadow:var(--bevel-in);background:var(--gb-bg-deep);
 }
 
-#hud{top:14px;left:14px;padding:14px 16px 12px;max-width:260px;z-index:10}
+/* ── HUD: 포켓기어 카드 ── */
+#hud{top:14px;left:14px;padding:0;width:min(288px,calc(100vw - 28px));z-index:10;overflow:hidden}
 #hud .day{
-  font-size:11px;color:var(--cream);letter-spacing:1px;
-  background:var(--wood-mid);display:inline-block;padding:3px 10px;
-  border:2px solid var(--wood-dark);margin-bottom:2px;
-  box-shadow:inset 0 1px 0 var(--wood-light)}
-#hud h1{font-size:16px;color:var(--ink);margin:8px 0 10px;line-height:1.35}
-#hud ol{list-style:none;display:flex;flex-direction:column;gap:4px}
-#hud li{font-size:12px;color:#8a7060;display:flex;gap:7px;align-items:baseline;cursor:pointer;
-  padding:3px 4px;border-radius:0}
-#hud li:hover{background:rgba(196,138,72,.2)}
-#hud li .tm{font-size:10px;width:34px;flex:none;color:var(--wood-mid)}
-#hud li.cur{color:var(--ember);font-weight:700;background:rgba(224,96,56,.12)}
-#hud li.done{color:var(--leaf)}
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  font-size:11px;letter-spacing:.06em;font-weight:700;
+  color:var(--gb-gold-light);background:var(--gb-navy);
+  padding:8px 10px 7px 12px;margin:4px 4px 0;border-bottom:2px solid var(--gb-ink);
+}
+#hud .day .dayLabel::before{content:'▣ ';color:var(--gb-gold)}
+#hudFold{flex:none;width:34px;height:28px;padding:0;margin:0;line-height:1;
+  background:var(--gb-navy-light);color:var(--gb-gold-light);box-shadow:var(--bevel-navy);
+  font-size:11px;font-weight:700}
+#hud .hudHead{margin:0 4px;background:var(--gb-bg);border-bottom:2px solid var(--gb-ink)}
+#hud h1{font-size:14px;font-weight:700;color:var(--gb-ink);margin:0;padding:9px 12px;
+  line-height:1.4;letter-spacing:-.02em}
+#hudBody{display:block}
+#hud.collapsed{width:auto;min-width:min(220px,calc(100vw - 28px))}
+#hud.collapsed #hudBody{display:none}
+#hud.collapsed h1{padding:8px 12px;font-size:13px;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#hud ol{list-style:none;display:flex;flex-direction:column;gap:4px;padding:8px 8px 4px;
+  max-height:46vh;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--gb-ink) var(--gb-bg)}
+/* 소지 창(Party) 슬롯: 왼쪽 도트 아이콘 · 오른쪽 이름 + 한 줄 평 */
+#hud li{
+  position:relative;display:grid;grid-template-columns:26px 1fr;column-gap:8px;align-items:center;
+  padding:5px 8px 5px 18px;cursor:pointer;color:var(--gb-ink);
+  background:var(--gb-bg);border:2px solid var(--gb-ink);box-shadow:inset -2px -2px 0 var(--gb-shade);
+}
+#hud li::before{content:'';position:absolute;left:5px;top:50%;transform:translateY(-50%);
+  width:0;height:0;border:5px solid transparent;border-left:7px solid var(--gb-ink);opacity:0}
+#hud li:hover{background:var(--gb-white)}
+#hud li.cur{background:var(--gb-gold-light);box-shadow:inset -2px -2px 0 var(--gb-gold)}
+#hud li.cur::before,#hud li:hover::before{opacity:1}
+#hud li.done{color:var(--gb-ink-soft)}
 #hud li.done .nm::after{content:' ✓'}
-#days{display:flex;gap:5px;margin-top:12px;flex-wrap:wrap;padding-top:10px;
-  border-top:2px solid var(--wood-light)}
-#days button{font-family:inherit;font-size:11px;padding:6px 10px;
-  border:3px solid var(--wood-dark);border-radius:0;
-  background:linear-gradient(180deg,var(--cream),var(--parchment-deep));
-  cursor:pointer;color:var(--ink);
-  box-shadow:inset 0 1px 0 #fff,0 2px 0 rgba(60,40,20,.3)}
-#days button.cur{background:linear-gradient(180deg,#e07048,var(--ember));border-color:var(--wood-dark);color:#fff}
-#days button:disabled{opacity:.35;cursor:default}
+#hud li .ic{grid-row:1/3;width:26px;height:26px;background-color:var(--gb-navy);
+  border:2px solid var(--gb-ink);box-shadow:inset 1px 1px 0 var(--gb-navy-light);
+  background-size:16px 16px;background-position:center;background-repeat:no-repeat;image-rendering:pixelated}
+#hud li .hd{grid-column:2;display:flex;gap:6px;align-items:baseline;min-width:0}
+#hud li .tm{font-size:11px;font-weight:700;color:var(--gb-navy);letter-spacing:.02em;flex:none;font-variant-numeric:tabular-nums}
+#hud li .nm{font-size:13px;font-weight:650;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#hud li .sub{grid-column:2;font-size:11px;font-weight:500;color:var(--gb-ink-soft);line-height:1.35;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 도트 미니 아이콘 (8×8 SVG, crispEdges) */
+.ic.sight{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' shape-rendering='crispEdges'><rect x='2' y='1' width='1' height='6' fill='%23F8F8F8'/><rect x='3' y='1' width='4' height='3' fill='%23D4A373'/><rect x='1' y='7' width='3' height='1' fill='%23F8F8F8'/></svg>")}
+.ic.eat{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' shape-rendering='crispEdges'><rect x='1' y='4' width='6' height='2' fill='%23F8F8F8'/><rect x='2' y='6' width='4' height='1' fill='%23F8F8F8'/><rect x='2' y='3' width='4' height='1' fill='%23D4A373'/><rect x='2' y='0' width='1' height='3' fill='%23F8F8F8'/><rect x='5' y='0' width='1' height='3' fill='%23F8F8F8'/></svg>")}
+.ic.stay{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' shape-rendering='crispEdges'><rect x='3' y='1' width='2' height='1' fill='%23D4A373'/><rect x='2' y='2' width='4' height='1' fill='%23D4A373'/><rect x='1' y='3' width='6' height='1' fill='%23D4A373'/><rect x='2' y='4' width='4' height='3' fill='%23F8F8F8'/><rect x='3' y='5' width='2' height='2' fill='%23283860'/></svg>")}
+.ic.park{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' shape-rendering='crispEdges'><rect x='3' y='0' width='2' height='1' fill='%23F8F8F8'/><rect x='2' y='1' width='4' height='2' fill='%23F8F8F8'/><rect x='1' y='3' width='6' height='2' fill='%23F8F8F8'/><rect x='3' y='5' width='2' height='2' fill='%23D4A373'/></svg>")}
+.ic.shop{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' shape-rendering='crispEdges'><rect x='3' y='0' width='2' height='1' fill='%23F8F8F8'/><rect x='2' y='1' width='1' height='2' fill='%23F8F8F8'/><rect x='5' y='1' width='1' height='2' fill='%23F8F8F8'/><rect x='1' y='3' width='6' height='4' fill='%23D4A373'/><rect x='2' y='4' width='4' height='1' fill='%23F8F8F8'/></svg>")}
+/* 일차 탭: 포켓기어 하단 아이콘 줄 */
+#days{display:flex;gap:4px;padding:6px 8px 8px;margin:0;flex-wrap:wrap;
+  background:var(--gb-bg);border-top:2px solid var(--gb-ink)}
+#days button{font-size:11px;padding:6px 0;min-width:34px;flex:1 1 34px;text-align:center;font-weight:700}
+#days button::before{content:'D';font-size:9px;opacity:.7;margin-right:1px}
+#days button.cur{background:var(--gb-navy);color:var(--gb-gold-light);box-shadow:var(--bevel-navy)}
+#days button:disabled{opacity:.4;cursor:default}
 
-#topPill{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:10;display:flex;gap:8px}
-.pill{font-size:11px;background:var(--wood-mid);color:var(--gold);padding:8px 14px;
-  border:3px solid var(--wood-dark);border-radius:0;text-decoration:none;
-  box-shadow:inset 0 1px 0 var(--wood-light),0 3px 0 rgba(60,40,20,.35)}
-a.pill.alt{background:var(--parchment);color:var(--ink)}
+#topPill{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:10;display:flex;gap:6px}
+.pill{font-size:11px;padding:7px 12px;letter-spacing:.02em;font-weight:650}
+span.pill{background:var(--gb-navy);color:var(--gb-gold-light);box-shadow:var(--bevel-navy)}
+a.pill.alt{background:var(--gb-bg);color:var(--gb-ink)}
 
-.wood-btn{
-  font-family:inherit;cursor:pointer;border:4px solid var(--wood-dark);border-radius:0;
-  box-shadow:inset 0 0 0 2px var(--wood-light),0 4px 0 rgba(60,40,20,.35);
-  color:#fff}
-.wood-btn:active{transform:translateY(2px);box-shadow:inset 0 0 0 2px var(--wood-light),0 2px 0 rgba(60,40,20,.35)}
-
-#autoBtn{position:fixed;right:14px;top:14px;z-index:10;font-size:13px;padding:11px 16px;
-  background:linear-gradient(180deg,#e07048,var(--ember))}
-#autoBtn.on{background:linear-gradient(180deg,#6aaa58,var(--leaf))}
-#bgmBtn{position:fixed;right:14px;top:66px;z-index:10;font-size:12px;padding:8px 12px;
-  background:linear-gradient(180deg,var(--cream),var(--parchment-deep));color:var(--ink)}
+#autoBtn{position:fixed;right:14px;top:14px;z-index:10;font-size:13px;padding:9px 14px;
+  background:var(--gb-gold);color:var(--gb-ink);box-shadow:var(--bevel-gold)}
+#autoBtn.on{background:var(--gb-navy);color:var(--gb-gold-light);box-shadow:var(--bevel-navy)}
+#bgmBtn{position:fixed;right:14px;top:58px;z-index:10;font-size:12px;padding:7px 12px}
 #bgmBtn.off{opacity:.55}
-#prog{position:fixed;top:116px;right:14px;z-index:10;font-size:11px;
-  background:var(--parchment);color:var(--ink);padding:7px 12px;
-  border:3px solid var(--wood-dark);border-radius:0;cursor:pointer;
-  box-shadow:inset 0 0 0 2px var(--wood-light),0 3px 0 rgba(60,40,20,.3)}
+#prog{position:fixed;top:100px;right:14px;z-index:10;font-size:11px;padding:6px 10px;font-weight:650}
 
-/* 대화창 — 스타듀 하단 박스 */
+/* ── 대화창: 골드 텍스트 박스 (흰 바탕 · 검은 두 줄) ── */
 #dlg{left:50%;transform:translateX(-50%);bottom:18px;width:min(660px,92vw);
-  padding:18px 22px 16px;z-index:20;display:none;min-height:120px}
-#dlg .name{font-size:15px;font-weight:700;color:var(--ink);margin-bottom:8px;
-  padding-bottom:6px;border-bottom:2px solid var(--wood-light)}
-#dlg .name .tm{color:var(--ember);margin-right:8px}
-#dlg .name .eat{font-size:10px;background:var(--ember);color:#fff;border-radius:0;
-  padding:2px 7px;margin-left:8px;vertical-align:2px;border:2px solid var(--wood-dark)}
-#dlg .body{font-size:14px;line-height:1.85;min-height:44px;color:var(--ink)}
-#dlg .via{margin-top:10px;font-size:12px;line-height:1.55;color:#2a5a88;
-  background:rgba(126,182,216,.18);border:2px solid #7eb6d8;padding:8px 10px;display:none}
-#dlg .via.show{display:block}
-#dlg .tip{margin-top:8px;font-size:12px;line-height:1.55;color:var(--leaf);
-  background:rgba(61,122,60,.12);border:2px solid var(--leaf-light);padding:8px 10px;display:none}
-#dlg .tip.show{display:block}
-#dlg .acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
-#dlg .acts a,#dlg .acts button{font-family:inherit;font-size:12px;padding:9px 14px;border-radius:0;
-  border:3px solid var(--wood-dark);text-decoration:none;color:var(--ink);
-  background:linear-gradient(180deg,var(--cream),var(--parchment-deep));cursor:pointer;
-  box-shadow:inset 0 1px 0 #fff,0 2px 0 rgba(60,40,20,.25);-webkit-tap-highlight-color:transparent}
-#dlg .acts a.maps{background:linear-gradient(180deg,#6a9ec8,#3a6a98);color:#fff}
-#dlg .acts button.ok{background:linear-gradient(180deg,#f0d060,var(--gold));font-weight:700}
-#dlg .next{position:absolute;right:16px;bottom:12px;font-size:14px;color:var(--ember);
-  animation:bob .7s infinite;pointer-events:none}
+  padding:14px 18px 16px;z-index:20;display:none;min-height:110px;
+  max-height:calc(100dvh - 36px);overflow-y:auto;overscroll-behavior:contain;
+  scrollbar-width:thin;scrollbar-color:var(--gb-ink) var(--gb-white)}
+#dlg .name{font-size:15px;font-weight:700;color:var(--gb-ink);margin-bottom:8px;padding:0 0 6px;
+  border-bottom:2px solid var(--gb-gold);line-height:1.45;overflow-wrap:anywhere;letter-spacing:-.02em}
+#dlg .name .tm{color:var(--gb-navy);margin-right:8px;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
+#dlg .name .eat{font-size:10px;font-weight:700;background:var(--gb-gold)!important;color:var(--gb-ink);border-radius:0;
+  padding:2px 6px;margin-left:8px;vertical-align:2px;border:1px solid var(--gb-ink);letter-spacing:.04em}
+#dlg .name .eat[style]{background:var(--gb-navy)!important;color:var(--gb-gold-light)}
+#dlg .body{font-size:14px;font-weight:500;line-height:1.75;min-height:44px;color:var(--gb-ink);padding:0 2px 4px;overflow-wrap:anywhere}
+#dlg .via,#dlg .tip{display:none;margin-top:10px;font-size:12px;font-weight:500;line-height:1.55;padding:8px 10px;
+  background:var(--gb-bg);border:2px solid var(--gb-ink);box-shadow:inset -2px -2px 0 var(--gb-shade)}
+#dlg .via{color:var(--gb-navy)}
+#dlg .tip{color:var(--gb-ink);border-color:var(--gb-gold-deep);box-shadow:inset -2px -2px 0 var(--gb-gold)}
+#dlg .via.show,#dlg .tip.show{display:block}
+/* 선택 메뉴: ▶ 커서 */
+#dlg .acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;padding-top:10px;border-top:2px solid var(--gb-ink)}
+#dlg .acts a,#dlg .acts button{flex:1 1 auto;position:relative;padding:8px 10px 8px 22px;font-size:12px;
+  text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#dlg .acts a::before,#dlg .acts button::before{content:'▶';position:absolute;left:8px;top:50%;
+  transform:translateY(-50%);font-size:9px;opacity:0}
+#dlg .acts a:hover::before,#dlg .acts button:hover::before,
+#dlg .acts a:focus-visible::before,#dlg .acts button:focus-visible::before{opacity:1}
+#dlg .acts [data-hub-to]{flex-basis:100%}
+#dlg .acts a.maps{background:var(--gb-bg)}
+#dlg .acts button.ok{background:var(--gb-gold);box-shadow:var(--bevel-gold)}
+#dlg .acts[hidden],#dlg .acts [hidden]{display:none!important}
+#dlg .next{position:absolute;right:14px;bottom:10px;font-size:12px;color:var(--gb-ink);
+  animation:bob .6s steps(2) infinite;pointer-events:none}
 @keyframes bob{50%{transform:translateY(3px)}}
 
-#sleep{position:fixed;inset:0;z-index:40;
-  background:linear-gradient(180deg,#1a2840 0%,#3a2a48 40%,#8a4a38 100%);
+#sleep{position:fixed;inset:0;z-index:40;background:var(--gb-navy-deep);
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
-  opacity:0;pointer-events:none;transition:opacity .7s}
+  opacity:0;pointer-events:none;transition:opacity .5s steps(4)}
 #sleep.show{opacity:1;pointer-events:auto}
-#sleep .z{font-size:46px;animation:bob 1.1s infinite}
-#sleep .t{color:var(--gold);font-size:22px;text-align:center;text-shadow:0 2px 0 #3a2010}
-#sleep .s{color:#e8d8c0;font-size:13px;text-align:center;line-height:1.8;padding:0 20px}
+#sleep .z{font-size:40px;animation:bob 1s steps(2) infinite}
+#sleep .t{color:var(--gb-gold);font-size:22px;font-weight:700;text-align:center;letter-spacing:-.02em}
+#sleep .s{color:var(--gb-bg);font-size:13px;font-weight:500;text-align:center;line-height:1.8;padding:10px 16px;
+  background:var(--gb-navy);border:2px solid var(--gb-ink);
+  box-shadow:inset 0 0 0 2px var(--gb-navy),inset 0 0 0 4px var(--gb-gold-deep)}
 
 /* 지하철/버스/택시 탑승 컷신 */
 #ride{position:fixed;inset:0;z-index:35;display:none;pointer-events:auto;
@@ -121,54 +173,60 @@ a.pill.alt{background:var(--parchment);color:var(--ink)}
 #ride.show{display:block}
 #ride canvas{width:100%;height:100%;display:block;image-rendering:pixelated}
 
-#hint{position:fixed;left:14px;bottom:14px;z-index:9;font-size:11px;color:var(--cream);
-  background:rgba(92,52,24,.72);padding:8px 12px;border:2px solid var(--wood-light);line-height:1.7}
+#hint{position:fixed;left:14px;bottom:14px;z-index:9;font-size:11px;font-weight:500;color:var(--gb-ink);line-height:1.65;
+  background:var(--gb-bg);padding:8px 11px;border:2px solid var(--gb-ink);box-shadow:inset -2px -2px 0 var(--gb-shade);
+  max-width:min(420px,calc(100vw - 28px))}
 
-#toast{left:50%;transform:translateX(-50%);bottom:64px;z-index:18;padding:14px 20px;
-  font-size:13px;color:var(--ink);text-align:center;animation:tpop .5s ease}
-#toast b{color:var(--ember)}
-@keyframes tpop{from{opacity:0;transform:translateX(-50%) translateY(10px)}}
+#toast{left:50%;transform:translateX(-50%);bottom:64px;z-index:18;padding:12px 18px;
+  font-size:13px;font-weight:500;line-height:1.7;color:var(--gb-ink);text-align:center;animation:tpop .3s steps(3)}
+#toast b{color:var(--gb-navy);border-bottom:2px solid var(--gb-gold);font-weight:700}
+@keyframes tpop{from{opacity:0;transform:translateX(-50%) translateY(8px)}}
 
+/* ── 터치 패드: GB 하드웨어 오마주 (회색 십자키 · 둥근 A) ── */
 #pad{position:fixed;left:0;right:0;bottom:0;z-index:16;display:none;pointer-events:none;
   padding:0 14px 14px;align-items:flex-end;justify-content:space-between}
-#dpad{display:grid;grid-template-columns:repeat(3,58px);grid-template-rows:repeat(3,58px);
-  gap:4px;pointer-events:auto}
-#dpad button,#abtn{font-family:inherit;font-size:20px;
-  background:linear-gradient(180deg,var(--cream),var(--parchment-deep));
-  border:4px solid var(--wood-dark);border-radius:0;color:var(--ink);touch-action:none;
+#dpad{display:grid;grid-template-columns:repeat(3,54px);grid-template-rows:repeat(3,54px);
+  gap:2px;pointer-events:auto}
+#dpad button,#abtn{font-family:inherit;font-size:18px;background:#383838;color:var(--gb-bg);
+  border:2px solid var(--gb-ink);border-radius:0;touch-action:none;pointer-events:auto;cursor:pointer;
   -webkit-tap-highlight-color:transparent;
-  box-shadow:inset 0 0 0 2px var(--wood-light),0 3px 0 rgba(60,40,20,.35);pointer-events:auto}
-#dpad button:active,#abtn:active{transform:translateY(2px);box-shadow:inset 0 0 0 2px var(--wood-light),0 1px 0 rgba(60,40,20,.35)}
+  box-shadow:inset -3px -3px 0 #202020,inset 3px 3px 0 #585858}
+#dpad button:active,#abtn:active{transform:none;box-shadow:inset 3px 3px 0 #202020,inset -3px -3px 0 #484848}
 #dpad .u{grid-area:1/2}#dpad .l{grid-area:2/1}#dpad .r{grid-area:2/3}#dpad .d{grid-area:3/2}
-#abtn{width:72px;height:72px;border-radius:0;
-  background:linear-gradient(180deg,#e07048,var(--ember));color:#fff;font-size:22px;font-weight:700;
-  margin-bottom:28px}
-#abtn small{display:block;font-size:10px;font-weight:400;opacity:.85}
+#dpad::after{content:'';grid-area:2/2;background:#383838;border:2px solid var(--gb-ink)}
+#abtn{width:70px;height:70px;border-radius:50%;background:#8A2A3A;color:var(--gb-white);
+  font-size:20px;font-weight:400;margin-bottom:28px;
+  box-shadow:inset -3px -3px 0 #5A1A26,inset 3px 3px 0 #B04858}
+#abtn:active{box-shadow:inset 3px 3px 0 #5A1A26,inset -3px -3px 0 #8A2A3A}
+#abtn small{display:block;font-size:9px;font-weight:400;opacity:.85}
 
 #mStops{display:none;position:fixed;left:10px;right:10px;bottom:196px;z-index:12;
-  overflow-x:auto;-webkit-overflow-scrolling:touch;gap:6px;padding:2px 0 4px}
+  overflow-x:auto;-webkit-overflow-scrolling:touch;gap:4px;padding:2px 0 4px}
 #mStops::-webkit-scrollbar{display:none}
-#mStops button{flex:none;font-family:inherit;font-size:11px;padding:8px 12px;border-radius:0;
-  border:3px solid var(--wood-dark);background:var(--parchment);color:var(--ink);white-space:nowrap;
-  box-shadow:inset 0 0 0 2px var(--wood-light),0 2px 0 rgba(60,40,20,.3)}
-#mStops button.done{background:#a8d080;color:#1a3a1a}
-#mStops button.cur{background:var(--ember);color:#fff}
+#mStops button{flex:none;font-size:10px;padding:7px 10px;white-space:nowrap}
+#mStops button.done{background:var(--gb-bg-deep)}
+#mStops button.cur{background:var(--gb-navy);color:var(--gb-gold-light);box-shadow:var(--bevel-navy)}
 
 @media (max-width:900px),(pointer:coarse){
   #pad{display:flex}
   #mStops{display:flex}
   #hint{display:none}
-  #hud{max-width:min(230px,60vw);padding:10px 12px;top:52px;left:10px}
-  #hud ol{display:none}
-  #autoBtn{top:auto;bottom:248px;right:14px;font-size:12px;padding:10px 12px}
-  #bgmBtn{top:auto;bottom:300px;right:14px}
-  #prog{top:auto;bottom:344px;right:14px}
-  #dlg{bottom:248px;width:min(92vw,520px);padding:12px 14px 12px}
+  #hud{width:min(260px,70vw);top:52px;left:10px}
+  #hud h1{font-size:13px;padding:7px 10px}
+  #hud li .nm{font-size:12px}
+  #hud li .sub{font-size:10px}
+  #autoBtn{top:auto;bottom:248px;right:14px;font-size:12px;padding:9px 12px}
+  #bgmBtn{top:auto;bottom:296px;right:14px}
+  #prog{top:auto;bottom:338px;right:14px}
+  #dlg{bottom:248px;width:min(92vw,520px);padding:12px 14px 12px;max-height:calc(100dvh - 264px)}
+  #dlg .name{font-size:14px}
+  #dlg .body{font-size:13px}
   #toast{bottom:250px;font-size:12px;max-width:88vw}
   #topPill{top:8px;max-width:96vw;flex-wrap:wrap;justify-content:center}
 }
 @media (prefers-reduced-motion:reduce){
   #dlg .next,#sleep .z{animation:none}
+  button,a,#prog{transition:none!important}
 }
 </style>
 </head>
@@ -177,16 +235,18 @@ a.pill.alt{background:var(--parchment);color:var(--ink)}
 
 <div id="topPill">
   <span class="pill">🌾 도쿄 산책 데이</span>
-  <a class="pill alt" href="/pokemon2.html">골드 ↗</a>
+  <a class="pill alt" href="/pokemon.html">픽셀 ↗</a>
   <a class="pill alt" href="/">디오라마 ↗</a>
   <a class="pill alt" href="/map">실제 지도 ↗</a>
 </div>
 
 <div id="hud" class="panel">
-  <div class="day" id="hudDay"></div>
-  <h1 id="hudTitle"></h1>
-  <ol id="stopList"></ol>
-  <div id="days"></div>
+  <div class="day"><span class="dayLabel" id="hudDay"></span><button type="button" id="hudFold" aria-label="목록 접기" title="목록 접기">▲</button></div>
+  <div class="hudHead"><h1 id="hudTitle"></h1></div>
+  <div id="hudBody">
+    <ol id="stopList"></ol>
+    <div id="days"></div>
+  </div>
 </div>
 
 <button id="autoBtn" class="wood-btn">▶ 자동 여행</button>
@@ -199,7 +259,7 @@ a.pill.alt{background:var(--parchment);color:var(--ink)}
   <div class="via" id="dlgVia"></div>
   <div class="tip" id="dlgTip"></div>
   <div class="acts" id="dlgActs" hidden>
-    <a class="maps" id="dlgMaps" target="_blank" rel="noopener">Maps 길찾기</a>
+    <a class="maps" id="dlgMaps" target="_blank" rel="noopener">길찾기</a>
     <button type="button" class="ok" id="dlgOk">다음 ▼</button>
     <button type="button" id="dlgCancel" hidden>나중에</button>
   </div>
@@ -209,9 +269,9 @@ a.pill.alt{background:var(--parchment);color:var(--ink)}
 <div id="sleep"></div>
 <div id="ride"><canvas id="rideCv"></canvas></div>
 
-<div id="hint">방향키/WASD 이동 · 지도 클릭 이동 · 스페이스 = 확인/탑승/대화<br>마을 역에서 A → 목적지 선택 · 스팟에서 A → 일정 보기 · 주민 옆에서 A/스페이스 → 대화 · 하루 끝은 숙소에서</div>
+<div id="hint">방향키/WASD 이동 · 지도 클릭 이동 · 스페이스 = 확인/대화<br>마을 아래 포탈로 들어가면 다음 맵 · 역에서 A → 지하철/버스(선택) · 스팟 A → 일정 · 하루 끝은 숙소</div>
 
-<div id="toast" class="panel">주인공은 <b>규빈</b> · 뒤따라오는 파란 친구는 <b>작애</b>!<br>마을 역에서 <b>A</b> → 목적지 선택 · 스팟에서 <b>A</b> → 일정 보기 🌱</div>
+<div id="toast" class="panel">주인공은 <b>규빈</b> · 뒤따라오는 파란 친구는 <b>작애</b>!<br>마을 <b>아래 포탈</b>로 들어가면 맵 이동 · 역에서 <b>A</b>는 선택 탑승 🌱</div>
 
 <div id="pad">
   <div id="dpad">
@@ -231,48 +291,58 @@ const TILE = 16, SCALE = 3, TS = TILE * SCALE;
 const DUR = 165;
 const NPC_DUR = 420; // 주민은 한 칸을 더 천천히
 const LAST_DAY = DAYS.length - 1;
+/* 캔버스 라벨용 — UI와 같은 고딕 (픽셀 폰트는 작은 한글이 깨져 보임) */
+const FONT_UI = '"Pretendard","Apple SD Gothic Neo","Noto Sans KR",sans-serif';
 
 /* ═══ 스타듀×픽셀 팔레트 (밝은 목가) ═══ */
+/* GBA 루비/사파이어 톤 — 납작하지만 조금 밝은 3단 색. UI 팔레트(#E0E8D0 / #D4A373 / #283860)와 맞춤 */
 const PAL = {
-  grassLight: '#90c050',
-  grassDark:  '#6a9a38',
-  grassHilite:'#b8e078',
-  grassDeep:  '#4e7a28',
-  pathLight:  '#e0c888',
-  pathDark:   '#c4a868',
-  pathEdge:   '#a88848',
-  waterLight: '#58a8d0',
-  waterDark:  '#3a80a8',
-  waterHilite:'#a0d8f0',
-  stoneLight: '#d0c8b0',
-  stoneDark:  '#a09880',
-  stoneMid:   '#b8b098',
-  autumnLight:'#e8a838',
-  autumnMid:  '#d87828',
-  autumnDeep: '#b85018',
-  treeDark:   '#2e6a30',
-  treeMid:    '#3e8a40',
-  treeLight:  '#58a850',
-  treeHilite: '#88d070',
-  trunk:      '#8a5a28',
-  trunkDark:  '#5a3a18',
-  outline:    '#2a2010',
-  uiPaper:    '#fcebc4',
-  uiBorder:   '#5c3418',
-  accentRed:  '#d06038',
-  roofRed:    '#a84828',
-  roofDark:   '#6a2818',
-  wallCream:  '#f0e0b8',
-  wallShade:  '#d0b888',
-  wood:       '#8a5a28',
-  woodDark:   '#5a3a18',
-  gold:       '#e8b848',
-  winGlass:   '#3888a8',
-  winHilite:  '#b0e0f0',
-  fujiSnow:   '#f0f4f8',
-  fujiMid:    '#7890a8',
-  fujiBase:   '#486070',
-  sky:        '#7eb6d8',
+  // 포켓몬 R/S 톤: 노란기 도는 밝은 잔디 + 모래빛 길
+  grassLight: '#80c860',
+  grassDark:  '#58a848',
+  grassHilite:'#a8e078',
+  grassDeep:  '#408838',
+  pathLight:  '#e8d8a0',
+  pathDark:   '#ccb878',
+  pathEdge:   '#a08850',
+  waterLight: '#6898c0',
+  waterDark:  '#4870a0',
+  waterHilite:'#a8c8e0',
+  stoneLight: '#d0d0c0',
+  stoneDark:  '#989888',
+  stoneMid:   '#b8b8a8',
+  autumnLight:'#d8a050',
+  autumnMid:  '#c07838',
+  autumnDeep: '#985028',
+  treeDark:   '#206838',
+  treeMid:    '#389850',
+  treeLight:  '#58b860',
+  treeHilite: '#88d878',
+  trunk:      '#886038',
+  trunkDark:  '#584028',
+  outline:    '#202020',
+  uiPaper:    '#f0ece0',
+  uiBorder:   '#202020',
+  accentRed:  '#c84040',
+  roofRed:    '#c04848',
+  roofDark:   '#703030',
+  wallCream:  '#f0ece0',
+  wallShade:  '#c8c4b0',
+  wood:       '#886038',
+  woodDark:   '#584028',
+  gold:       '#d4a373',
+  navy:       '#283860',
+  navyLight:  '#4a5a88',
+  navyDeep:   '#182440',
+  martBlue:   '#3868b8',
+  martTop:    '#5888d0',
+  martBot:    '#204880',
+  winGlass:   '#4870a0',
+  winHilite:  '#a8c8e0',
+  fujiSnow:   '#f0f4f0',
+  fujiMid:    '#8090a8',
+  fujiBase:   '#506070',
+  sky:        '#88b0d0',
 };
 
 /* ═══ 시간대 (저장하지 않고 날짜 진입 시 설정) ═══ */
@@ -297,7 +367,7 @@ const START_TIME_BY_DAY = {
 };
 
 /* ═══ 저장 ═══ */
-const SAVE_KEY = 'tokyo-pixel-v4';
+const SAVE_KEY = 'tokyo-pixel-v4-test';
 let save;
 try { save = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null') || {}; } catch { save = {}; }
 save.day = Math.min(save.day || 0, LAST_DAY);
@@ -307,6 +377,11 @@ function persist() { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }
 
 /* ═══ 현재 맵 상태 (loadDay가 채움) ═══ */
 let dayIdx = 0, DAY = DAYS[0];
+// 하루 = 여러 마을(에리어). 마을 사이는 컷신으로 맵 이동. TRIG는 일정 인덱스 기준(다른 마을 스팟은 null)
+let AREAS = [], areaIdx = 0, GATE = [2, 2], arriveStop = -1;
+let portalLatch = false; // 포탈 칸에서 메뉴가 반복 뜨지 않게
+let interior = null; // { stopIdx, kind, title } — 건물 안이면 null 아님
+let outdoorsReturn = null; // 나가기 시 스폰할 스팟 인덱스
 let W = 0, H = 0, g = null, BLD = [], TRIG = [], ZONES = [], STN_LABELS = [], STATIONS = [], RAILS = [];
 let metroTrains = [];
 let blocked = new Set(), bldCache = new Map();
@@ -325,7 +400,7 @@ rideCtx.imageSmoothingEnabled = false;
 const walkable = (x, y) => {
   if (x < 1 || y < 1 || x >= W - 1 || y >= H - 1) return false;
   const t = g[y][x];
-  if (t === 3 || t === 4 || t === 6) return false;
+  if (t === 3 || t === 4 || t === 6 || t === 9) return false; // 물·나무·다리·펜스
   return !blocked.has(y * W + x) && !npcBlocked.has(y * W + x);
 };
 
@@ -335,9 +410,11 @@ function mkRect(gr, x, y, w, h, v) {
   for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++)
     if (gr[j] && gr[j][i] !== undefined) gr[j][i] = v;
 }
-function borderTrees(gr, w, h) {
-  for (let i = 0; i < w; i++) { gr[0][i] = 4; gr[h - 1][i] = 4; }
-  for (let j = 0; j < h; j++) { gr[j][0] = 4; gr[j][w - 1] = 4; }
+function borderTrees(gr, w, h, thick = 1) {
+  for (let k = 0; k < thick; k++) {
+    for (let i = 0; i < w; i++) { gr[k][i] = 4; gr[h - 1 - k][i] = 4; }
+    for (let j = 0; j < h; j++) { gr[j][k] = 4; gr[j][w - 1 - k] = 4; }
+  }
 }
 function scatter(gr, w, h, n, seed0) {
   let seed = seed0;
@@ -395,14 +472,16 @@ function styleFor(name) {
   if (/야키니쿠|토도로키|히로키야/.test(name)) return { s: 'yakiniku', w: 3, h: 3 };
   if (/스시/.test(name)) return { s: 'sushi', w: 3, h: 3 };
   if (/AFURI|라멘/.test(name)) return { s: 'ramen', w: 3, h: 3 };
-  if (/호토/.test(name)) return { s: 'hotspring', w: 3, h: 3 };
+  if (/호토/.test(name)) return { s: 'hotspring', w: 4, h: 3 };
   if (/로손/.test(name)) return { s: 'lawson', w: 3, h: 2 };
   if (/로프웨이/.test(name)) return { s: 'ropeway', w: 3, h: 4 };
   if (/버스|→/.test(name)) return { s: 'bus', w: 4, h: 2 };
   if (/후지산|일출/.test(name)) return { s: 'fuji', w: 8, h: 5 };
-  if (/Section|숙소|료칸|온천|가이세키/.test(name)) return { s: 'hotel', w: 5, h: 3 };
+  if (/Section|숙소/.test(name)) return { s: 'hotel', w: 4, h: 4 };
+  if (/료칸|온천|가이세키/.test(name)) return { s: 'hotspring', w: 5, h: 3 };
+  if (/신주쿠 쇼핑/.test(name)) return { s: 'mall', w: 5, h: 4 };
   if (/신주쿠|카와구치코/.test(name) && !/로손|로프|호토|일출|후지/.test(name)) return { s: 'station', w: 4, h: 2 };
-  return { s: 'shopR', w: 2, h: 2 };
+  return { s: 'station', w: 4, h: 2 };
 }
 
 function shortStationFallback(name) {
@@ -439,334 +518,435 @@ function stationTag(name, vk) {
   if (vk === 'bus') return /버스/.test(n) ? n : n + ' 버스';
   return /역$/.test(n) ? n : n + '역';
 }
-/** L자 선로 셀 목록 */
-function railCells(x0, y0, x1, y1) {
-  const pts = [];
-  const seen = new Set();
-  const add = (x, y) => {
-    const k = y * 4096 + x;
-    if (seen.has(k)) return;
-    seen.add(k); pts.push([x, y]);
-  };
-  let x = x0, y = y0;
-  add(x, y);
-  const sx = Math.sign(x1 - x0) || 0;
-  while (x !== x1) { x += sx; add(x, y); }
-  const sy = Math.sign(y1 - y0) || 0;
-  while (y !== y1) { y += sy; add(x, y); }
-  return pts;
+/* ═══ 에리어(마을) 분할 — 실제 0.9km 안의 스팟은 한 마을, 그 밖은 다른 마을(컷신으로 맵 이동) ═══ */
+const AREA_MERGE_KM = 0.9;
+function buildAreas(day) {
+  const areas = [];
+  day.stops.forEach((s, i) => {
+    let ai = -1;
+    if (s.lat != null) {
+      for (let k = 0; k < areas.length; k++) {
+        if (areas[k].n && haversineKm(areas[k], s) < AREA_MERGE_KM) { ai = k; break; }
+      }
+    } else if (areas.length) ai = areas.length - 1;
+    if (ai < 0) { areas.push({ stops: [], lat: s.lat ?? 0, lng: s.lng ?? 0, n: 0 }); ai = areas.length - 1; }
+    const a = areas[ai];
+    a.stops.push(i);
+    if (s.lat != null) {
+      a.lat = (a.lat * a.n + s.lat) / (a.n + 1);
+      a.lng = (a.lng * a.n + s.lng) / (a.n + 1);
+      a.n++;
+    }
+  });
+  areas.forEach((a, k) => { a.idx = k; a.name = areaName(day, a); });
+  return areas;
+}
+/** 마을 이름: via의 도착역(승차 스팟이면 출발역) → 지역 힌트 → 스팟 이름 */
+function areaName(day, area) {
+  for (const i of area.stops) {
+    const s = day.stops[i];
+    const names = extractStations(s.via);
+    if (!names.length) continue;
+    const vehicle = s.mode === 'bus' || s.mode === 'taxi';
+    return (vehicle ? names[0] : names[names.length - 1]).replace(/공항$/, '');
+  }
+  const s0 = day.stops[area.stops[0]];
+  if (/공항|하네다/.test(s0.name)) return '하네다';
+  if (/후지|카와구치코|로손|호토|온천|일출/.test(s0.name)) return '카와구치코';
+  return shortStationFallback(s0.name);
+}
+function areaOf(i) {
+  const k = AREAS.findIndex(a => a.stops.includes(i));
+  return k < 0 ? 0 : k;
+}
+/** 목적지로 가는 교통 via (목적지 via가 교통이면 그것, 직전이 승차 스팟이면 그 노선, 아니면 '') */
+function hopViaFor(destIdx) {
+  const s = DAY.stops[destIdx];
+  if (!s) return '';
+  if (isTransit(s.via, s) && !isVehicleStop(s) && s.mode !== 'bus' && s.mode !== 'taxi') return s.via;
+  const prev = DAY.stops[destIdx - 1];
+  if (prev && (prev.mode === 'bus' || prev.mode === 'taxi' || isVehicleStop(prev)) && isTransit(prev.via, prev)) return prev.via;
+  return '';
 }
 
-/** 위경도 → 타일 맵 (실측 상대 위치 유지, 플레이 가능하게 최소 간격) */
-function buildGeoMap(di) {
-  const day = DAYS[di], n = day.stops.length;
-  const proj = projectDay(day);
-  const rel = proj.stops.map(s => ({
-    x: s.km.x - proj.center.x,
-    z: s.km.z - proj.center.z
-  }));
-
-  let minX = Math.min(...rel.map(p => p.x));
-  let maxX = Math.max(...rel.map(p => p.x));
-  let minZ = Math.min(...rel.map(p => p.z));
-  let maxZ = Math.max(...rel.map(p => p.z));
-  if (maxX - minX < 0.08) { minX -= 0.2; maxX += 0.2; }
-  if (maxZ - minZ < 0.08) { minZ -= 0.2; maxZ += 0.2; }
-
-  const spanX = maxX - minX, spanZ = maxZ - minZ;
-  // 포켓몬 마을·스타듀 타운처럼 한 화면에 밀도가 느껴지도록 압축
-  const inner = Math.max(26, Math.min(40, Math.round(day.layoutSpan || 34)));
-  const pad = 5;
-  const w = inner + pad * 2, h = inner + pad * 2;
-  const scale = inner / Math.max(spanX, spanZ);
-
-  const pts = rel.map(p => ({
-    x: pad + (p.x - minX) * scale,
-    y: pad + (p.z - minZ) * scale
-  }));
-
-  // 스팟이 겹치지 않을 정도만 벌림 — 넓은 들판이 되지 않게
-  const minGap = 6;
-  for (let iter = 0; iter < 80; iter++) {
-    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
-      let dx = pts[j].x - pts[i].x, dy = pts[j].y - pts[i].y;
-      let d = Math.hypot(dx, dy) || 0.01;
-      if (d < minGap) {
-        const push = (minGap - d) * 0.55;
-        dx /= d; dy /= d;
-        pts[i].x -= dx * push; pts[i].y -= dy * push;
-        pts[j].x += dx * push; pts[j].y += dy * push;
-      }
-    }
-  }
+/** 마을 맵 — 포켓몬식 소도시: 2겹 나무 울타리 · 아래 마을 입구(광장+역) · 큰길과 가지길 · 집 · 꽃밭 · 풀숲 · 펜스 */
+function buildAreaMap(di, ai) {
+  const day = DAYS[di], area = AREAS[ai], idxs = area.stops, n = idxs.length;
+  const all = day.stops;
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-  const spots = pts.map(p => ({
-    x: clamp(Math.round(p.x), pad, w - pad - 1),
-    y: clamp(Math.round(p.y), pad, h - pad - 1)
-  }));
-  // 같은 좌표(숙소 출발·복귀 등)는 살짝 벌려 트리거가 겹치지 않게
-  for (let i = 0; i < n; i++) {
-    for (let j = 0; j < i; j++) {
-      if (spots[i].x !== spots[j].x || spots[i].y !== spots[j].y) continue;
-      const dx = (i % 2 === 0 ? 1 : -1) * (2 + (i % 3));
-      const dy = (i % 2 === 0 ? -1 : 1) * (2 + ((i + 1) % 3));
-      spots[i].x = clamp(spots[j].x + dx, pad, w - pad - 1);
-      spots[i].y = clamp(spots[j].y + dy, pad, h - pad - 1);
+
+  // ── 스팟 배치: 포켓몬 마을처럼 큰길 하나 + 양옆 레인.
+  //    북쪽(실측) 스팟이 큰길 끝(위)에, 나머지는 북→남 순서로 6행 간격, 동/서는 실측 방향 그대로 ──
+  const proj = projectDay(day);
+  const order = [...idxs.keys()].sort((a, b) => proj.stops[idxs[a]].km.z - proj.stops[idxs[b]].km.z);
+  const xs = idxs.map(i => proj.stops[i].km.x);
+  const medX = xs.slice().sort((a, b) => a - b)[xs.length >> 1];
+  const fujiHere = day.theme === 'fuji' && area.lat < 35.6;
+  const w = 34, gx = w >> 1;
+  const maxH = Math.max(...idxs.map(i => styleFor(all[i].name).h));
+  const yTop = Math.max(fujiHere ? 12 : 7, maxH + 3); // 후지산 자리(위쪽 2~6행)·높은 건물 여유
+  const rowGap = Math.max(6, maxH + 3);
+  const h = yTop + (n - 1) * rowGap + 12; // 마지막 스팟 아래 역·광장·게이트·울타리
+  const spots = new Array(n);
+  order.forEach((k, r) => {
+    let x = gx;
+    if (r > 0) {
+      let side = xs[k] >= medX ? 1 : -1;
+      if (xs[k] === medX && n > 2) side = r % 2 ? 1 : -1;
+      x = gx + side * 8;
     }
-  }
-  // 반올림 후에도 최소 타일 간격 유지
-  for (let iter = 0; iter < 40; iter++) {
-    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
-      let dx = spots[j].x - spots[i].x, dy = spots[j].y - spots[i].y;
-      let d = Math.hypot(dx, dy) || 0.01;
-      if (d < 5) {
-        const push = Math.ceil((5 - d) / 2);
-        const sx = Math.sign(dx) || (i % 2 ? 1 : -1);
-        const sy = Math.sign(dy) || (j % 2 ? 1 : -1);
-        spots[i].x = clamp(spots[i].x - sx * push, pad, w - pad - 1);
-        spots[i].y = clamp(spots[i].y - sy * push, pad, h - pad - 1);
-        spots[j].x = clamp(spots[j].x + sx * push, pad, w - pad - 1);
-        spots[j].y = clamp(spots[j].y + sy * push, pad, h - pad - 1);
-      }
-    }
-  }
+    spots[k] = { x, y: yTop + r * rowGap };
+  });
 
   const gr = grid(w, h);
-  // 마을 큰길처럼 조금 더 두껍게
-  const pave = (x0, y0, x1, y1) => {
-    const mx = x0;
-    mkRect(gr, Math.min(x0, mx), y0, Math.abs(mx - x0) + 1, 3, 1);
-    mkRect(gr, mx, Math.min(y0, y1), 3, Math.abs(y1 - y0) + 1, 1);
-    mkRect(gr, Math.min(mx, x1), y1, Math.abs(x1 - mx) + 1, 3, 1);
-  };
+  const bld = [], trig = new Array(all.length).fill(null), stns = [], lbl = [], zones = [], rails = [];
+  const trigList = () => trig.filter(Boolean);
   const paintedWater = new Map();
   const paintWater = (x0, y0, ww, hh) => {
     for (let j = y0; j < y0 + hh; j++) for (let i = x0; i < x0 + ww; i++) {
       if (!gr[j] || gr[j][i] === undefined) continue;
-      if (gr[j][i] === 1 || gr[j][i] === 2) continue; // 도로는 유지
+      if (gr[j][i] === 1 || gr[j][i] === 2) continue;
+      if (bld.some(b => covers(b, i, j))) continue;
       gr[j][i] = 3;
       paintedWater.set(j * w + i, { x: i, y: j, w: 1, h: 1 });
     }
   };
   const covers = (b, tx, ty) => tx >= b.x && tx < b.x + b.w && ty >= b.y && ty < b.y + b.h;
   const placeBld = (bx, by, bw, bh, s) => {
-    let x = clamp(bx, 1, w - bw - 1);
-    let y = clamp(by, 1, h - bh - 1);
-    const b = { x, y, w: bw, h: bh, s };
-    // 트리거와 겹치면 위/아래로 밀어냄
+    const b = { x: clamp(bx, 2, w - bw - 2), y: clamp(by, 2, h - bh - 2), w: bw, h: bh, s };
     for (let guard = 0; guard < 8; guard++) {
-      const hit = trig.find(([tx, ty]) => covers(b, tx, ty));
+      const hit = trigList().find(([tx, ty]) => covers(b, tx, ty));
       if (!hit) break;
-      const [tx, ty] = hit;
-      if (ty - bh >= 1) b.y = ty - bh;
-      else b.y = clamp(ty + 1, 1, h - bh - 1);
-      b.x = clamp(b.x, 1, w - bw - 1);
+      const [, ty] = hit;
+      b.y = ty - bh >= 2 ? ty - bh : clamp(ty + 1, 2, h - bh - 2);
     }
     bld.push(b);
     return b;
   };
 
-  for (let i = 0; i < n; i++) {
-    const { x, y } = spots[i];
-    mkRect(gr, x - 1, y - 1, 3, 3, 2);
-    if (i > 0) pave(spots[i - 1].x, spots[i - 1].y, x, y);
-  }
+  // ── 입구: 아래쪽 중앙 게이트 + 돌 광장 + 스폰 ──
+  const plazaY = h - 7;                       // 광장 y 범위 plazaY .. h-3
+  mkRect(gr, gx - 6, plazaY, 13, 5, 2);
+  const spawn = [gx, h - 4];
+  spots.forEach((p, k) => { trig[idxs[k]] = [p.x, p.y]; });
 
-  const bld = [], trig = [], stns = [], lbl = [], zones = [], rails = [];
-  day.stops.forEach((s, i) => {
-    const { x, y } = spots[i];
-    trig.push([x, y]);
+  // ── 길: 광장에서 위로 뻗는 큰길(3칸) + 각 스팟으로 가지길(2칸) + 스팟끼리 순서대로 ──
+  const road = (x0, y0, x1, y1) => {
+    mkRect(gr, x0, Math.min(y0, y1), 2, Math.abs(y1 - y0) + 1, 1);
+    mkRect(gr, Math.min(x0, x1), y1, Math.abs(x1 - x0) + 2, 2, 1);
+  };
+  const topY = Math.min(...spots.map(p => p.y));
+  mkRect(gr, gx - 1, topY, 3, plazaY - topY + 1, 1);
+  spots.forEach(p => { if (p.x !== gx) road(gx, p.y, p.x, p.y); });
+  spots.forEach(p => mkRect(gr, p.x - 1, p.y - 1, 3, 3, 2));
+
+  // ── 일정 건물: 문이 발판 바로 위 ──
+  idxs.forEach((i, k) => {
+    const { x, y } = spots[k];
+    const st = styleFor(all[i].name);
+    placeBld(x - (st.w >> 1), Math.max(2, y - st.h), st.w, st.h, st.s);
   });
 
-  // 스팟 건물 배치
-  day.stops.forEach((s, i) => {
-    const { x, y } = spots[i];
-    const st = styleFor(s.name);
-    let by = y - st.h;
-    if (by < 2) by = y + 2;
-    const bx = x - (st.w >> 1);
-    placeBld(bx, by, st.w, st.h, st.s);
+  // ── 마을 역(정류장): 광장 왼쪽 위 — 이 마을에서 다른 마을로 가는 모든 일정이 노선 ──
+  const kinds = all.filter(s => isTransit(s.via, s)).map(s => vehicleKind(extractLine(s.via)));
+  const vk = kinds.length && kinds.every(k => k === 'bus') ? 'bus' : kinds.length && kinds.every(k => k === 'taxi') ? 'taxi' : 'metro';
+  const sw = vk === 'metro' ? 4 : 3, sh = vk === 'metro' ? 3 : 2;
+  const hall = placeBld(gx - 6, plazaY - sh, sw, sh, vk === 'bus' ? 'busStop' : vk === 'taxi' ? 'taxiStand' : 'station');
+  hall.name = area.name; hall.vKind = vk; hall.lines = [];
+  hall.routes = [];
+  all.forEach((s, j) => {
+    if (idxs.includes(j)) return;
+    const via = hopViaFor(j);
+    const line = via ? extractLine(via) : '도보';
+    hall.routes.push({ toStop: j, toName: shortStationFallback(s.name), line, fromStop: idxs[0], kind: via ? vehicleKind(line) : 'walk' });
   });
+  stns.push(hall);
+  lbl.push([hall.x + hall.w / 2, hall.y - 0.45, area.name + (vk === 'metro' ? '역' : vk === 'bus' ? ' 버스' : ' 택시')]);
+  // 역 앞 짧은 안내선(장식 차량)
+  const rx = hall.x + (hall.w >> 1);
+  rails.push({ cells: [[rx, plazaY], [rx, plazaY + 1], [rx, plazaY + 2], [rx, plazaY + 3]], line: vk, color: lineColor(vk === 'bus' ? '버스' : vk === 'taxi' ? '택시' : ''), kind: vk, from: area.name, to: '' });
 
-  // ── 하루 1개 허브 역: 시작 스팟 근처, 갈 수 있는 교통 일정을 모두 등록 ──
-  const hops = [];
-  day.stops.forEach((s, i) => {
-    if (i === 0) return;
-    if (isVehicleStop(s)) return;
+  // ── 광장 오른쪽: 꽃밭 + 펜스 (마을 표지판 자리) ──
+  mkRect(gr, gx + 3, plazaY, 4, 2, 5);
+  mkRect(gr, gx + 2, plazaY - 1, 6, 1, 9);
+  mkRect(gr, gx + 7, plazaY, 1, 2, 9);
 
-    let fromStop = i - 1;
-    let useVia = isTransit(s.via, s) ? s.via
-      : ((day.stops[i - 1].mode === 'bus' || day.stops[i - 1].mode === 'taxi') ? day.stops[i - 1].via : s.via);
-    if (isVehicleStop(day.stops[i - 1]) && i >= 2) {
-      fromStop = i - 2;
-      useVia = day.stops[i - 1].via || s.via || useVia;
-    }
-    const longHop = haversineKm(day.stops[fromStop], s) >= 3;
-    if (!(isTransit(useVia, s) || (longHop && isTransit(useVia, day.stops[fromStop])))) return;
-    const names = extractStations(useVia);
-    const fromName = names[0] || shortStationFallback(day.stops[fromStop].name);
-    const toName = names.length > 1 ? names[names.length - 1] : (names[0] || shortStationFallback(s.name));
-    const line = extractLine(useVia);
-    const vk = vehicleKind(line);
-    hops.push({ from: fromName, to: toName, line, toStop: i, fromStop, kind: vk });
-  });
+  // 건물 후보 자리가 비어 있는지(잔디만, 길·발판·다른 건물 없음)
+  const blockedAt = (bx, by, bw, bh) => {
+    for (const b of bld) if (bx < b.x + b.w + 1 && bx + bw + 1 > b.x && by < b.y + b.h + 1 && by + bh + 1 > b.y) return true;
+    for (const [tx, ty] of trigList()) if (tx >= bx - 1 && tx < bx + bw + 1 && ty >= by - 1 && ty < by + bh + 2) return true;
+    for (let j = by; j < by + bh; j++) for (let i = bx; i < bx + bw; i++) if (!gr[j] || gr[j][i] === undefined || gr[j][i] !== 0) return true;
+    return false;
+  };
+  const stopNames = idxs.map(i => all[i].name).join(' ');
 
-  if (hops.length) {
-    const kinds = hops.map(h => h.kind);
-    const vk = kinds.every(k => k === 'bus') ? 'bus'
-      : kinds.every(k => k === 'taxi') ? 'taxi' : 'metro';
-    const hubName = (() => {
-      const region = (day.region.split(/[·→]/)[0] || '').trim();
-      if (region && region.length <= 6) return region;
-      return shortStationFallback(day.stops[0].name) || '마을';
-    })();
-
-    let hall = null;
-    if (vk === 'taxi') {
-      const taxiBld = bld.find(b => b.s === 'taxi' || b.s === 'taxiStand');
-      if (taxiBld) hall = taxiBld;
-    }
-    if (!hall) {
-      const sp0 = spots[0];
-      let ax = clamp(sp0.x + 4, pad, w - pad - 5);
-      let ay = clamp(sp0.y - 5, pad, h - pad - 4);
-      for (let guard = 0; guard < 24; guard++) {
-        let hit = spots.some(sp => Math.hypot(ax + 2 - sp.x, ay + 1.5 - sp.y) < 5);
-        if (!hit) break;
-        ax = clamp(ax + ((guard & 1) ? 2 : -2), pad, w - pad - 5);
-        ay = clamp(ay + ((guard & 2) ? 2 : -2), pad, h - pad - 4);
-      }
-      const style = vk === 'bus' ? 'busStop' : vk === 'taxi' ? 'taxiStand' : 'station';
-      hall = placeBld(ax, ay, vk === 'metro' ? 4 : 3, vk === 'metro' ? 3 : 2, style);
-      mkRect(gr, hall.x, hall.y + hall.h, hall.w, 2, 2);
-      // 허브만 라벨
-      if (vk === 'metro') lbl.push([hall.x + hall.w / 2, hall.y - 0.45, hubName + '역']);
-      else if (vk === 'bus') lbl.push([hall.x + hall.w / 2, hall.y - 0.45, hubName + ' 버스']);
-    } else {
-      mkRect(gr, hall.x, hall.y + hall.h, hall.w, 2, 2);
-    }
-    hall.name = hubName;
-    hall.routes = [];
-    hall.lines = new Set();
-    hall.vKind = vk;
-    stns.push(hall);
-
-    // 허브 → 스팟 짧은 보도 + 장식용 안내선(역↔역 복수 선로 없음)
-    const hubDoor = [hall.x + (hall.w >> 1), hall.y + hall.h];
-    mkRect(gr, Math.min(spots[0].x, hubDoor[0]), Math.min(spots[0].y, hubDoor[1]), 1, Math.abs(spots[0].y - hubDoor[1]) + 1, 1);
-    mkRect(gr, Math.min(spots[0].x, hubDoor[0]), hubDoor[1], Math.abs(spots[0].x - hubDoor[0]) + 1, 1, 1);
-
-    const seenDest = new Set();
-    for (const hop of hops) {
-      if (seenDest.has(hop.toStop)) continue;
-      seenDest.add(hop.toStop);
-      hall.routes.push({
-        toStop: hop.toStop, toName: hop.to, line: hop.line,
-        fromStop: hop.fromStop, kind: hop.kind
-      });
-      hall.lines.add(hop.line);
-    }
-    hall.lines = [...hall.lines];
-    // 허브 앞 짧은 안내선 1개만 (여러 역↔역 선로 대신)
-    const tip = spots[hops[0].toStop] || spots[0];
-    const short = railCells(hubDoor[0], hubDoor[1], tip.x, tip.y).slice(0, 5);
-    if (short.length >= 2) {
-      rails.push({
-        cells: short, line: hops[0].line, color: lineColor(hops[0].line),
-        kind: vk, from: hubName, to: hops[0].to,
-        fromPos: hubDoor, toPos: [tip.x, tip.y]
-      });
+  // ── 랜드마크 (자리가 비어 있을 때만) ──
+  if (fujiHere && !bld.some(b => b.s === 'fuji')) placeBld(gx - 4, 2, 8, 5, 'fuji');
+  if (day.theme === 'odaiba' && /오다이바|조이폴리스|아쿠아시티/.test(stopNames)) {
+    for (const [wx, wy] of [[w - 11, 3], [w - 8, plazaY - 8], [3, plazaY - 8], [3, 3]]) {
+      if (blockedAt(wx, wy, 5, 6)) continue;
+      placeBld(wx, wy, 5, 6, 'wheel'); break;
     }
   }
-
-  // 포켓몬식 중간 건물 — 길 옆에 촘촘히, 들판 랜덤 배치는 최소
-  {
-    let seed = 91 + di * 17;
-    const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
-    const styles = ['house', 'houseB', 'shopR', 'shopG', 'house'];
-    const blocked = (bx, by, bw, bh) => {
-      for (const b of bld) {
-        if (bx < b.x + b.w + 1 && bx + bw + 1 > b.x && by < b.y + b.h + 1 && by + bh + 1 > b.y) return true;
-      }
-      for (const [tx, ty] of trig) {
-        if (tx >= bx - 1 && tx < bx + bw + 1 && ty >= by - 1 && ty < by + bh + 1) return true;
-      }
-      return false;
-    };
-    const tryPlace = (bx, by, style) => {
-      bx = clamp(bx | 0, 2, w - 4); by = clamp(by | 0, 2, h - 4);
-      if (blocked(bx, by, 2, 2)) return;
-      if (gr[by] && (gr[by][bx] === 3 || gr[by][bx] === 4)) return;
-      placeBld(bx, by, 2, 2, style);
-    };
-    for (let i = 1; i < n; i++) {
-      const path = railCells(spots[i - 1].x, spots[i - 1].y, spots[i].x, spots[i].y);
-      for (let k = 4; k < path.length - 4; k += 5) {
-        const [px, py] = path[k];
-        const side = (k + i) % 2 ? 1 : -1;
-        tryPlace(px + side * 2, py - 2, styles[(k + i) % styles.length]);
-        if (rnd() < 0.3) tryPlace(px - side * 2, py + 1, styles[(k + 2) % styles.length]);
-      }
-    }
-    for (let t = 0; t < 6; t++) {
-      const bx = 3 + (rnd() * (w - 8)) | 0;
-      const by = 3 + (rnd() * (h - 8)) | 0;
-      if (gr[by] && gr[by][bx] !== 0) continue;
-      tryPlace(bx, by, styles[t % styles.length]);
-    }
-  }
-
-  if (day.landmark === 'fuji' || day.theme === 'fuji') {
-    placeBld((w >> 1) - 4, 1, 8, 5, 'fuji');
-    paintWater(2, h - 5, w - 4, 3);
-  }
-  if (day.theme === 'odaiba' || day.landmark === 'wheel') {
-    paintWater(1, h - 4, w - 2, 3);
-    placeBld(w - 8, h - 10, 5, 6, 'wheel');
-  }
-  if (day.theme === 'asakusa') {
-    paintWater(w - 5, 2, 3, h - 8);
-  }
-  if (day.landmark === 'pagoda' && !bld.some(b => b.s === 'pagoda')) {
+  if (day.theme === 'asakusa' && /센소지|몬자|스즈키/.test(stopNames)) {
     const t = bld.find(b => b.s === 'temple');
-    if (t) placeBld(t.x - 3, t.y, 3, 4, 'pagoda');
+    if (t && !blockedAt(t.x - 3, t.y, 3, 4)) placeBld(t.x - 3, t.y, 3, 4, 'pagoda');
   }
-  if (day.landmark === 'tower' && !bld.some(b => b.s === 'tower')) {
-    placeBld((w >> 1) - 1, 2, 3, 6, 'tower');
-  }
+  if (day.landmark === 'tower' && /모리|시티뷰|히로키야/.test(stopNames) && !bld.some(b => b.s === 'tower') && !blockedAt(3, 2, 3, 6)) placeBld(3, 2, 3, 6, 'tower');
+  // 물: 후지 호수(오른쪽) · 오다이바 바다 / 아사쿠사 스미다강 (오른쪽 띠) — 길·발판은 덮지 않음
+  if (fujiHere) paintWater(w - 6, plazaY - 8, 4, 6);
+  if (day.theme === 'odaiba' && /오다이바|조이폴리스|아쿠아시티/.test(stopNames)) paintWater(w - 5, 3, 3, plazaY - 8);
+  if (day.theme === 'asakusa' && /센소지|몬자|스즈키/.test(stopNames)) paintWater(w - 5, 3, 3, plazaY - 8);
 
-  // 트리거·도로 위 나무/물 제거 후 발판 재포장
-  for (let i = 0; i < n; i++) {
-    const { x, y } = spots[i];
-    mkRect(gr, x - 1, y - 1, 3, 3, 2);
-    if (i > 0) pave(spots[i - 1].x, spots[i - 1].y, x, y);
-  }
-  // 건물이 트리거를 덮으면 최종 한 번 더 밀어냄
-  for (const [tx, ty] of trig) {
-    for (const b of bld) {
-      if (!covers(b, tx, ty)) continue;
-      if (ty - b.h >= 1) b.y = ty - b.h;
-      else b.y = clamp(ty + 1, 1, h - b.h - 1);
-      b.x = clamp(b.x, 1, w - b.w - 1);
+  // ── 장식 집: 큰길 양옆 + 빈 잔디 ──
+  {
+    let seed = 91 + di * 17 + ai * 5;
+    const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+    const styles = ['house', 'houseB', 'shopR', 'house', 'shopG', 'houseB'];
+    let si = 0;
+    const tryHouse = (bx, by) => {
+      bx |= 0; by |= 0;
+      if (bx < 2 || by < 2 || bx + 3 > w - 2 || by + 3 > plazaY - 1) return false;
+      if (blockedAt(bx, by, 3, 3)) return false;
+      const b = placeBld(bx, by, 3, 3, styles[si++ % styles.length]);
+      // 집 앞 작은 꽃밭 or 문 앞 길
+      const fy = b.y + b.h;
+      if (gr[fy] && gr[fy][b.x + 1] === 0) { gr[fy][b.x + 1] = 1; }
+      if (rnd() < 0.6 && gr[fy] && gr[fy][b.x] === 0) gr[fy][b.x] = 5;
+      if (rnd() < 0.6 && gr[fy] && gr[fy][b.x + 2] === 0) gr[fy][b.x + 2] = 5;
+      return true;
+    };
+    for (let y = topY; y < plazaY - 4; y += 5) {
+      tryHouse(gx - 6, y); tryHouse(gx + 4, y);
     }
+    for (let t = 0; t < 14; t++) tryHouse(3 + rnd() * (w - 9), 3 + rnd() * (plazaY - 9));
   }
 
-  const regionLabel = (day.region.split(/[·→]/)[0] || day.jp).trim();
-  zones.push([regionLabel, spots[0]?.x ?? (w >> 1), Math.max(3, (spots[0]?.y ?? 8) - 4)]);
+  // ── 풀숲(위 모서리) · 물 · 랜드마크 ──
+  const grassPatch = (x0, y0, ww, hh) => {
+    for (let j = y0; j < y0 + hh; j++) for (let i = x0; i < x0 + ww; i++) if (gr[j] && gr[j][i] === 0) gr[j][i] = 8;
+  };
+  grassPatch(2, 2, 5, 4); grassPatch(w - 7, 2, 5, 4);
 
-  borderTrees(gr, w, h);
-  scatter(gr, w, h, 16, 13 + di);
-  // 스폰/트리거 발판은 나무에 덮이지 않게
-  for (const [x, y] of trig) mkRect(gr, x - 1, y - 1, 3, 3, 2);
-  for (let i = 1; i < n; i++) pave(spots[i - 1].x, spots[i - 1].y, spots[i].x, spots[i].y);
+  // ── 울타리 나무 2겹 + 아래 게이트 + 흩뿌린 나무/꽃 ──
+  borderTrees(gr, w, h, 2);
+  scatter(gr, w, h, 12, 13 + di * 3 + ai);
+  mkRect(gr, gx - 1, h - 3, 3, 3, 1); // 게이트 통로
+  // 발판·길은 나무에 덮이지 않게
+  spots.forEach(p => mkRect(gr, p.x - 1, p.y - 1, 3, 3, 2));
+  mkRect(gr, gx - 1, topY, 3, plazaY - topY + 1, 1);
+  spots.forEach(p => { if (p.x !== gx) road(gx, p.y, p.x, p.y); });
+  // Preserve each landmark doorstep and the return-spawn tile after decoration/water.
+  spots.forEach(p => mkRect(gr, p.x - 1, p.y, 3, 2, 1));
+  mkRect(gr, gx - 6, plazaY, 13, 5, 2);
+  mkRect(gr, gx + 3, plazaY, 4, 2, 5);
+
+  zones.push([area.name, gx, Math.max(2.6, topY - maxH - 1.3)]); // 큰길 끝 건물 위 마을 이름
 
   return {
     W: w, H: h, g: gr, BLD: bld, TRIG: trig, ZONES: zones,
     STN_LABELS: lbl, STATIONS: stns, RAILS: rails,
-    // 최종 도로·발판으로 덮인 물 칸은 반짝임에서도 제외한다.
-    waterTiles: [...paintedWater.values()].filter(tile => gr[tile.y][tile.x] === 3),
-    spawn: [trig[0][0], trig[0][1]]
+    waterTiles: [...paintedWater.values()].filter(t => gr[t.y][t.x] === 3),
+    spawn, gate: [gx, h - 2], area: ai
   };
+}
+
+/** 건물 내부 입장 가능 여부 — 공원·해변·택시 등은 제외 */
+function interiorKind(name) {
+  const theme = interiorTheme(name);
+  if (!theme) return null;
+  if (theme === 'haneda') return 'airport';
+  if (['sectionL', 'ryokan'].includes(theme)) return 'hotel';
+  if (['planets', 'mori'].includes(theme)) return 'museum';
+  if (['sensoji', 'gajoen'].includes(theme)) return 'temple';
+  if (['monja', 'matcha', 'yakiniku', 'sushi', 'afuri'].includes(theme)) return 'restaurant';
+  if (['cityview', 'ropeway'].includes(theme)) return 'tower';
+  if (theme === 'joypolis') return 'arcade';
+  return 'shop';
+}
+
+/** 일정 명칭만 분류한다. 교통/공원은 실내를 만들지 않는다. */
+function interiorTheme(name = '') {
+  if (/택시|버스|→|↔|공원|해변|해안|황거|러닝|일출/.test(name)) return null;
+  if (/로손/.test(name)) return 'lawson';
+  if (/로프웨이/.test(name)) return 'ropeway';
+  if (/후지산/.test(name)) return null;
+  if (/하네다|공항/.test(name)) return 'haneda';
+  if (/료칸|온천|가이세키|호토/.test(name)) return 'ryokan';
+  if (/Section|숙소/i.test(name)) return 'sectionL';
+  if (/센소지|나카미세/.test(name)) return 'sensoji';
+  if (/몬자/.test(name)) return 'monja';
+  if (/스즈키|말차|젤라토/.test(name)) return 'matcha';
+  if (/아메요코/.test(name)) return 'ameyoko';
+  if (/아키하바라/.test(name)) return 'akihabara';
+  if (/야키니쿠|토도로키|히로키야/.test(name)) return 'yakiniku';
+  if (/teamLab|플래닛/i.test(name)) return 'planets';
+  if (/아쿠아시티/.test(name)) return 'aquacity';
+  if (/조이폴리스/.test(name)) return 'joypolis';
+  if (/스시/.test(name)) return 'sushi';
+  if (/가조엔/.test(name)) return 'gajoen';
+  if (/AFURI|라멘/i.test(name)) return 'afuri';
+  if (/모리미술관/.test(name)) return 'mori';
+  if (/시티뷰/.test(name)) return 'cityview';
+  if (/신주쿠.*쇼핑/.test(name)) return 'shinjuku';
+  return null;
+}
+
+/** 단층 26×18 오마주 룸. 실제 평면/사진/공식 게임 자산을 복제하지 않는다. */
+function buildInteriorMap(kind, stop) {
+  const theme = interiorTheme(stop.name);
+  // 실내용 도트 바닥. atlas의 야외 0..9는 그대로 보존한다.
+  // 10 목재 / 11 크림 러그 / 12 홍색 러그 / 13 어두운 홀 / 14 다다미 / 15 청색 러그.
+  if (atlas.width < 16 * 16) {
+    const old = document.createElement('canvas'); old.width = atlas.width; old.height = atlas.height;
+    old.getContext('2d').drawImage(atlas, 0, 0);
+    atlas.width = 16 * 16;
+    const a = atlas.getContext('2d'); a.drawImage(old, 0, 0);
+    const colors = [['#a67850','#765439','#c89868'],['#dfccb0','#b29a7c','#f5e8ce'],['#a84d50','#70343c','#d38b73'],['#292e47','#1c2037','#424966'],['#b8b783','#818962','#d8cda0'],['#628ba4','#3d617f','#9ac2cf']];
+    colors.forEach(([base, edge, light], i) => {
+      for (let frame = 0; frame < 2; frame++) {
+        const x = (10+i)*16, y=frame*16;
+        a.fillStyle=base; a.fillRect(x,y,16,16);
+        a.fillStyle=edge;
+        if(i===0){a.fillRect(x,y+7,16,1);a.fillRect(x,y+15,16,1);a.fillRect(x+5,y,1,7);a.fillRect(x+11,y+8,1,7);}
+        else if(i===4){a.fillRect(x,y,1,16);a.fillRect(x+15,y,1,16);for(let j=2;j<16;j+=3)a.fillRect(x+2,y+j,12,1);}
+        else {a.fillRect(x,y+15,16,1);a.fillRect(x+15,y,1,16);}
+        a.fillStyle=light; a.fillRect(x+2,y+2,1,1);a.fillRect(x+10,y+10,1,1);
+      }
+    });
+  }
+  const w = 26, h = 18, gx = 12;
+  const gr = grid(w,h), bld = [], zones = [], lbl = [], paintedWater = [];
+  borderTrees(gr,w,h,2);
+  const dark = ['planets','joypolis','yakiniku'].includes(theme);
+  const wood = ['sectionL','monja','matcha','sushi','afuri','ryokan','gajoen','sensoji'].includes(theme);
+  const base = dark ? 13 : wood ? 10 : 2;
+  const rug = ['sensoji','gajoen','yakiniku','haneda'].includes(theme) ? 12 : ['ryokan','matcha'].includes(theme) ? 14 : ['planets','joypolis','lawson','aquacity','cityview','ropeway'].includes(theme) ? 15 : 11;
+  mkRect(gr,2,2,22,14,base);
+  const floor = (x,y,ww,hh,t=rug) => mkRect(gr,x,y,ww,hh,t);
+  const p = (x,y,ww,hh,s) => { bld.push({x,y,w:ww,h:hh,s,theme}); };
+  const one = (x,y,s) => p(x,y,1,1,s);
+  const row = (xs,y,s,ww=2,hh=2) => xs.forEach(x=>p(x,y,ww,hh,s));
+  const zone = (text,x,y) => lbl.push([x,y,text]);
+  const pool = (x,y,ww,hh) => { floor(x,y,ww,hh,3); for(let j=y;j<y+hh;j++)for(let i=x;i<x+ww;i++)paintedWater.push({x:i,y:j,w:1,h:1}); };
+  // 3칸 입구 + 십자/고리 통로. 시그니처 존의 바닥이 회색 공백으로 남지 않는다.
+  floor(3,3,8,10); floor(15,3,8,10); floor(11,2,3,14); floor(2,5,22,2);floor(2,9,22,2);floor(2,13,22,2);
+  const title = (stop.name||'').replace(/\s*·.*/, '').slice(0,12);
+  zones.push([title,gx,1.3]);
+  // 공개 페이지의 시그니처를 소품/색/존으로 번역. 아래 배치는 창작이며 영업 정보가 아니다.
+  if (theme === 'haneda') {
+    // https://tokyo-haneda.com/en/faq/facilities.html : 터미널 서비스/카운터/수하물. 유리+빨간 대기는 무드 연출.
+    row([3,7,15,19],2,'window',3,1); row([3,7,15,19],3,'counter',3,2);
+    row([3,6,9],7,'locker',2,2); row([16,20],7,'bench',3,1);
+    row([3,7,16,20],11,'bench',3,1); one(22,8,'vending');one(14,7,'exhibit');
+    zone('체크인',6,2.7);zone('로커',6,6.6);zone('게이트',19,6.6);
+  } else if(theme === 'sectionL') {
+    // https://section-l.co/hatchobori : 구비 주방/세탁/소파베드/상주 스태프 → 프런트·주방·객실.
+    p(3,3,5,2,'reception');p(9,3,2,2,'shelf');p(15,3,3,2,'sink');p(20,3,2,2,'fridge');
+    row([3,7],7,'sofa',3,1);p(4,11,2,2,'table');one(3,11,'chair');one(7,11,'chair');
+    row([15,19],7,'bed',3,2);row([15,19],11,'bed',3,2);one(10,11,'vending');one(22,3,'machine');
+    zone('프런트',6,2.6);zone('라운지',6,6.6);zone('객실·주방',19,2.6);
+  } else if(theme === 'sensoji') {
+    // https://www.japan.travel/en/spot/1691 : 본당/큰 붉은 초롱/나카미세 상점/오미쿠지.
+    p(9,2,8,3,'altar');row([3,21],3,'pillar',2,2);row([3,8,16,21],7,'stall',2,2);
+    row([3,8,16,21],11,'stall',2,2);row([5,19],3,'lantern',1,2);
+    one(6,8,'lantern');one(19,8,'lantern');one(6,12,'flower');one(19,12,'flower');
+    zone('본당',13,2);zone('나카미세',6,6.6);zone('오미쿠지',19,10.6);
+  } else if(theme === 'planets') {
+    // https://www.teamlab.art/e/planets : 물·잉어/무한 크리스탈/플라워/맨발 입장 → 신발 로커.
+    floor(3,3,8,10,13);floor(15,3,8,10,13);pool(3,3,7,2);pool(3,7,3,2);
+    row([15,18,21],3,'crystal',2,2);row([15,18,21],7,'crystal',2,2);
+    row([3,6,9],11,'flower',2,2);row([15,18,21],11,'flower',2,2);
+    p(8,7,2,2,'exhibit');row([3,6,19,22],14,'locker',1,1);one(10,3,'neon');one(14,3,'neon');
+    zone('워터',6,2.6);zone('크리스탈',19,2.6);zone('플라워',6,10.6);zone('신발',20,13.6);
+  } else if(theme === 'gajoen') {
+    // https://www.daisuki-nippon.net (Hotel Gajoen Tokyo) : 정원·폭포·잉어 + 장식 천장/계단 인상을 전시·꽃으로 번역.
+    p(8,2,10,3,'altar');row([3,21],3,'pillar',2,2);pool(4,7,4,2);
+    row([8,16,20],7,'flower',2,2);row([3,7,16,20],11,'flower',2,2);
+    row([9,18],11,'lamp',1,2);row([3,21],9,'lantern',1,1);p(16,14,5,1,'bench');
+    zone('본관',13,2);zone('수정원',5,6.6);zone('화원',19,10.6);
+  } else if(theme === 'mori') {
+    // https://www.mori.art.museum/en/ : 현대미술 전시/타워 상층/컬렉션 → 흰 전시섬+엘리베이터 홀.
+    row([3,8,15,20],3,'exhibit',3,2);row([3,8,15,20],7,'exhibit',3,2);
+    p(3,11,4,2,'counter');row([16,20],11,'window',2,2);p(8,11,3,1,'bench');
+    row([3,8,16,21],2,'window',2,1);one(22,14,'exhibit');
+    zone('상설 전시',6,2.6);zone('기획 전시',18,6.6);zone('승강기 홀',19,10.6);
+  } else if(theme === 'cityview') {
+    // https://art-view.roppongihills.com/en/info : 전망 덱/52층/전시 → 유리 벨트·전망석·안내 전시.
+    row([3,6,9,15,18,21],2,'window',2,2);row([3,7,16,20],7,'bench',3,1);
+    row([3,7],11,'exhibit',3,2);row([16,19,22],11,'locker',1,2);p(16,14,5,1,'bench');
+    one(10,7,'exhibit');one(14,7,'exhibit');
+    zone('전망 덱',6,2);zone('파노라마',19,6.6);zone('안내·로커',19,10.6);
+  } else if(theme === 'ropeway') {
+    // https://www.mtfujiropeway.jp/en : 곤돌라 창/3열 승강 대기/전망/산정 찻집.
+    row([3,7,16,20],2,'window',3,1);row([3,7,16,20],3,'exhibit',3,2);
+    row([3,7,16,20],7,'bench',3,1);p(3,11,4,2,'counter');p(8,11,2,2,'stall');
+    row([16,19,22],11,'locker',1,2);one(22,8,'vending');one(10,8,'exhibit');
+    zone('곤돌라',6,2.6);zone('승강장',19,6.6);zone('산정 찻집',6,10.6);
+  } else if(theme === 'ryokan') {
+    // https://www.fufukawaguchiko.jp/en : 후지 조망/목재/온천/식사. 특정 숙소 복원이 아닌 료칸 장르 오마주.
+    floor(3,3,8,10,14);floor(15,3,8,10,14);p(3,3,5,2,'reception');p(9,3,2,2,'locker');
+    pool(16,3,6,2);row([15,19],7,'bed',3,2);row([3,7],7,'table',3,2);
+    row([3,7],11,'table',3,2);row([15,19],11,'sofa',3,1);row([3,7],10,'chair',1,1);
+    one(22,7,'lamp');one(10,11,'lantern');one(15,3,'plant');
+    zone('로비',6,2.6);zone('온천',19,2.6);zone(/호토/.test(stop.name)?'호토 식당':'가이세키',6,6.6);zone('객실',19,6.6);
+  } else if(theme === 'joypolis') {
+    // https://tokyo-joypolis.com/language/english/attraction/index.html : 라이브/레이싱/체감 게임 → 네온+기계섬+티켓.
+    p(3,3,5,2,'counter');row([9,16,19,22],3,'machine',1,2);row([3,6,9,16,19,22],7,'machine',2,2);
+    row([3,6,9,16,19],11,'machine',2,2);p(22,11,1,2,'locker');row([3,10,16,22],2,'neon',1,1);
+    zone('티켓',6,2.6);zone('레이싱',6,6.6);zone('리듬·체감',19,10.6);
+  } else if(theme === 'lawson') {
+    // 편의점 장르 오마주: 파란 밴드/냉장 벽/진열 섬/L자 계산대. 특정 매장 평면을 복원하지 않는다.
+    row([3,6,9,16,19,22],3,'fridge',2,2);row([3,7,16,20],7,'shelf',3,2);
+    row([3,7],11,'shelf',3,2);p(16,11,5,1,'counter');p(20,12,1,2,'counter');
+    one(22,11,'vending');one(22,13,'machine');row([3,7,16,20],2,'window',2,1);p(22,2,2,1,'window');
+    zone('냉장',6,2.6);zone('진열',6,6.6);zone('계산',18,10.6);
+  } else if(theme === 'akihabara') {
+    // https://www.gotokyo.org/en/spot/55/index.html : 컴퓨터/게임/피규어/전문점 밀도.
+    row([3,7,16,20],3,'shelf',3,2);row([3,7],7,'exhibit',3,2);row([16,19,22],7,'machine',1,2);
+    row([3,7],11,'shelf',3,2);p(16,11,5,2,'counter');row([3,10,16,22],2,'neon',1,1);
+    row([16,19,22],14,'exhibit',1,1);zone('전기·부품',6,2.6);zone('피규어',6,6.6);zone('게임',19,6.6);
+  } else if(theme === 'ameyoko') {
+    // https://en.japantravel.com/tokyo/ameyoko-1/2611 : 생선/과자/건물/노점 → 양쪽 차양과 밀집 상품.
+    row([3,7,16,20],3,'stall',3,2);row([3,7,16,20],7,'stall',3,2);row([3,7,16,20],11,'shelf',3,2);
+    row([3,10,16,22],2,'lantern',1,1);one(10,14,'fridge');one(16,14,'bench');
+    zone('시장 골목',6,2.6);zone('먹거리',19,6.6);zone('과자·잡화',6,10.6);
+  } else if(['aquacity','shinjuku'].includes(theme)) {
+    // Aquacity: 쇼핑/식당/바다 전망. Shinjuku: 패션/델리/백화점의 층별 상품을 단층 존으로.
+    // https://www.aquacity.jp.e.yp.hp.transer.com/foodcourt/ (빛·녹음·편안한 푸드코트) ; https://www.shinjukustation.com/odakyu-department-store
+    row([3,7,16,20],3,theme==='aquacity'?'window':'exhibit',3,2);
+    row([3,7],7,'stall',3,2);row([16,20],7,'shelf',3,2);row([3,7],11,'exhibit',3,2);
+    p(16,11,5,2,'counter');row([3,7,16,20],14,'bench',2,1);one(10,3,'exhibit');one(22,11,'vending');
+    zone(theme==='aquacity'?'베이 윈도':'패션',6,2.6);zone('숍',6,6.6);zone(theme==='aquacity'?'푸드 홀':'델리',19,10.6);
+  } else if(theme === 'matcha') {
+    // https://matcha-jp.com/en/1632 : 7단계 말차 젤라토/초록 배너/찻잎/다구.
+    row([3,6,9],3,'fridge',2,2);p(16,3,5,2,'counter');row([16,20],7,'shelf',3,2);
+    row([3,7],7,'table',3,2);row([3,7],11,'table',3,2);row([3,7],10,'chair',1,1);
+    row([16,20],11,'exhibit',2,2);row([3,9,16,22],2,'plant',1,1);
+    zone('말차 1~7',6,2.6);zone('찻잎·다구',19,6.6);zone('티 라운지',6,10.6);
+  } else {
+    // 식당은 좌석/작업대와 소품까지 장르별로 다르게. 빈 테이블 템플릿이 아니다.
+    // Monja: https://celiaintokyo.wordpress.com/2018/10/19/delicious-japanese-dishes-monjayaki (테이블 철판/주걱/그릇)
+    // Yakiniku: https://hirokiya-group.com (목재/네온/라이브 카운터/개별 좌석)
+    // AFURI: https://locally.matcha-jp.com/en/24927 (유자/세련된 공간/식기), Sushi는 흰 목재 카운터 장르 오마주.
+    const sushi = theme==='sushi', ramen = theme==='afuri', bbq = theme==='yakiniku';
+    p(3,3,sushi?8:5,2,sushi?'sushiCase':'counter');p(16,3,3,2,'sink');p(21,3,2,2,'fridge');
+    if(!sushi)p(9,3,2,2,bbq?'neon':ramen?'vending':'grill');
+    else p(4,2,6,1,'window');
+    row([3,7,16,20],7,(sushi||ramen)?'table':'grill',3,2);
+    row([3,7,16,20],11,'table',3,2);
+    row([3,7,16,20],10,'chair',1,1);row([3,7,16,20],14,'chair',1,1);
+    row([3,10,16,22],2,bbq?'neon':ramen?'lamp':'lantern',1,1);
+    zone(sushi?'스시 카운터':ramen?'유자·주방':'카운터',6,2.6);zone(bbq?'불판 홀':theme==='monja'?'철판 홀':'식사 홀',6,6.6);zone('안쪽 좌석',19,10.6);
+  }
+  // 작은 벽 장식은 통로를 자르지 않는 자리만 사용. 가장자리까지 읽히는 밀도.
+  [[2,6],[23,6],[2,10],[23,10],[2,14],[23,14]].forEach(([x,y],i)=>{
+    if(!bld.some(b=>x>=b.x&&x<b.x+b.w&&y>=b.y&&y<b.y+b.h))one(x,y,i%2?'lamp':'plant');
+  });
+  // 남쪽 세 칸은 가구/물과 무관하게 마지막에 재확보. 중앙 줄은 모든 주요 존과 연결.
+  floor(11,13,3,5,rug);
+  const spawn=[gx,14], gate=[gx,16];
+  return {W:w,H:h,g:gr,BLD:bld,TRIG:new Array(DAY.stops.length).fill(null),ZONES:zones,STN_LABELS:lbl,STATIONS:[],RAILS:[],waterTiles:paintedWater.filter(t=>gr[t.y][t.x]===3),spawn,gate,area:areaIdx,theme};
 }
 
 /* ═══ 일차별 주민 — 화면의 DAY 번호 기준, stop은 일정의 0 기반 인덱스 ═══ */
@@ -1435,39 +1615,36 @@ const MAPQ_BY_DAY = {
 
 /* ═══ 픽셀 아틀라스 ═══ */
 const atlas = document.createElement('canvas');
-atlas.width = 16 * 8; atlas.height = 32;
+atlas.width = 16 * 10; atlas.height = 32; // 0 잔디 1 길 2 돌 3 물 4(나무 충돌) 5 꽃 6 다리 7 철로 8 풀숲 9 펜스
 {
   const a = atlas.getContext('2d');
   const px = (f, c, x, y, w, h, col) => { a.fillStyle = col; a.fillRect(c * 16 + x, f * 16 + y, w, h); };
   for (let f = 0; f < 2; f++) {
-    // 0 잔디 — 격자 십자·물결 + 하이라이트/그림자 가장자리
+    // 0 잔디 — GBA(R/S)식: 납작한 바탕 + 짧은 풀 대시 (프레임마다 1px 지터)
     px(f, 0, 0, 0, 16, 16, PAL.grassLight);
-    px(f, 0, 0, 0, 16, 1, PAL.grassHilite); px(f, 0, 0, 0, 1, 16, PAL.grassHilite);
-    px(f, 0, 0, 15, 16, 1, PAL.grassDark); px(f, 0, 15, 0, 1, 16, PAL.grassDark);
-    // 규칙 격자 무늬 (십자 + 짧은 물결), 프레임마다 미세 지터
     const j = f ? 1 : 0;
-    [[2,3],[2,11],[8,2],[8,10],[14,4],[14,12]].forEach(([x,y]) => {
-      px(f, 0, x, y + j, 1, 1, PAL.grassDark);
-      px(f, 0, x - 1, y + 1 + j, 3, 1, PAL.grassDark);
+    [[2,4],[9,3],[5,10],[12,11]].forEach(([x,y]) => {
+      px(f, 0, x, y + j, 3, 1, PAL.grassDark);
+      px(f, 0, x + 1, y + j - 1, 1, 1, PAL.grassDark);
     });
-    [[5,6],[5,14],[11,5],[11,13]].forEach(([x,y]) => {
-      px(f, 0, x, y - j, 2, 1, PAL.grassDeep);
-    });
-    [[4,4],[10,8],[3,12]].forEach(([x,y]) => px(f, 0, x + j, y, 1, 1, PAL.grassHilite));
+    [[7,7],[13,6],[1,13]].forEach(([x,y]) => px(f, 0, x, y, 2, 1, PAL.grassDeep));
+    px(f, 0, 3, 13, 1, 1, PAL.grassHilite); px(f, 0, 11, 1, 1, 1, PAL.grassHilite);
 
-    // 1 흙길 — 가장자리 명암 + 점무늬
+    // 1 포장길 — GBA식 밝은 바닥 + 2단 가장자리(중간/어두움) + 줄눈
     px(f, 1, 0, 0, 16, 16, PAL.pathLight);
-    px(f, 1, 0, 0, 16, 1, '#e0d4b0'); px(f, 1, 0, 0, 1, 16, '#e0d4b0');
-    px(f, 1, 0, 15, 16, 1, PAL.pathEdge); px(f, 1, 15, 0, 1, 16, PAL.pathEdge);
-    [[3,4],[10,8],[6,13],[13,2],[1,10],[8,5]].forEach(([x,y]) => px(f, 1, x, y, 2, 1, PAL.pathDark));
-    [[5,7],[12,11]].forEach(([x,y]) => px(f, 1, x, y, 1, 1, PAL.pathEdge));
+    px(f, 1, 0, 0, 16, 1, '#f4ecd4'); px(f, 1, 0, 0, 1, 16, '#f4ecd4');   // 좌상 하이라이트
+    px(f, 1, 0, 14, 16, 1, PAL.pathDark); px(f, 1, 14, 0, 1, 16, PAL.pathDark); // 1단
+    px(f, 1, 0, 15, 16, 1, PAL.pathEdge); px(f, 1, 15, 0, 1, 16, PAL.pathEdge); // 2단
+    px(f, 1, 0, 7, 14, 1, PAL.pathDark);                                    // 줄눈
+    [[3,3],[10,10]].forEach(([x,y]) => px(f, 1, x, y, 2, 1, PAL.pathDark));
 
-    // 2 포장 — 하이라이트/그림자 + 줄눈
+    // 2 포장 — 석재 블록 (2×2 줄눈, 좌상 하이라이트)
     px(f, 2, 0, 0, 16, 16, PAL.stoneLight);
-    px(f, 2, 0, 0, 16, 1, '#d4cebc'); px(f, 2, 0, 0, 1, 16, '#d4cebc');
+    px(f, 2, 0, 0, 16, 1, '#e8e8e0'); px(f, 2, 0, 0, 1, 16, '#e8e8e0');
     px(f, 2, 0, 15, 16, 1, PAL.stoneDark); px(f, 2, 15, 0, 1, 16, PAL.stoneDark);
     px(f, 2, 0, 7, 16, 1, PAL.stoneMid);
-    px(f, 2, 7, 0, 1, 16, PAL.stoneMid);
+    px(f, 2, 7, 0, 1, 8, PAL.stoneMid);
+    px(f, 2, 3, 8, 1, 8, PAL.stoneMid); px(f, 2, 11, 8, 1, 8, PAL.stoneMid);
 
     // 3 물 — 사선 줄무늬가 대각선으로 흐름 (f=0/1)
     px(f, 3, 0, 0, 16, 16, PAL.waterDark);
@@ -1491,13 +1668,11 @@ atlas.width = 16 * 8; atlas.height = 32;
     px(f, 5, 3, 4, 3, 3, PAL.accentRed); px(f, 5, 4, 5, 1, 1, '#fff8e8');
     px(f, 5, 10, 9, 3, 3, PAL.gold); px(f, 5, 11, 10, 1, 1, '#fff8e8');
 
-    // 6 다리
+    // 6 다리 — 나무 판자 (납작)
     px(f, 6, 0, 0, 16, 16, PAL.grassLight);
-    px(f, 6, 5, 1, 6, 14, PAL.accentRed);
-    px(f, 6, 9, 1, 2, 14, '#8a2820');
-    px(f, 6, 4, 0, 8, 2, '#702818');
-    px(f, 6, 4, 13, 8, 3, '#703018');
-    px(f, 6, 5, 1, 6, 1, '#c85848');
+    px(f, 6, 4, 0, 8, 16, PAL.wood);
+    px(f, 6, 4, 0, 1, 16, PAL.woodDark); px(f, 6, 11, 0, 1, 16, PAL.woodDark);
+    px(f, 6, 4, 5, 8, 1, PAL.woodDark); px(f, 6, 4, 10, 8, 1, PAL.woodDark);
 
     // 7 철로
     px(f, 7, 0, 0, 16, 16, PAL.grassLight);
@@ -1507,6 +1682,29 @@ atlas.width = 16 * 8; atlas.height = 32;
     for (let x = 0; x < 16; x += 4) px(f, 7, x + 1, 3, 2, 10, PAL.trunk);
     px(f, 7, 0, 4, 16, 2, '#5a5e66'); px(f, 7, 0, 4, 16, 1, '#8a8e96');
     px(f, 7, 0, 10, 16, 2, '#5a5e66'); px(f, 7, 0, 10, 16, 1, '#8a8e96');
+
+    // 8 풀숲 — R/S 야생 풀: 잔디 위에 큼직한 V자 풀 다발 3개 (프레임마다 살짝 흔들림)
+    px(f, 8, 0, 0, 16, 16, PAL.grassLight);
+    const sway = f ? 1 : 0;
+    [[1, 2], [8, 1], [4, 9], [11, 8]].forEach(([x, y]) => {
+      px(f, 8, x, y + 3, 5, 3, PAL.grassDark);          // 몸통
+      px(f, 8, x, y + 1 + sway, 1, 3, PAL.grassDark);   // 왼 잎
+      px(f, 8, x + 4, y + 1 - sway, 1, 3, PAL.grassDark);
+      px(f, 8, x + 2, y, 1, 4, PAL.grassDeep);          // 가운데 잎
+      px(f, 8, x + 1, y + 5, 3, 1, PAL.grassDeep);
+      px(f, 8, x + 1, y + 3, 1, 1, PAL.grassHilite);
+    });
+
+    // 9 펜스 — 흰 울타리(기둥 2 + 가로대 2), 잔디 바탕
+    px(f, 9, 0, 0, 16, 16, PAL.grassLight);
+    px(f, 9, 0, 6, 16, 2, '#f4f0e0'); px(f, 9, 0, 8, 16, 1, '#b8b0a0');
+    px(f, 9, 0, 11, 16, 2, '#f4f0e0'); px(f, 9, 0, 13, 16, 1, '#b8b0a0');
+    [2, 11].forEach(x => {
+      px(f, 9, x, 3, 3, 12, '#f4f0e0');
+      px(f, 9, x + 2, 3, 1, 12, '#b8b0a0');
+      px(f, 9, x + 1, 2, 1, 1, '#f4f0e0');
+      px(f, 9, x, 15, 3, 1, '#6a6050');
+    });
   }
 }
 
@@ -1516,7 +1714,7 @@ function renderTree(q, x, y, variant = 0) {
     q.fillStyle = col;
     q.fillRect((x + dx) | 0, (y + dy) | 0, w, h);
   };
-  const autumn = variant < 7; // 10종 중 7종은 단풍, 3종은 초록
+  const autumn = variant < 3; // 10종 중 3종만 단풍 — 포켓몬식 초록 울타리 나무가 기본
   const dark = autumn ? PAL.autumnDeep : PAL.treeDark;
   const mid = autumn ? PAL.autumnMid : PAL.treeMid;
   const light = autumn ? PAL.autumnLight : PAL.treeHilite;
@@ -1527,18 +1725,20 @@ function renderTree(q, x, y, variant = 0) {
       r(cx - half, cy + dy, half * 2 + 1, 1, col);
     }
   };
-  r(6, 10, 3, 6, PAL.trunk);
-  r(6, 10, 1, 6, PAL.trunkDark);
+  // R/S식 둥근 나무: 어두운 외곽 덩어리 → 중간색 몸통(좌상 치우침) → 좌상 하이라이트 → 우하 그림자
+  r(6, 11, 3, 5, PAL.trunk);
+  r(6, 11, 1, 5, PAL.trunkDark);
+  r(4, 15, 8, 1, PAL.trunkDark); // 밑그림자
   const lift = variant % 2;
-  blob(7, 6, 5, dark);
-  blob(4, 8 - lift, 4, dark);
-  blob(11, 8, 4, dark);
-  blob(7 + lift, 4, 4, mid);
-  blob(4, 6 - lift, 3, mid);
-  blob(11, 6, 3, mid);
-  blob(6, 3, 2, light);
-  r(3, 5, 2, 1, light);
-  r(10, 5 + variant % 3, 2, 1, light);
+  blob(7, 8, 6, dark);
+  blob(4, 9 - lift, 3, dark);
+  blob(11, 9, 3, dark);
+  blob(6 + lift, 6, 4, mid);
+  blob(10, 8, 2, mid);
+  blob(5 + lift, 4, 2, light);
+  r(3, 6 - lift, 1, 1, light);
+  // 우하단 어두운 그림자 라인
+  r(9, 12, 3, 1, dark); r(11, 11, 2, 1, dark);
 }
 
 // 작은 투명 스프라이트를 재사용해 매 프레임 나무를 다시 만들지 않는다.
@@ -1556,294 +1756,422 @@ function renderBld(b) {
   const q = c.getContext('2d');
   const r = (x, y, w, h, col) => { q.fillStyle = col; q.fillRect(x | 0, y | 0, w | 0, h | 0); };
   const WPX = c.width, HPX = c.height;
-
-  /** 지붕 3단: 정상 하이라이트 / 본색 / 처마 그림자 */
+  // ── GBA(루비/사파이어)식 2.5D 파츠 ──
+  // 지붕 비중 35~50% · 윗면(밝)/경사(본색)/처마(어두움) 3단 · 벽 정면+오른쪽 옆면 · 지붕 오버행.
+  // DS급 텍스처/그라데이션은 넣지 않는다.
+  const darken = (hex, k) => {
+    const n = parseInt(hex.slice(1), 16);
+    const f = v => Math.max(0, Math.min(255, Math.round(v * k)));
+    return `#${((f(n >> 16) << 16) | (f((n >> 8) & 255) << 8) | f(n & 255)).toString(16).padStart(6, '0')}`;
+  };
+  /** 지붕(평/완경사): 윗면(밝) → 경사(본색) → 처마(어두움) + 두꺼운 오른쪽 옆면 */
   const roofBand = (x, y, w, h, mid, top, bot) => {
+    const edge = bot || darken(mid, .48);
+    const hilite = top || darken(mid, 1.35);
     r(x, y, w, h, mid);
-    if (h >= 2) r(x, y, w, 1, top || '#a85848');
-    if (h >= 3) r(x, y + h - 1, w, 1, bot || PAL.roofDark);
+    const topH = Math.max(3, Math.round(h * 0.42));
+    r(x, y, w, topH, hilite);
+    r(x, y, w, 1, darken(hilite, 1.1));
+    if (h >= 8) r(x + 1, y + topH + ((h - topH) >> 1), Math.max(1, w - 2), 1, darken(mid, .82));
+    // 오른쪽 두께 — 화면에서 바로 보이도록 4~7px
+    if (w > 6 && h > 3) {
+      const side = Math.min(7, Math.max(4, (w / 6) | 0));
+      r(x + w - side, y + 1, side, h - 1, edge);
+      r(x + w - side, y + 1, 1, h - 1, darken(edge, .75));
+    }
+    if (h >= 4) {
+      r(x, y + h - 3, w, 3, edge);
+      for (let col = 1; col < w - 3; col += 4) r(x + col, y + h - 3, 2, 1, mid);
+    }
   };
-  /** 벽면 + 아래 30% 어두운 밴드 + 좌상 하이라이트 */
+  /** 박공 지붕: 좌 밝은 면 / 우 본색 + 용마루 + 두꺼운 오른쪽 옆면 + 처마 */
+  const gableRoof = (x, y, w, h, mid, top, bot) => {
+    const edge = bot || darken(mid, .48);
+    const hilite = top || darken(mid, 1.35);
+    for (let i = 0; i < h; i++) {
+      const inset = Math.round((h - 1 - i) * (w / 2) / h);
+      const rw = w - inset * 2;
+      if (rw <= 0) continue;
+      const half = (rw / 2) | 0;
+      r(x + inset, y + i, half, 1, hilite);
+      r(x + inset + half, y + i, rw - half, 1, mid);
+      if (i === 0) r(x + inset + half - 1, y, 2, 1, darken(hilite, 1.1));
+      // 오른쪽 옆면 두께 3px
+      if (i >= 1 && i < h - 1) r(x + w - inset - 3, y + i, 3, 1, edge);
+    }
+    r(x, y + h - 3, w, 3, edge);
+    for (let col = 1; col < w - 3; col += 4) r(x + col, y + h - 3, 2, 1, mid);
+  };
+  /** 벽: 처마 그림자 + 정면 + 두꺼운 오른쪽 옆면 + 왼쪽 하이라이트 + 바닥 그림자 */
   const wallFace = (x, y, w, h, base, shade) => {
+    const sh = shade || darken(base, .78);
+    const deep = darken(sh, .8);
     r(x, y, w, h, base);
-    const sh = Math.max(2, (h * .3) | 0);
-    r(x, y + h - sh, w, sh, shade || PAL.wallShade);
-    r(x, y, w, 1, '#f4ead4');
-    r(x, y, 1, h, '#f0e6d0');
-    r(x + w - 1, y, 1, h, shade || PAL.wallShade);
+    // 옆면 4~7px — 2×2 집에서도 보이도록
+    const side = Math.min(7, Math.max(4, (w / 5) | 0));
+    if (w > 8) {
+      r(x + w - side, y, side, h, sh);
+      r(x + w - side, y, 1, h, deep);
+    }
+    r(x, y, w, 2, sh);                       // 처마 그림자 두껍게
+    r(x, y + 2, 2, h - 2, darken(base, 1.08)); // 왼쪽 하이라이트
+    r(x, y + h - 3, w, 3, sh);
+    r(x, y + h - 1, w, 1, deep);
   };
-  /** 작은 창문 (점형) + 유리 하이라이트 1px */
+  /** 창문: 프레임 + 유리 + 창틀 그림자 (밤엔 불) */
   const win = (x, y, w = 3, h = 3) => {
     const lit = TIME_TINTS[currentTime].ambient < 0.7;
-    r(x, y, w, h, lit ? '#f8d878' : PAL.winGlass);
-    r(x, y, 1, 1, lit ? '#fff4c0' : PAL.winHilite);
+    r(x - 1, y - 1, w + 2, h + 2, '#686860'); // 프레임
+    r(x, y, w, h, lit ? '#e8c060' : PAL.winGlass);
+    r(x, y, 1, Math.min(2, h), lit ? '#f8e8a0' : PAL.winHilite);
+    r(x, y + h - 1, w, 1, lit ? '#c89840' : '#385878'); // 하단
+    if (w >= 5) r(x + ((w / 2) | 0), y, 1, h, '#f0ece0'); // 세로 창살
   };
+  /** 문: 문틀 + 문짝 + 손잡이 */
+  const door = (x, y, w, h, col = PAL.woodDark) => {
+    r(x - 1, y - 1, w + 2, h + 1, '#504838');
+    r(x, y, w, h, col);
+    r(x, y, w, 1, '#786850');
+    if (w >= 4) r(x + w - 2, y + ((h / 2) | 0), 1, 2, PAL.gold); // 손잡이
+  };
+  /** 차양: 윗면 밝게 + 아래 그림자 + 줄무늬 */
   const awning = (c1, y0, hh) => {
-    for (let i = 0; i < WPX; i += 5) r(i, y0, 5, hh, (i / 5) % 2 ? PAL.uiPaper : c1);
-    r(0, y0 + hh - 1, WPX, 1, PAL.outline); // 처마 그림자
+    for (let i = 0; i < WPX; i += 4) r(i, y0, 4, hh, (i / 4) % 2 ? PAL.wallCream : c1);
+    r(0, y0, WPX, 1, '#fff0d0');
+    r(0, y0 + hh - 2, WPX, 1, 'rgba(40,24,16,.25)');
+    r(0, y0 + hh - 1, WPX, 1, PAL.outline);
   };
+  /** 간판: 검정 테두리 1px + 단색 + 하단 그림자 */
+  const sign = (x, y, w, h, col) => {
+    r(x - 1, y - 1, w + 2, h + 2, PAL.outline);
+    r(x, y, w, h, col);
+    r(x, y, w, 1, '#fff8e8');
+    r(x, y + h, w, 1, 'rgba(0,0,0,.2)');
+  };
+  /** 포켓몬마트풍: 파란 지붕 + 흰 벽 + 큰 간판 띠 + 옆면 */
+  const martBody = (roof = PAL.martBlue, top = PAL.martTop, bot = PAL.martBot) => {
+    const roofH = Math.max(14, Math.round(HPX * 0.5));
+    wallFace(5, roofH - 2, WPX - 10, HPX - roofH + 2, '#f8f8f0', '#c0c0b8');
+    roofBand(0, 0, WPX, roofH, roof, top, bot);
+    // 지붕 아래 흰 간판 띠 (마트 시그니처)
+    r(2, roofH - 1, WPX - 4, 5, '#f0f4f8');
+    r(3, roofH, WPX - 6, 3, roof);
+    win(5, roofH + 7, 6, 6);
+    door(WPX - 14, HPX - 12, 9, 12, '#284868');
+  };
+  const TILE_DARK = PAL.roofDark, TILE_TOP = '#8a5040', TILE_BOT = '#3a2818';
 
   if (b.s === 'temple') {
-    wallFace(0, 28, WPX, HPX - 28, PAL.wallCream, '#c4b090');
-    for (let i = 4; i < WPX; i += 10) r(i, 28, 2, HPX - 30, PAL.wood); // 촘촘한 목재
-    r(56, 36, 16, HPX - 38, PAL.woodDark);
-    r(60, 30, 8, 4, PAL.gold);
-    roofBand(8, 8, 112, 12, PAL.roofRed, '#a85848', PAL.roofDark);
-    roofBand(0, 20, WPX, 9, PAL.roofRed, '#a85848', PAL.roofDark);
-    r(58, 2, 12, 7, PAL.gold);
-    r(58, 2, 12, 1, '#e0c050');
+    // 사원 (R/S 비율): 벽은 아래 40%, 기와 2단이 넓게 오버행
+    wallFace(6, 30, WPX - 12, HPX - 30, PAL.wallCream, PAL.wallShade);
+    for (let i = 10; i < WPX - 8; i += 12) r(i, 32, 2, HPX - 34, PAL.wood);
+    door(WPX / 2 - 8, HPX - 20, 16, 20);
+    roofBand(10, 6, WPX - 20, 14, TILE_DARK, TILE_TOP, TILE_BOT);
+    roofBand(0, 20, WPX, 12, TILE_DARK, TILE_TOP, TILE_BOT);
+    r(WPX / 2 - 6, 0, 12, 7, PAL.gold);
+    r(WPX / 2 - 6, 0, 12, 2, '#e8c890');
   } else if (b.s === 'pagoda') {
+    // 탑: 4층 층단 — 기와가 벽보다 넓게, 위로 갈수록 좁게
     for (let i = 0; i < 4; i++) {
       const y0 = i * 14 + 6;
-      roofBand(4, y0, 40, 6, PAL.roofRed, '#a85848', PAL.roofDark);
-      wallFace(12, y0 + 6, 24, 8, PAL.wallCream, '#c4b090');
-      for (let x = 14; x < 34; x += 5) r(x, y0 + 7, 1, 6, PAL.wood);
-      win(18, y0 + 8, 3, 3); win(27, y0 + 8, 3, 3);
+      const shrink = (3 - i) * 2;
+      wallFace(12 + shrink, y0 + 5, WPX - 24 - shrink * 2, 9, PAL.wallCream, PAL.wallShade);
+      roofBand(2 + shrink, y0, WPX - 4 - shrink * 2, 7, TILE_DARK, TILE_TOP, TILE_BOT);
+      win(18 + shrink, y0 + 9, 3, 3); win(WPX - 21 - shrink, y0 + 9, 3, 3);
     }
-    r(21, 0, 6, 7, PAL.gold);
-    r(21, 0, 6, 1, '#e0c050');
+    r(WPX / 2 - 3, 0, 6, 7, PAL.gold);
   } else if (b.s === 'shopR' || b.s === 'shopG') {
-    awning(b.s === 'shopR' ? '#a83838' : '#3a7848', 0, 10);
-    wallFace(0, 10, WPX, HPX - 10, '#e0d4b8', '#c0b090');
-    win(5, 16, 4, 5);
-    r(20, 16, 8, 16, PAL.woodDark);
-    r(20, 16, 8, 1, '#6a5040');
+    // 마트풍 상점: 파란 지붕 + 간판 색으로만 구분
+    martBody();
+    sign(3, 3, WPX - 6, 4, b.s === 'shopR' ? PAL.accentRed : PAL.gold);
   } else if (b.s === 'house' || b.s === 'houseB') {
-    const roof = b.s === 'house' ? '#a84848' : '#3a6898';
-    wallFace(2, 12, WPX - 4, HPX - 12, '#e8dcc0', '#c8bca0');
-    roofBand(0, 4, WPX, 10, roof, '#c86868', '#683030');
-    win(8, 16, 5, 5); win(WPX - 14, 16, 5, 5);
-    r(WPX / 2 - 4, HPX - 10, 8, 10, PAL.woodDark);
+    // R/S식 주택: 지붕이 높이의 ~50%, 벽보다 넓게 오버행, 옆면 확실히 보이게
+    // 지붕색은 R/S 마을처럼 집마다 다르게(빨강/파랑/주황/초록) — 위치 기반 고정
+    const ROOFS = b.s === 'house'
+      ? [[PAL.roofRed, '#e88888', PAL.roofDark], ['#d88040', '#f0b070', '#804820']]
+      : [['#4878b0', '#98c0e8', '#203858'], ['#489060', '#88c890', '#204830']];
+    const [rm, rt, rb] = ROOFS[(b.x + b.y) % 2];
+    const roofH = Math.max(14, Math.round(HPX * 0.5));
+    wallFace(5, roofH - 2, WPX - 10, HPX - roofH + 2, PAL.wallCream, PAL.wallShade);
+    gableRoof(0, 0, WPX, roofH, rm, rt, rb);
+    // 굴뚝
+    r(WPX - 12, 3, 4, Math.max(5, roofH * 0.45), '#8a6a58');
+    r(WPX - 12, 3, 4, 1, '#b09080'); r(WPX - 9, 3, 1, Math.max(5, roofH * 0.45), '#5a4038');
+    win(7, roofH + 2, 5, 5); win(WPX - 14, roofH + 2, 5, 5);
+    door(WPX / 2 - 4, HPX - 10, 8, 10);
+    // 문 앞 발판
+    r(WPX / 2 - 6, HPX - 2, 12, 2, PAL.pathLight);
   } else if (b.s === 'busStop') {
-    wallFace(0, 8, WPX, HPX - 8, '#f0f0f0', '#d0d0d0');
-    roofBand(0, 0, WPX, 8, '#c84838', '#e06050', '#902828');
-    r(2, 2, WPX - 4, 4, '#f0d848');
-    win(6, 12, 5, 5); win(WPX - 14, 12, 5, 5);
-    r(WPX / 2 - 5, HPX - 10, 10, 10, '#384048');
+    const roofH = Math.round(HPX * 0.38);
+    wallFace(2, roofH - 2, WPX - 4, HPX - roofH + 2, '#e8e8e0', '#c0c0b8');
+    roofBand(0, 0, WPX, roofH, PAL.accentRed, '#e06860', '#902828');
+    sign(3, 2, WPX - 6, 4, PAL.gold);
+    win(5, roofH + 2, 5, 5); win(WPX - 11, roofH + 2, 5, 5);
+    door(WPX / 2 - 5, HPX - 10, 10, 10, '#384048');
   } else if (b.s === 'taxiStand') {
-    wallFace(0, 8, WPX, HPX - 8, '#f8f0d0', '#d8d0b0');
-    roofBand(0, 0, WPX, 8, '#d8b838', '#e8c858', '#a88828');
-    r(WPX / 2 - 5, 1, 10, 5, '#282828');
-    r(WPX / 2 - 3, 2, 6, 3, '#f0d848');
-    win(6, 12, 5, 5); win(WPX - 14, 12, 5, 5);
-    r(WPX / 2 - 5, HPX - 10, 10, 10, '#384048');
-  } else if (b.s === 'monja') {
-    awning('#c89838', 0, 10);
-    wallFace(0, 10, WPX, HPX - 10, '#dccfb0', '#bca888');
-    r(16, 18, 16, 13, PAL.accentRed);
-    r(16, 18, 16, 1, '#c85848');
-    r(20, 18, 2, 10, PAL.uiPaper); r(26, 18, 2, 10, PAL.uiPaper);
-    r(4, 16, 8, 8, '#e8e0d0');
-    r(6, 18, 4, 4, '#c89030');
-    r(6, 18, 1, 1, '#e8c060');
-  } else if (b.s === 'matcha') {
-    awning('#3a7848', 0, 10);
-    wallFace(0, 10, WPX, HPX - 10, PAL.uiPaper, '#c8b898');
-    r(6, 15, 12, 16, '#e8e0d0');
-    r(9, 17, 6, 7, '#3a8050'); r(10, 15, 4, 3, '#58a068');
-    r(9, 24, 6, 5, '#c09848');
-    r(28, 18, 12, 13, PAL.woodDark);
+    const roofH = Math.round(HPX * 0.38);
+    wallFace(2, roofH - 2, WPX - 4, HPX - roofH + 2, PAL.wallCream, PAL.wallShade);
+    roofBand(0, 0, WPX, roofH, PAL.gold, '#e8c890', '#a87848');
+    r(WPX / 2 - 5, 1, 10, 5, '#282828'); r(WPX / 2 - 3, 2, 6, 3, '#f0d848');
+    win(5, roofH + 2, 5, 5); win(WPX - 11, roofH + 2, 5, 5);
+    door(WPX / 2 - 5, HPX - 10, 10, 10, '#384048');
+  } else if (['monja', 'matcha', 'sushi', 'ramen', 'yakiniku', 'hoto'].includes(b.s)) {
+    const col = { monja: PAL.accentRed, matcha: '#488850', sushi: PAL.navy, ramen: '#d08040', yakiniku: '#584038', hoto: '#987048' }[b.s];
+    const traditional = b.s === 'sushi' || b.s === 'hoto';
+    const roofY = b.s === 'matcha' ? 12 : 7, roofH = traditional ? 18 : 13;
+    wallFace(4, roofY + roofH - 2, WPX - 8, HPX - roofY - roofH + 2, PAL.wallCream, PAL.wallShade);
+    if (traditional) gableRoof(0, roofY, WPX, roofH, col);
+    else roofBand(1, roofY, WPX - 2, roofH, col);
+    if (b.s === 'matcha') { // large tea scoop / cone roof sign
+      r(9, 1, 10, 4, '#80b868'); r(7, 5, 14, 5, '#488850'); r(11, 10, 6, 7, PAL.gold);
+      awning('#488850', roofY + roofH, 5);
+    } else if (b.s === 'yakiniku') {
+      r(WPX - 12, 0, 6, 15, PAL.stoneDark); r(WPX - 14, 0, 10, 3, PAL.stoneLight);
+      r(7, roofY + roofH + 2, 7, 11, PAL.accentRed); r(9, roofY + roofH + 3, 2, 8, PAL.gold);
+    } else if (b.s === 'ramen' || b.s === 'hoto') {
+      r(WPX / 2 - 10, 6, 20, 3, PAL.wallCream); r(WPX / 2 - 7, 9, 14, 5, col);
+      r(WPX / 2 - 4, 1, 1, 4, PAL.wallCream); r(WPX / 2 + 3, 0, 1, 5, PAL.wallCream);
+    } else if (b.s === 'monja') {
+      r(6, 0, 16, 8, PAL.stoneDark); r(8, 2, 12, 4, '#c88858');
+      awning(PAL.accentRed, roofY + roofH, 5);
+    }
+    const entranceX = traditional ? WPX / 2 - 5 : WPX - 16;
+    door(entranceX, HPX - 15, 10, 15);
+    if (b.s === 'sushi') for (let x = 6; x < WPX - 6; x += 7) r(x, HPX - 20, 6, 7, PAL.navy);
+    else sign(6, HPX - 20, 13, 5, col);
+    win(7, HPX - 12, 7, 6);
   } else if (b.s === 'stall' || b.s === 'stall2') {
-    awning(b.s === 'stall' ? '#b84838' : '#3a6898', 0, 12);
-    r(2, 16, WPX - 4, 12, '#a07840');
-    r(2, 16, WPX - 4, 1, '#c09858');
-    r(2, 27, WPX - 4, 1, '#805828');
-    const fr = b.s === 'stall' ? ['#b83830', '#c88830', '#c8b038'] : ['#c8b038', '#489848', '#b83830'];
+    awning(b.s === 'stall' ? PAL.accentRed : PAL.martBlue, 0, 12);
+    r(2, 16, WPX - 4, 12, PAL.wood);
+    r(2, 16, WPX - 4, 1, '#b08858');
+    const fr = b.s === 'stall' ? [PAL.accentRed, PAL.gold, '#488850'] : [PAL.gold, '#488850', PAL.accentRed];
     fr.forEach((col, i) => r(5 + i * 8, 18, 5, 4, col));
-  } else if (b.s === 'elec' || b.s === 'elec2') {
-    wallFace(0, 4, WPX, HPX - 4, '#b8bcc4', '#989ca4');
-    r(0, 4, WPX, 2, '#787c88');
-    r(0, 4, WPX, 1, '#d0d4dc'); // 지붕 하이라이트
+  } else if (b.s === 'elec' || b.s === 'elec2' || b.s === 'akihabara') {
+    // 전자상가: 회색 박스 + 창문 격자 + 세로 간판 2색
+    wallFace(0, 4, WPX, HPX - 4, '#b8bcc0', '#909498');
+    r(0, 4, WPX, 2, '#707880');
     for (let y = 10; y < HPX - 18; y += 10)
       for (let x = 5; x < WPX - 18; x += 9) win(x, y, 3, 3);
     r(WPX - 13, 8, 10, HPX - 26, '#282838');
-    const cols = b.s === 'elec' ? ['#d8b838', '#c84888'] : ['#48b0c8', '#d8b838'];
-    for (let y = 10, i = 0; y < HPX - 30; y += 8, i++) r(WPX - 11, y, 6, 6, cols[i % 2]);
-    r(8, HPX - 14, 20, 14, '#384048');
-    r(WPX / 2 - 2, 0, 3, 5, '#787c88');
-  } else if (b.s === 'yakiniku') {
-    wallFace(0, 10, WPX, HPX - 10, '#504030', '#3a3028');
-    roofBand(0, 0, WPX, 10, '#383838', '#585858', '#282828');
-    win(7, 15, 4, 5); r(7, 19, 4, 1, '#d8b888');
-    win(WPX - 12, 15, 4, 5); r(WPX - 12, 19, 4, 1, '#d8b888');
-    r(WPX / 2 - 4, HPX - 12, 8, 10, '#d8a858');
-    r(WPX / 2 - 4, HPX - 12, 8, 1, '#e8c878');
+    const neon = b.s === 'elec' ? [PAL.gold, PAL.accentRed] : [PAL.martTop, PAL.gold];
+    for (let y = 10, i = 0; y < HPX - 30; y += 8, i++) r(WPX - 11, y, 6, 6, neon[i % 2]);
+    door(8, HPX - 14, 20, 14, '#384048');
+    r(WPX / 2 - 2, 0, 3, 5, '#707880');
   } else if (b.s === 'fountain') {
     r(2, 2, WPX - 4, HPX - 4, PAL.stoneMid);
     r(2, 2, WPX - 4, 1, PAL.stoneLight);
     r(2, HPX - 3, WPX - 4, 1, PAL.stoneDark);
     r(6, 6, WPX - 12, HPX - 12, PAL.waterLight);
-    r(7, 7, 3, 1, PAL.waterHilite);
+    r(7, 7, 4, 1, PAL.waterHilite);
     r(WPX / 2 - 3, 8, 6, 12, PAL.stoneLight);
-    r(WPX / 2 - 2, 4, 4, 4, '#c8dce8');
   } else if (b.s === 'station') {
-    // 역사 본체
-    wallFace(0, 12, WPX, HPX - 12, '#d0d4dc', '#a8acb4');
-    roofBand(0, 0, WPX, 12, '#1a4a88', '#2a62a8', '#0e2e58');
-    r(4, 3, WPX - 8, 6, '#f0d848'); // 역명판 밴드
-    r(6, 4, WPX - 12, 4, '#2868c8');
-    for (let x = 8; x < WPX - 10; x += 12) win(x, 18, 5, 5);
-    r(WPX / 2 - 8, HPX - 14, 16, 14, '#2a3038'); // 개찰구
-    r(WPX / 2 - 6, HPX - 12, 4, 8, '#48a0d0');
-    r(WPX / 2 + 2, HPX - 12, 4, 8, '#48a0d0');
-    r(2, HPX - 4, WPX - 4, 3, '#c8a858'); // 노란 안전선 느낌
+    // 역: 큰 네이비 지붕(오버행) + 금색 간판 밴드 + 개찰 문
+    // R/S 게이트하우스 느낌: 기둥 2개 + 시계 + 넓은 개찰 입구
+    const roofH = Math.round(HPX * 0.42);
+    wallFace(2, roofH - 2, WPX - 4, HPX - roofH + 2, '#d8dcd8', '#a8aca8');
+    roofBand(0, 0, WPX, roofH, PAL.navy, PAL.navyLight, PAL.navyDeep);
+    sign(5, 3, WPX - 10, 5, PAL.gold);
+    r(7, 4, WPX - 14, 3, PAL.navy);
+    // 시계
+    r(WPX / 2 - 4, roofH + 1, 8, 8, '#f8f8f0'); r(WPX / 2 - 3, roofH + 2, 6, 6, '#ffffff');
+    r(WPX / 2, roofH + 3, 1, 3, PAL.outline); r(WPX / 2, roofH + 5, 2, 1, PAL.outline);
+    for (let x = 6; x < WPX - 12; x += 14) if (Math.abs(x + 2 - WPX / 2) > 7) win(x, roofH + 3, 5, 5);
+    // 기둥
+    r(4, roofH - 1, 3, HPX - roofH + 1, '#b8bcc0'); r(6, roofH - 1, 1, HPX - roofH + 1, '#888c90');
+    r(WPX - 10, roofH - 1, 3, HPX - roofH + 1, '#b8bcc0'); r(WPX - 8, roofH - 1, 1, HPX - roofH + 1, '#888c90');
+    door(WPX / 2 - 8, HPX - 14, 16, 14, '#2a3038');
+    r(2, HPX - 3, WPX - 4, 2, PAL.gold);
   } else if (b.s === 'hotel') {
-    wallFace(0, 8, WPX, HPX - 8, '#dcd8d0', '#bcb8b0');
-    for (let x = 4; x < WPX; x += 6) r(x, 8, 1, HPX - 10, '#ccc8c0'); // 촘촘한 세로줄
-    roofBand(0, 0, WPX, 10, '#3a5a78', '#4a7090', '#2a4058');
-    for (let y = 14; y < HPX - 10; y += 8)
-      for (let x = 6; x < WPX - 8; x += 10) win(x, y, 3, 3);
-    r(WPX / 2 - 8, HPX - 14, 16, 14, PAL.accentRed);
-    r(WPX / 2 - 8, HPX - 14, 16, 1, '#c85848');
-    r(WPX / 2 - 10, 2, 20, 5, PAL.gold);
-    r(WPX / 2 - 10, 2, 20, 1, '#e0c050');
+    // Section L: stepped apartment block, rooftop plant room and balcony rails.
+    wallFace(7, 12, WPX - 14, HPX - 12, '#e4dcc8', '#aaa894');
+    roofBand(5, 8, WPX - 10, 8, PAL.navy, PAL.navyLight, PAL.navyDeep);
+    roofBand(12, 1, WPX / 2, 8, '#98a8a0', '#c8d4c8', '#586860');
+    for (let y = 20; y < HPX - 16; y += 13) {
+      for (let x = 12; x < WPX - 14; x += 12) win(x, y, 6, 6);
+      r(9, y + 8, WPX - 20, 2, PAL.navy); r(9, y + 6, WPX - 20, 1, '#f4f0dc');
+    }
+    door(WPX / 2 - 5, HPX - 13, 10, 13, PAL.winGlass);
+    roofBand(WPX / 2 - 10, HPX - 18, 20, 6, PAL.navy, PAL.navyLight, PAL.navyDeep);
+    sign(WPX - 16, 19, 7, 13, PAL.navy); r(WPX - 14, 22, 2, 7, PAL.wallCream); r(WPX - 14, 27, 4, 2, PAL.wallCream);
   } else if (b.s === 'airport') {
-    wallFace(0, 14, WPX, HPX - 14, '#d0d4dc', '#a8acb4');
-    roofBand(0, 6, WPX, 10, '#6a8098', '#8898a8', '#485868');
-    r(4, 0, WPX - 8, 8, '#c8d0d8'); // 관제탑 베이스
-    r(WPX / 2 - 3, 0, 6, 14, '#787c88');
-    r(WPX / 2 - 8, 2, 16, 4, '#48a0d0'); // 창문 밴드
-    for (let x = 8; x < WPX - 10; x += 12) win(x, 20, 4, 4);
-    r(10, HPX - 10, 18, 8, '#384048'); // 출입구
-    r(WPX - 28, HPX - 12, 20, 4, '#e8e8ec'); // 활주로 느낌
+    // 공항 (R/S 비율): 넓은 지붕 + 유리 밴드 + 관제탑(옆면) + 금색 간판
+    const roofH = Math.round(HPX * 0.34);
+    wallFace(2, roofH + 4, WPX - 4, HPX - roofH - 4, '#d0d4d8', '#a0a4a8');
+    roofBand(0, 6, WPX, roofH, '#707888', '#8890a0', '#485058');
+    r(4, 0, WPX - 8, 8, '#c8d0d8');           // 관제탑 베이스
+    r(WPX / 2 - 4, 0, 8, roofH + 6, '#707888');  // 관제탑
+    r(WPX / 2 + 2, 0, 2, roofH + 6, '#485058');  // 관제탑 옆면
+    r(WPX / 2 - 8, 2, 16, 4, PAL.winGlass);
+    r(WPX / 2 - 8, 2, 16, 1, PAL.winHilite);
+    r(6, roofH + 8, WPX - 14, 5, PAL.winGlass);  // 터미널 유리 밴드
+    r(6, roofH + 8, WPX - 14, 1, PAL.winHilite);
+    sign(WPX / 2 - 12, roofH + 16, 24, 5, PAL.gold);
+    door(10, HPX - 10, 18, 10, '#384048');
+    r(WPX - 30, HPX - 12, 20, 4, '#e8e8e0');
   } else if (b.s === 'taxi') {
-    wallFace(0, 8, WPX, HPX - 8, '#e8e0c8', '#c8c0a0');
-    roofBand(0, 0, WPX, 8, '#d8b838', '#e8c858', '#a88828');
+    wallFace(0, 8, WPX, HPX - 8, PAL.wallCream, PAL.wallShade);
+    roofBand(0, 0, WPX, 8, PAL.gold, '#e8c890', '#a87848');
     r(6, 12, WPX - 12, 10, '#282828');
-    r(8, 14, 6, 4, '#48c8f0'); r(WPX - 14, 14, 6, 4, '#48c8f0');
-    r(WPX / 2 - 4, 18, 8, 3, '#d8b838'); // 택시등
+    r(8, 14, 6, 4, PAL.winGlass); r(WPX - 14, 14, 6, 4, PAL.winGlass);
+    r(WPX / 2 - 4, 18, 8, 3, PAL.gold);
   } else if (b.s === 'market') {
-    awning('#b84838', 0, 10);
-    r(0, 10, WPX, HPX - 10, '#a07840');
-    r(0, 10, WPX, 1, '#c09858');
-    const goods = ['#b83830', '#c88830', '#c8b038', '#489848', '#3a6898'];
-    goods.forEach((col, i) => r(4 + i * 11, 14, 8, 6, col));
-    r(2, HPX - 6, WPX - 4, 4, '#805828');
-  } else if (b.s === 'akihabara') {
-    wallFace(0, 4, WPX, HPX - 4, '#b8bcc4', '#989ca4');
-    r(0, 4, WPX, 2, '#787c88');
-    for (let y = 10; y < HPX - 18; y += 10)
-      for (let x = 5; x < WPX - 18; x += 9) win(x, y, 3, 3);
-    r(WPX - 13, 8, 10, HPX - 26, '#282838');
-    const neon = ['#d8b838', '#c84888', '#48b0c8', '#68d848'];
-    for (let y = 10, i = 0; y < HPX - 28; y += 7, i++) r(WPX - 11, y, 6, 5, neon[i % neon.length]);
-    r(8, HPX - 14, 22, 14, '#384048');
-    r(WPX / 2 - 2, 0, 3, 5, '#787c88');
-    r(4, 0, WPX - 8, 3, '#c84888'); // 네온 지붕
+    // Ameyoko gateway: open central alley between two produce stalls.
+    r(3, 3, 3, HPX - 3, PAL.accentRed); r(WPX - 6, 3, 3, HPX - 3, PAL.accentRed);
+    roofBand(0, 0, WPX, 7, PAL.accentRed, '#e88068', '#782830');
+    sign(WPX / 2 - 13, 2, 26, 5, PAL.navy);
+    for (let x = WPX / 2 - 10; x < WPX / 2 + 11; x += 5) r(x, 4, 3, 2, PAL.wallCream);
+    for (const x of [1, WPX - 23]) {
+      roofBand(x, 13, 22, 7, PAL.gold, '#f0d098', '#886040');
+      for (let k = 0; k < 20; k += 5) r(x + k, 15, 3, 4, PAL.accentRed);
+      wallFace(x + 2, 21, 18, HPX - 21, PAL.wood, PAL.woodDark);
+      for (let k = 0; k < 3; k++) r(x + 4 + k * 5, 22, 4, 4, [PAL.accentRed, '#68a858', PAL.gold][k]);
+    }
+    r(WPX / 2 - 6, HPX - 3, 12, 3, PAL.pathLight);
   } else if (b.s === 'park') {
-    r(0, HPX - 8, WPX, 8, '#5a8848');
-    r(2, HPX - 6, WPX - 4, 2, '#78a858');
-    // 나무 두 그루
-    r(8, 18, 10, 14, '#6a4828'); r(4, 6, 18, 16, '#3a7848'); r(8, 4, 10, 6, '#58a058');
-    r(WPX - 20, 20, 8, 12, '#6a4828'); r(WPX - 26, 8, 20, 16, '#3a7848');
-    r(WPX / 2 - 6, HPX - 14, 12, 6, PAL.stoneMid); // 벤치
+    // Ueno: grove framing a tiered fountain plaza, not another roofed building.
+    r(2, HPX - 12, WPX - 4, 10, PAL.pathLight);
+    renderTree(q, 2, 5, 4); renderTree(q, 9, 15, 5); renderTree(q, WPX - 20, 8, 6);
+    const cx = WPX / 2;
+    r(cx - 12, HPX - 18, 24, 12, PAL.stoneDark);
+    r(cx - 10, HPX - 19, 20, 10, PAL.stoneLight);
+    r(cx - 8, HPX - 17, 16, 6, PAL.waterLight);
+    r(cx - 2, HPX - 29, 4, 15, PAL.stoneMid);
+    r(cx - 6, HPX - 26, 12, 4, PAL.waterHilite);
+    r(cx - 1, HPX - 33, 2, 8, PAL.waterLight);
+    r(5, HPX - 9, 12, 3, PAL.wood); r(6, HPX - 6, 2, 4, PAL.woodDark); r(14, HPX - 6, 2, 4, PAL.woodDark);
   } else if (b.s === 'palace') {
-    wallFace(0, 16, WPX, HPX - 16, '#e8e0d0', '#c8c0b0');
-    roofBand(4, 4, WPX - 8, 10, PAL.roofDark, '#6a5040', '#3a2818');
-    roofBand(0, 12, WPX, 6, PAL.roofDark, '#6a5040', '#3a2818');
-    r(WPX / 2 - 6, 18, 12, HPX - 20, '#8a7060'); // 문
-    r(WPX / 2 - 4, 20, 8, 6, PAL.gold);
-    for (let x = 8; x < WPX - 10; x += 14) { win(x, 22, 4, 4); r(x, 26, 4, 1, '#d8b888'); }
-    r(2, HPX - 4, WPX - 4, 3, '#789868'); // 해자 잔디
+    // Imperial moat, stone rampart and white corner keep.
+    r(0, HPX - 12, WPX, 12, PAL.waterLight);
+    for (let x = 3; x < WPX; x += 13) r(x, HPX - 5, 8, 1, PAL.waterHilite);
+    wallFace(3, 23, WPX - 6, HPX - 35, PAL.stoneMid, PAL.stoneDark);
+    for (let x = 7; x < WPX - 5; x += 9) r(x, 27, 1, 5, PAL.stoneDark);
+    wallFace(8, 11, 29, 15, PAL.wallCream, PAL.wallShade);
+    gableRoof(3, 1, 39, 13, PAL.navy, PAL.navyLight, PAL.navyDeep);
+    roofBand(5, 19, 35, 6, PAL.navy, PAL.navyLight, PAL.navyDeep);
+    win(15, 14, 4, 3); win(27, 14, 4, 3);
+    r(WPX - 28, 17, 3, 18, PAL.woodDark); r(WPX - 10, 17, 3, 18, PAL.woodDark);
+    roofBand(WPX - 32, 13, 29, 7, PAL.navy, PAL.navyLight, PAL.navyDeep);
+    r(WPX - 27, HPX - 14, 21, 9, PAL.pathLight);
   } else if (b.s === 'beach') {
-    r(0, HPX - 10, WPX, 10, '#e8d8a8');
-    r(0, HPX - 10, WPX, 2, '#f0e8c0');
-    r(0, 0, WPX, HPX - 10, PAL.waterLight);
-    r(2, 4, 8, 2, PAL.waterHilite);
-    r(WPX - 18, HPX - 18, 4, 8, '#6a4828'); // 파라솔 기둥
-    r(WPX - 24, HPX - 22, 16, 6, '#c84838');
+    // Odaiba: suspension bridge and a tiny green Liberty silhouette above sand.
+    r(0, HPX - 15, WPX, 15, PAL.waterLight); r(0, HPX - 6, WPX, 6, '#e8d8a8');
+    r(1, 15, WPX - 2, 3, '#d8dce0');
+    for (const x of [12, WPX - 16]) { r(x, 2, 3, 22, '#e8e8dc'); r(x - 2, 3, 7, 2, '#b8c8d0'); }
+    for (let x = 15; x < WPX - 16; x += 2) {
+      const y = 4 + Math.round(7 * Math.sin((x - 15) / (WPX - 31) * Math.PI));
+      r(x, y, 2, 1, PAL.navy); r(x, y + 1, 1, 15 - y, '#b8c8d0');
+    }
+    r(WPX - 18, HPX - 7, 10, 5, PAL.stoneMid);
+    r(WPX - 15, HPX - 19, 5, 12, '#488878'); r(WPX - 14, HPX - 23, 3, 4, '#78b898');
+    r(WPX - 18, HPX - 24, 2, 12, '#488878'); r(WPX - 19, HPX - 27, 4, 3, PAL.gold);
+    r(6, HPX - 11, 13, 1, PAL.waterHilite);
   } else if (b.s === 'teamlab') {
-    wallFace(0, 8, WPX, HPX - 8, '#1a2030', '#101820');
-    roofBand(0, 0, WPX, 8, '#283848', '#384858', '#182028');
-    const glows = ['#48c8f0', '#c848e8', '#48e8a0', '#f0c848'];
-    for (let y = 14, i = 0; y < HPX - 12; y += 8, i++)
-      for (let x = 6; x < WPX - 8; x += 10)
-        r(x, y, 6, 5, glows[(i + x) % glows.length]);
-    r(WPX / 2 - 8, HPX - 12, 16, 12, '#48c8f0');
+    // Planets: low dark gallery with a faceted luminous orb on its roof.
+    wallFace(3, 22, WPX - 6, HPX - 22, '#283048', '#141c28');
+    roofBand(0, 15, WPX, 12, '#384868', '#586888', '#182030');
+    const cx = WPX / 2;
+    r(cx - 7, 1, 14, 3, '#c8c0f0'); r(cx - 11, 4, 22, 10, '#8878c8');
+    r(cx - 7, 14, 14, 4, '#584890'); r(cx - 8, 4, 8, 6, '#e0dcf8'); r(cx + 6, 5, 4, 8, '#584890');
+    for (let x = 7, k = 0; x < WPX - 8; x += 7, k++) r(x, 30, 3, 9, k % 2 ? '#c878f0' : '#68c8f0');
+    door(cx - 7, HPX - 12, 14, 12, PAL.winGlass);
+    r(4, HPX - 3, 13, 1, '#68c8f0');
   } else if (b.s === 'joypolis') {
-    wallFace(0, 12, WPX, HPX - 12, '#e84868', '#c03050');
-    roofBand(0, 0, WPX, 12, '#4858d0', '#6878e8', '#3038a0');
-    r(WPX / 2 - 4, 2, 8, 10, '#f0d848'); // 깃발
-    for (let x = 6; x < WPX - 8; x += 12) win(x, 18, 5, 5);
-    r(8, HPX - 14, WPX - 16, 12, '#282838');
-    r(12, HPX - 10, 8, 4, '#48e8f0');
+    // Indoor amusement park: twin pylons, marquee and deep arcade entrance.
+    wallFace(7, 23, WPX - 14, HPX - 23, '#d85868', '#982838');
+    roofBand(5, 17, WPX - 10, 12, PAL.martBlue, PAL.martTop, PAL.martBot);
+    for (const x of [2, WPX - 14]) {
+      wallFace(x, 11, 12, HPX - 11, PAL.navyLight, PAL.navyDeep);
+      gableRoof(x - 2, 4, 16, 12, PAL.martBlue, PAL.martTop, PAL.martBot);
+      r(x + 5, 0, 1, 6, PAL.woodDark); r(x + 6, 0, 6, 3, PAL.accentRed);
+      for (let y = 22; y < HPX - 8; y += 9) r(x + 4, y, 4, 4, PAL.gold);
+    }
+    sign(16, 24, WPX - 32, 10, '#d85868');
+    for (let x = 18; x < WPX - 17; x += 5) r(x, 27, 2, 4, PAL.gold);
+    door(17, HPX - 22, WPX - 34, 22, PAL.navyDeep);
+    r(19, HPX - 20, WPX - 38, 2, '#c878f0');
+    r(15, HPX - 3, WPX - 30, 3, PAL.gold);
   } else if (b.s === 'mall') {
-    wallFace(0, 10, WPX, HPX - 10, '#d8e0e8', '#b0b8c0');
-    roofBand(0, 0, WPX, 10, '#4890c8', '#68a8d8', '#286890');
-    for (let y = 14; y < HPX - 12; y += 10)
-      for (let x = 6; x < WPX - 8; x += 12) win(x, y, 6, 5);
-    r(WPX / 2 - 10, HPX - 14, 20, 14, '#384858');
+    // Department store: setback floors, rooftop glass atrium, broad display windows.
+    wallFace(3, 20, WPX - 6, HPX - 20, '#d8dcd8', '#989ca0');
+    wallFace(10, 9, WPX - 20, 17, '#e8e4d4', '#b8b4a4');
+    roofBand(7, 6, WPX - 14, 7, PAL.martBlue, PAL.martTop, PAL.martBot);
+    gableRoof(WPX / 2 - 12, 0, 24, 10, PAL.winGlass, PAL.winHilite, PAL.navy);
+    roofBand(0, 23, WPX, 6, PAL.martBlue, PAL.martTop, PAL.martBot);
+    for (let x = 15; x < WPX - 15; x += 12) win(x, 16, 6, 4);
+    for (let y = 33; y < HPX - 16; y += 11) for (let x = 8; x < WPX - 12; x += 12) win(x, y, 7, 6);
+    win(8, HPX - 13, 10, 9); win(WPX - 20, HPX - 13, 10, 9);
+    door(WPX / 2 - 8, HPX - 13, 16, 13, PAL.winGlass);
+    r(2, HPX - 2, WPX - 4, 2, PAL.pathLight);
   } else if (b.s === 'gajoen') {
-    wallFace(0, 18, WPX, HPX - 18, '#f0e8d8', '#d0c8b0');
-    roofBand(6, 4, WPX - 12, 10, PAL.roofRed, '#a85848', PAL.roofDark);
-    roofBand(0, 12, WPX, 8, PAL.roofRed, '#a85848', PAL.roofDark);
-    r(WPX / 2 - 8, 20, 16, HPX - 22, PAL.woodDark);
-    r(WPX / 2 - 6, 22, 12, 6, PAL.gold);
-    for (let x = 6; x < WPX - 8; x += 16) { r(x, 24, 2, HPX - 28, PAL.wood); }
-    r(4, HPX - 6, WPX - 8, 4, '#c84868'); // 붉은 담장
+    // Gajoen: ornate central gable, staggered wings and garden cascade.
+    wallFace(5, 27, WPX - 10, HPX - 27, PAL.wallCream, PAL.wallShade);
+    roofBand(0, 21, WPX, 12, TILE_DARK, TILE_TOP, TILE_BOT);
+    wallFace(17, 17, WPX - 34, 27, PAL.wallCream, PAL.wallShade);
+    gableRoof(10, 1, WPX - 20, 21, TILE_DARK, TILE_TOP, TILE_BOT);
+    gableRoof(8, 24, WPX - 16, 15, TILE_DARK, TILE_TOP, TILE_BOT);
+    r(WPX / 2 - 2, 4, 4, 6, PAL.gold);
+    for (let x = 9; x < WPX - 8; x += 11) { r(x, 36, 2, HPX - 38, PAL.wood); win(x + 3, 40, 4, 7); }
+    door(WPX / 2 - 6, HPX - 17, 12, 17);
+    r(1, HPX - 15, 11, 13, PAL.stoneDark); r(4, HPX - 15, 5, 10, PAL.waterLight); r(2, HPX - 5, 13, 3, PAL.waterHilite);
+    r(WPX - 17, HPX - 8, 14, 3, PAL.accentRed); renderTree(q, WPX - 18, HPX - 24, 4);
   } else if (b.s === 'tower') {
     q.clearRect(0, 0, WPX, HPX);
-    wallFace(8, 8, WPX - 16, HPX - 8, '#c8ccd4', '#a0a4ac');
+    wallFace(8, 8, WPX - 16, HPX - 8, '#c8ccd0', '#989ca0');
     for (let y = 12; y < HPX - 10; y += 8)
       for (let x = 12; x < WPX - 14; x += 8) win(x, y, 3, 3);
-    roofBand(4, 0, WPX - 8, 10, '#d8b838', '#e8c858', '#a88828'); // 전망대
-    r(WPX / 2 - 2, 0, 4, 6, '#787c88');
-    r(WPX / 2 - 6, HPX - 10, 12, 10, '#384048');
+    roofBand(4, 0, WPX - 8, 10, PAL.gold, '#e8c890', '#a87848'); // 전망대
+    r(WPX / 2 - 2, 0, 4, 6, '#707880');
+    door(WPX / 2 - 6, HPX - 10, 12, 10, '#384048');
   } else if (b.s === 'wheel') {
     q.clearRect(0, 0, WPX, HPX);
     const cx = WPX / 2, cy = HPX / 2 + 2, rad = Math.min(WPX, HPX) / 2 - 4;
-    q.strokeStyle = '#c84868'; q.lineWidth = 2;
+    q.strokeStyle = '#c04858'; q.lineWidth = 2;
     q.beginPath(); q.arc(cx, cy, rad, 0, Math.PI * 2); q.stroke();
-    q.strokeStyle = '#e8a0b0';
+    q.strokeStyle = '#e0a0b0';
     for (let i = 0; i < 8; i++) {
       const a = (i / 8) * Math.PI * 2;
       q.beginPath(); q.moveTo(cx, cy);
       q.lineTo(cx + Math.cos(a) * rad, cy + Math.sin(a) * rad); q.stroke();
-      r(cx + Math.cos(a) * rad - 2, cy + Math.sin(a) * rad - 2, 4, 4, '#f0d848');
+      r(cx + Math.cos(a) * rad - 2, cy + Math.sin(a) * rad - 2, 4, 4, PAL.gold);
     }
     r(cx - 3, cy - 3, 6, 6, '#384048');
-    r(cx - 2, HPX - 8, 4, 8, '#6a4828'); // 지지대
-  } else if (b.s === 'sushi') {
-    awning('#e8e8ec', 0, 10);
-    wallFace(0, 10, WPX, HPX - 10, '#f0e8d8', '#d0c8b0');
-    r(4, 14, WPX - 8, 8, '#2a2a30'); // 카운터
-    r(8, 16, 6, 3, '#f0a0a0'); r(18, 16, 6, 3, '#f0e0a0'); r(28, 16, 6, 3, '#a0d0f0');
-    r(WPX / 2 - 5, HPX - 12, 10, 10, PAL.woodDark);
-  } else if (b.s === 'ramen') {
-    awning('#c84838', 0, 10);
-    wallFace(0, 10, WPX, HPX - 10, '#e8dcc8', '#c8bca8');
-    r(10, 16, 16, 10, '#e8e0d0'); // 냄비
-    r(14, 18, 8, 5, '#d88838');
-    r(12, 14, 12, 3, '#f0f0f0'); // 김
-    r(WPX - 16, 18, 10, 14, PAL.woodDark);
+    r(cx - 2, HPX - 8, 4, 8, PAL.trunk); // 지지대
   } else if (b.s === 'hotspring') {
-    wallFace(0, 12, WPX, HPX - 12, '#e0d4b8', '#c0b498');
-    roofBand(0, 0, WPX, 12, PAL.roofDark, '#6a5040', '#3a2818');
-    r(8, 18, WPX - 16, 12, PAL.waterLight);
-    r(10, 20, 4, 2, PAL.waterHilite);
-    r(WPX / 2 - 4, HPX - 10, 8, 8, '#8a7060');
-    // 김 느낌
-    r(14, 14, 3, 3, 'rgba(240,240,248,.5)');
-    r(22, 12, 4, 3, 'rgba(240,240,248,.4)');
+    // Ryokan: low tiled wing and open-air stone bath with steam.
+    wallFace(4, 19, WPX - 8, HPX - 20, PAL.wallCream, PAL.wallShade);
+    gableRoof(0, 7, WPX - 22, 17, TILE_DARK, TILE_TOP, TILE_BOT);
+    roofBand(WPX - 30, 13, 30, 11, TILE_DARK, TILE_TOP, TILE_BOT);
+    for (let x = 8; x < WPX - 35; x += 8) { win(x, 27, 4, 8); r(x - 2, 25, 1, 17, PAL.wood); }
+    r(WPX - 33, HPX - 18, 30, 16, PAL.stoneDark); r(WPX - 31, HPX - 19, 26, 13, PAL.stoneLight);
+    r(WPX - 28, HPX - 16, 20, 8, PAL.waterLight); r(WPX - 25, HPX - 14, 10, 1, PAL.waterHilite);
+    for (let x = WPX - 25; x < WPX - 7; x += 7) { r(x, 5, 2, 5, '#f4f0e0'); r(x + 1, 1, 2, 4, '#f4f0e0'); }
+    door(15, HPX - 13, 9, 13);
   } else if (b.s === 'lawson') {
-    wallFace(0, 8, WPX, HPX - 8, '#f0f4f8', '#d0d4d8');
-    roofBand(0, 0, WPX, 8, '#2868c8', '#4890e0', '#184898');
-    r(2, 2, WPX - 4, 4, '#e84868'); // Lawson 밴드
-    win(6, 12, 5, 5); win(WPX - 14, 12, 5, 5);
-    r(WPX / 2 - 5, HPX - 10, 10, 10, '#2868c8');
+    // 편의점: 파란 지붕(오버행) + 흰 벽 + 줄무늬 간판
+    const roofH = Math.round(HPX * 0.38);
+    wallFace(2, roofH - 2, WPX - 4, HPX - roofH + 2, '#f0f4f0', '#c8ccc8');
+    roofBand(0, 0, WPX, roofH, PAL.martBlue, PAL.martTop, PAL.martBot);
+    sign(3, 2, WPX - 6, 4, '#f0f0e8'); r(3, 3, WPX - 6, 2, PAL.martBlue);
+    win(5, roofH + 2, 5, 5); win(WPX - 11, roofH + 2, 5, 5);
+    door(WPX / 2 - 5, HPX - 10, 10, 10, PAL.martBlue);
   } else if (b.s === 'ropeway') {
-    wallFace(4, 20, WPX - 8, HPX - 20, '#c8ccd4', '#a0a4ac');
-    roofBand(0, 12, WPX, 10, '#485868', '#687888', '#303848');
-    r(WPX / 2 - 2, 0, 4, 14, '#787c88'); // 기둥
-    r(4, 4, WPX - 8, 6, '#e84868'); // 곤돌라
-    win(8, 5, 4, 3); win(WPX - 14, 5, 4, 3);
-    r(WPX / 2 - 6, HPX - 8, 12, 6, '#384048');
+    // Open cable and suspended red cabin, mountain station below.
+    r(1, 3, WPX - 2, 2, PAL.navy); r(7, 0, 3, HPX - 10, PAL.stoneDark);
+    r(WPX - 10, 0, 3, HPX - 10, PAL.stoneMid);
+    r(WPX / 2 - 1, 4, 2, 8, PAL.navy);
+    roofBand(12, 12, WPX - 24, 6, PAL.accentRed, '#f08878', '#802830');
+    wallFace(13, 18, WPX - 26, 18, PAL.accentRed, '#982830');
+    win(16, 19, 5, 7); win(WPX - 22, 19, 5, 7);
+    r(15, 32, WPX - 30, 2, PAL.wallCream);
+    wallFace(4, HPX - 15, WPX - 8, 15, PAL.wallCream, PAL.wallShade);
+    roofBand(0, HPX - 21, WPX, 8, PAL.navy, PAL.navyLight, PAL.navyDeep);
+    door(WPX / 2 - 7, HPX - 11, 14, 11, PAL.navyDeep);
   } else if (b.s === 'bus') {
-    wallFace(0, 6, WPX, HPX - 6, '#e84848', '#c03030');
-    roofBand(0, 0, WPX, 8, '#c03030', '#e05050', '#902020');
+    wallFace(0, 6, WPX, HPX - 6, PAL.accentRed, '#a83030');
+    roofBand(0, 0, WPX, 8, '#b83030', '#e06060', '#802020');
     for (let x = 6; x < WPX - 10; x += 12) win(x, 12, 6, 5);
     r(4, HPX - 6, 6, 4, '#282828'); r(WPX - 10, HPX - 6, 6, 4, '#282828');
-    r(WPX - 8, 8, 4, 4, '#f0d848'); // 방향등
+    r(WPX - 8, 8, 4, 4, PAL.gold); // 방향등
   } else if (b.s === 'fuji') {
     // GBC식 3단 색 밴드 (눈 → 산허리 → 기슭)
     q.clearRect(0, 0, WPX, HPX);
@@ -1862,11 +2190,126 @@ function renderBld(b) {
     for (const edge of [.28, .62]) {
       const y = (edge * HPX) | 0;
       const half = (WPX / 2) * edge;
-      q.fillStyle = '#3a4858';
+      q.fillStyle = '#485868';
       q.fillRect(WPX / 2 - half, y, half * 2, 1);
     }
-    r(WPX / 2 - 4, 0, 8, 3, '#f0f4f8');
-    r(WPX / 2 - 2, 0, 4, 1, '#fff');
+    r(WPX / 2 - 4, 0, 8, 3, PAL.fujiSnow);
+  } else if (['chair', 'sofa', 'bench', 'lamp', 'lantern', 'vending', 'vendingMachine', 'vending machine', 'neon', 'window', 'grill', 'sushiCase', 'sink'].includes(b.s)) {
+    q.save(); q.scale(WPX / 16, HPX / 16);
+    if (['chair', 'sofa', 'bench'].includes(b.s)) {
+      const fabric = b.s === 'bench' ? (b.theme === 'haneda' ? '#ba5860' : PAL.wood) : b.s === 'sofa' ? '#588880' : '#b86058';
+      r(2, 3, 12, 6, fabric); r(3, 3, 10, 1, darken(fabric, 1.4));
+      r(2, 9, 12, 4, darken(fabric, .7)); r(3, 8, 10, 3, fabric);
+      r(2, 13, 2, 2, PAL.woodDark); r(12, 13, 2, 2, PAL.woodDark);
+      if (b.s === 'sofa') { r(1, 7, 3, 6, '#386058'); r(12, 7, 3, 6, '#386058'); r(8, 4, 1, 6, '#386058'); }
+      if (b.s === 'bench') { r(3, 5, 10, 1, PAL.woodDark); r(3, 7, 10, 1, PAL.woodDark); }
+    } else if (b.s === 'lamp' || b.s === 'lantern') {
+      r(7, 1, 2, 14, PAL.woodDark);
+      if (b.s === 'lamp') { r(4, 2, 8, 3, PAL.gold); r(2, 5, 12, 3, '#f8e0a0'); r(5, 14, 6, 1, PAL.stoneDark); }
+      else { r(4, 3, 8, 9, PAL.accentRed); r(5, 4, 6, 7, '#f08858'); r(3, 2, 10, 2, PAL.woodDark); r(4, 11, 8, 2, PAL.woodDark); r(7, 4, 1, 7, PAL.gold); }
+    } else if (b.s.startsWith('vending')) {
+      r(2, 1, 12, 14, PAL.martBlue); r(3, 2, 8, 8, '#e0f0e8'); r(12, 2, 2, 12, PAL.martBot);
+      for (let y = 3; y < 9; y += 3) for (let x = 4; x < 10; x += 3) r(x, y, 2, 2, y === 3 ? PAL.accentRed : PAL.gold);
+      r(11, 9, 1, 2, PAL.gold); r(4, 12, 6, 2, PAL.navyDeep);
+    } else if (b.s === 'neon') {
+      r(1, 3, 14, 10, PAL.navyDeep); r(2, 4, 12, 1, '#f080b8'); r(2, 11, 12, 1, '#68d8e8');
+      for (let x = 3; x < 13; x += 4) { r(x, 6, 2, 4, '#f080b8'); r(x, 6, 3, 1, '#fff0e8'); }
+    } else if (b.s === 'window') {
+      r(1, 2, 14, 12, PAL.woodDark); r(2, 3, 12, 10, PAL.winGlass); r(3, 4, 3, 4, PAL.winHilite);
+      r(7, 3, 1, 10, PAL.wallCream); r(2, 8, 12, 1, PAL.wallCream); r(0, 14, 16, 1, PAL.stoneLight);
+    } else if (b.s === 'grill') {
+      r(1, 5, 14, 8, PAL.stoneDark); r(2, 6, 12, 5, '#583830');
+      for (let x = 3; x < 14; x += 3) r(x, 6, 1, 5, PAL.stoneLight);
+      r(4, 7, 3, 2, '#d87858'); r(9, 8, 3, 2, '#d89860'); r(2, 13, 2, 2, PAL.woodDark); r(12, 13, 2, 2, PAL.woodDark);
+    } else if (b.s === 'sushiCase') {
+      r(1, 4, 14, 9, PAL.woodDark); r(2, 3, 12, 7, PAL.winGlass); r(3, 4, 10, 1, PAL.winHilite);
+      for (let x = 3; x < 13; x += 4) { r(x, 8, 3, 2, PAL.wallCream); r(x, 7, 3, 1, x === 7 ? PAL.gold : PAL.accentRed); }
+      r(1, 11, 14, 2, PAL.wood); r(12, 4, 1, 6, PAL.wallCream);
+    } else if (b.s === 'sink') {
+      r(1, 6, 14, 9, '#c8d4d0'); r(2, 5, 12, 7, '#eef0e8'); r(4, 7, 8, 4, PAL.stoneDark); r(5, 8, 6, 2, PAL.winGlass);
+      r(7, 2, 2, 6, PAL.stoneLight); r(8, 2, 3, 2, PAL.stoneLight); r(2, 13, 12, 1, '#98a8a0');
+    }
+    q.restore();
+  } else if (b.s === 'reception') {
+    wallFace(0, 6, WPX, HPX - 6, '#f4f4ec', '#c8c8c0');
+    roofBand(0, 0, WPX, 8, '#d04040', '#f08080', '#702020');
+    sign(2, 2, WPX - 4, 4, PAL.gold);
+    r(2, HPX - 8, WPX - 4, 6, '#486890');
+    r(4, HPX - 6, 3, 3, '#e8f0f8');
+  } else if (b.s === 'counter') {
+    r(0, 6, WPX, HPX - 6, PAL.wood);
+    r(0, 6, WPX, 2, '#b08858');
+    r(0, HPX - 2, WPX, 2, PAL.woodDark);
+    r(2, 2, WPX - 4, 5, '#f0ece0');
+    r(3, 3, WPX - 6, 2, PAL.martBlue);
+  } else if (b.s === 'table') {
+    r(2, 6, WPX - 4, HPX - 8, PAL.wood);
+    r(2, 6, WPX - 4, 1, '#b08858');
+    r(1, HPX - 4, 3, 3, PAL.woodDark); r(WPX - 4, HPX - 4, 3, 3, PAL.woodDark);
+    r(4, 8, WPX - 8, 4, '#e8d8c0');
+  } else if (b.s === 'bed') {
+    r(1, 4, WPX - 2, HPX - 6, '#f0f4f8');
+    r(1, 4, WPX - 2, 3, '#76583f');
+    r(4, 8, WPX - 8, 6, '#ffffff');
+    r(2, 16, WPX - 4, HPX - 20, b.theme === 'ryokan' ? '#a9aa78' : '#7e9eaf');
+    r(3, 17, WPX - 6, 2, '#c3d7da');
+    r(1, HPX - 3, WPX - 2, 2, PAL.wood);
+  } else if (b.s === 'exhibit') {
+    wallFace(0, 4, WPX, HPX - 4, '#e8e4dc', '#b8b4a8');
+    r(2, 6, WPX - 4, HPX - 12, PAL.navy);
+    r(3, 7, WPX - 6, HPX - 14, '#6898c0');
+    r(4, 8, 3, 3, '#f0d060');
+    sign(2, 1, WPX - 4, 4, PAL.gold);
+  } else if (b.s === 'crystal') {
+    q.clearRect(0, 0, WPX, HPX);
+    for (let i = 0; i < 4; i++) {
+      const x = 2 + i * 7, y = 2 + (i % 2) * 5;
+      r(x, y, 5, HPX - y - 3, i % 2 ? '#68c8f0' : '#c878f0');
+      r(x+2, y+2, 2, HPX-y-7, '#e4f7ff');
+      r(x+1, y+2, 3, 3, '#f0f8ff');
+    }
+    r(0, HPX - 3, WPX, 3, '#181828');
+  } else if (b.s === 'locker') {
+    wallFace(0, 2, WPX, HPX - 2, '#c8d0d8', '#98a0a8');
+    for (let y = 4; y < HPX - 4; y += 6) {
+      r(2, y, WPX - 4, 5, '#e8eef4');
+      r(WPX - 5, y + 2, 2, 2, PAL.gold);
+    }
+  } else if (b.s === 'shelf') {
+    wallFace(0, 2, WPX, HPX - 2, '#e8e0d0', '#b8b0a0');
+    for (let y = 4; y < HPX - 2; y += 5) {
+      r(1, y, WPX - 2, 1, PAL.wood);
+      for (let x = 2; x < WPX - 3; x += 4) r(x, y - 3, 3, 3, ['#c84040', '#3868b8', '#48a060', '#e8b848'][(x + y) % 4]);
+    }
+  } else if (b.s === 'fridge') {
+    wallFace(0, 2, WPX, HPX - 2, '#e8f0f8', '#b0c0d0');
+    r(2, 4, WPX - 4, HPX - 8, '#d0e0f0');
+    r(WPX - 5, 8, 2, 4, '#8898a8');
+    r(3, 6, 4, 3, '#68c878'); r(3, 11, 4, 3, '#f0a040');
+  } else if (b.s === 'altar') {
+    wallFace(4, 10, WPX - 8, HPX - 10, PAL.wallCream, PAL.wallShade);
+    roofBand(0, 4, WPX, 8, TILE_DARK, TILE_TOP, TILE_BOT);
+    r(WPX / 2 - 4, 0, 8, 5, PAL.gold);
+    r(7,14,WPX-14,HPX-19,b.theme==='gajoen'?'#8a503f':'#75433a');
+    for(let x=10;x<WPX-10;x+=14){r(x,15,3,HPX-22,'#d3ac58');r(x+4,18,6,7,b.theme==='gajoen'?'#d79c9e':'#f1ce77');}
+    r(6,HPX-9,WPX-12,3,'#cfaa65');r(3,HPX-5,WPX-6,3,'#a48b70');
+  } else if (b.s === 'pillar') {
+    r(WPX / 2 - 3, 0, 6, HPX, PAL.accentRed);
+    r(WPX / 2 - 3, 0, 6, 2, '#e06860');
+    r(WPX / 2 + 1, 0, 2, HPX, '#902828');
+  } else if (b.s === 'flower' && b.theme === 'planets') {
+    for (let i=0;i<5;i++) {
+      const x=3+(i%3)*9,y=3+Math.floor(i/3)*13;
+      r(x+3,y,2,11,'#709680');
+      r(x,y+3,8,5,i%2?'#c59cf0':'#ec8cb9');
+      r(x+2,y+1,4,9,i%2?'#c59cf0':'#ec8cb9');
+      r(x+3,y+4,2,3,'#fff0ba');
+    }
+  } else if (b.s === 'plant' || b.s === 'flower') {
+    r(WPX / 2 - 2, HPX - 6, 4, 6, PAL.wood);
+    r(2, 2, WPX - 4, 10, b.s === 'flower' ? '#e878a0' : '#489050');
+    r(4, 4, 3, 3, b.s === 'flower' ? '#f0b0c8' : '#68b068');
+    r(WPX - 8, 6, 3, 3, b.s === 'flower' ? '#f0d060' : '#307838');
   }
 
   strokeOuterOutline(q, WPX, HPX);
@@ -1949,7 +2392,7 @@ function drawChar(ctx, sx, sy, dir, frame, p, tag) {
   else if (dir === 'right') r(10, 5, 1, 2, PAL.outline);
   paintOutlined(ctx, sx, sy, u, rects);
   if (tag) {
-    ctx.font = `bold ${Math.max(11, SCALE * 3.5)}px Galmuri11, monospace`;
+    ctx.font = `bold ${Math.max(11, SCALE * 3.5)}px ${FONT_UI}`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
     const tw = ctx.measureText(tag).width;
     const bx = sx + 7 * u - tw / 2 - 4, by = sy - 2 * u;
@@ -2091,7 +2534,7 @@ function drawJakae(ctx, sx, sy, dir, frame, p, tag) {
   paintOutlined(ctx, sx, sy, u, rects);
 
   if (tag) {
-    ctx.font = `bold ${Math.max(10, SCALE * 3)}px Galmuri11, monospace`;
+    ctx.font = `bold ${Math.max(10, SCALE * 3)}px ${FONT_UI}`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
     const tw = ctx.measureText(tag).width;
     const bx = sx + 7 * u - tw / 2 - 4, by = sy - 2 * u;
@@ -2111,16 +2554,16 @@ function drawJakae(ctx, sx, sy, dir, frame, p, tag) {
 
 const PAL_ME = { cap: PAL.accentRed, hair: '#3a2618', skin: '#e8b878', shirt: '#e8e4dc', pants: '#3a5898' };
 const PAL_JAKAE = {
-  blue: '#3a7ae0', blueHilite: '#78b0f8', blueShade: '#2a58b0',
-  quill: '#2a68d0',
-  belly: '#f8d8b0', bellyHilite: '#fff0d8',
-  muzzle: '#f8d8b0', muzzleHilite: '#fff0d8', earIn: '#f0b888',
-  blush: '#f8a8a0', smile: '#e07068',
-  eyeWhite: '#fffef8', eye: '#58c868', pupil: '#203020', spark: '#fff',
-  nose: '#c89878',
-  glove: '#fffef8', gloveCuff: '#f0e8e0', gloveShade: '#d8d0c8',
-  shoe: '#e04840', shoeHilite: '#f07868', sole: '#787870', soleDark: '#585850',
-  strap: '#fffef8', buckle: '#ffffff',
+  blue: '#3878d0', blueHilite: '#78b0f0', blueShade: '#204898',
+  quill: '#2858b0',
+  belly: '#e8f0f8', bellyHilite: '#f8fcff',
+  muzzle: '#e8f0f8', muzzleHilite: '#f8fcff', earIn: '#a8c8e8',
+  blush: '#f0a0b0', smile: '#486888',
+  eyeWhite: '#f6eee2', eye: '#284868', pupil: '#182030', spark: '#fff6e0',
+  nose: '#304858',
+  glove: '#e8e0c8', gloveCuff: '#d0c8a8', gloveShade: '#a89878',
+  shoe: '#284868', shoeHilite: '#486888', sole: '#e8b848', soleDark: '#c89830',
+  strap: '#e8b848', buckle: '#f0d060',
 };
 const PAL_WIFE = { hair: '#5a3a20', skin: '#e8b888', shirt: '#f0ebe0', dress: '#d07088', pants: '#d07088', long: true };
 
@@ -2143,13 +2586,13 @@ const me = makeEnt(2, 2), wife = makeEnt(3, 2), pet = makeEnt(4, 2);
 // 일정 스팟 주변의 넓은 잔디·길에 배치. 고정 좌표보다 맵 크기 변화에 안전하다.
 function placeNpcs(definitions) {
   for (const definition of definitions) {
-    const anchor = TRIG[definition.stop] || TRIG[0];
+    const anchor = (interior && definition.anchor) || TRIG[definition.stop] || TRIG.find(Boolean) || (interior ? [W >> 1, 6] : GATE);
     const candidates = [];
     for (let y = 2; y < H - 2; y++) for (let x = 2; x < W - 2; x++) {
-      // 잔디(0)·보도(1)만 — 광장·건물·물 제외
-      if (g[y][x] !== 0 && g[y][x] !== 1) continue;
+      // 잔디(0)·보도(1)·풀숲(8)만 — 광장·건물·물 제외 (실내는 돌바닥(2)도 허용)
+      if (!interior && g[y][x] !== 0 && g[y][x] !== 1 && g[y][x] !== 8) continue;
       if (npcBlocked.has(y * W + x)) continue;
-      if (TRIG.some(([tx, ty]) => Math.abs(tx - x) + Math.abs(ty - y) <= 2)) continue;
+      if (TRIG.some(t => t && Math.abs(t[0] - x) + Math.abs(t[1] - y) <= 2)) continue;
       if ([me, wife, pet].some(e => Math.abs(e.x - x) + Math.abs(e.y - y) <= 2)) continue;
       if (STATIONS.some(st => x >= st.x - 1 && x <= st.x + st.w &&
         y >= st.y - 1 && y <= st.y + st.h + 2)) continue;
@@ -2160,6 +2603,19 @@ function placeNpcs(definitions) {
         if (!walkable(x + dx, y + dy)) { open = false; break; }
       }
       if (!open) continue;
+      if (interior) {
+        // An NPC may not turn a furniture aisle into an isolated pocket.
+        const reached = new Set(), pending = [[me.x, me.y]];
+        while (pending.length) {
+          const [cx, cy] = pending.pop(), key = cy * W + cx;
+          if ((cx === x && cy === y) || reached.has(key) || !walkable(cx, cy)) continue;
+          reached.add(key);
+          pending.push([cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]);
+        }
+        let count = 0;
+        for (let yy=1; yy<H-1; yy++) for (let xx=1; xx<W-1; xx++) if (walkable(xx,yy) && !(xx===x && yy===y)) count++;
+        if (reached.size !== count) continue;
+      }
       candidates.push({ x, y, distance: Math.abs(anchor[0] - x) + Math.abs(anchor[1] - y) });
     }
     candidates.sort((a, b) => a.distance - b.distance);
@@ -2179,7 +2635,7 @@ function placeNpcs(definitions) {
       lastLineIndex: -1,
       homeX: pick.x,
       homeY: pick.y,
-      roam: !!definition.roam,
+      roam: !interior && !!definition.roam,
       path: [],
       wait: 600 + Math.random() * 1600,
       moveDur: NPC_DUR,
@@ -2193,7 +2649,7 @@ function stepNpc(npc, nx, ny) {
   if (npc.moving || dlgOpen || ride) return false;
   if ([me, wife, pet].some(e => e.x === nx && e.y === ny)) return false;
   if (npcs.some(o => o !== npc && o.x === nx && o.y === ny)) return false;
-  if (TRIG.some(([tx, ty]) => tx === nx && ty === ny)) return false;
+  if (TRIG.some(t => t && t[0] === nx && t[1] === ny)) return false;
   npcBlocked.delete(npc.y * W + npc.x);
   const ok = walkable(nx, ny);
   if (!ok) {
@@ -2211,7 +2667,9 @@ function stepNpc(npc, nx, ny) {
 function pickNpcWanderTarget(npc) {
   // 일정 스팟·허브·빈 길 중 먼 곳을 골라 맵 전체를 오가게 함
   const goals = [];
-  for (const [tx, ty] of TRIG) {
+  for (const t of TRIG) {
+    if (!t) continue;
+    const [tx, ty] = t;
     for (const [dx, dy] of [[0, 2], [0, -2], [2, 0], [-2, 0], [1, 1], [-1, 1]]) {
       const x = tx + dx, y = ty + dy;
       if (walkable(x, y) || (g[y] && (g[y][x] === 0 || g[y][x] === 1))) goals.push([x, y]);
@@ -2336,7 +2794,7 @@ let pendingSleep = false, npcDialog = false;
 let talkingNpc = null;
 
 function clearHubButtons() {
-  dlgActs.querySelectorAll('[data-hub-to]').forEach(el => el.remove());
+  dlgActs.querySelectorAll('[data-hub-to],[data-enter-in],[data-exit-out]').forEach(el => el.remove());
   dlgOk.style.display = '';
 }
 
@@ -2403,11 +2861,11 @@ function advanceDialog() {
 }
 dlg.addEventListener('pointerdown', e => {
   if (e.target.closest('.acts')) return;
-  e.stopPropagation(); advanceDialog();
+  e.stopPropagation(); sfx('tick'); advanceDialog();
 });
-dlgOk.addEventListener('pointerdown', e => { e.stopPropagation(); advanceDialog(); });
+dlgOk.addEventListener('pointerdown', e => { e.stopPropagation(); sfx('confirm'); advanceDialog(); });
 dlgCancel.addEventListener('pointerdown', e => {
-  e.stopPropagation();
+  e.stopPropagation(); sfx('tick');
   pendingWarp = null;
   pendingSleep = false;
   talkingNpc = null;
@@ -2422,8 +2880,33 @@ const listEl = document.getElementById('stopList');
 const mStops = document.getElementById('mStops');
 const daysEl = document.getElementById('days');
 const autoBtn = document.getElementById('autoBtn');
+const hudEl = document.getElementById('hud');
+const hudFoldBtn = document.getElementById('hudFold');
+const HUD_FOLD_KEY = 'tokyo-pixel-hud-fold';
+let hudCollapsed = localStorage.getItem(HUD_FOLD_KEY) === '1'
+  || (matchMedia('(max-width:900px), (pointer:coarse)').matches && localStorage.getItem(HUD_FOLD_KEY) == null);
+function applyHudFold() {
+  hudEl.classList.toggle('collapsed', hudCollapsed);
+  hudFoldBtn.textContent = hudCollapsed ? '▼' : '▲';
+  hudFoldBtn.title = hudCollapsed ? '목록 펼치기' : '목록 접기';
+  hudFoldBtn.setAttribute('aria-label', hudFoldBtn.title);
+  localStorage.setItem(HUD_FOLD_KEY, hudCollapsed ? '1' : '0');
+}
+hudFoldBtn.addEventListener('click', e => {
+  e.stopPropagation(); hideToast(); sfx('tick');
+  hudCollapsed = !hudCollapsed; applyHudFold();
+});
+applyHudFold();
 
 function shortName(s) { return s.name.replace(/\s*·.*/, '').replace(/^점심\s*/, '').slice(0, 7); }
+/** 슬롯 아이콘용 장소 성격 (숙소 / 맛집 / 공원 / 쇼핑 / 명소) */
+function stopKind(s) {
+  if (s.stay) return 'stay';
+  if (s.eat) return 'eat';
+  if (/공원|정원|황거|강변|해변|온천|호수|숲|후지/.test(s.name)) return 'park';
+  if (/쇼핑|돈키|스토어|마켓|백화점|아메요코|아키하바라|몰|시티|스크램블/.test(s.name)) return 'shop';
+  return 'sight';
+}
 
 function refreshList() {
   [...listEl.children].forEach((li, i) => {
@@ -2440,13 +2923,14 @@ function refreshDays() {
   daysEl.innerHTML = DAYS.map((d, i) =>
     `<button type="button" data-i="${i}" class="${i === dayIdx ? 'cur' : ''}">${d.no}</button>`).join('');
   daysEl.querySelectorAll('button').forEach(b =>
-    b.addEventListener('click', () => { const i = +b.dataset.i; if (i !== dayIdx) loadDay(i); }));
+    b.addEventListener('click', () => { const i = +b.dataset.i; if (i !== dayIdx) { sfx('confirm'); loadDay(i); } else sfx('tick'); }));
 }
 
 /** 같은 칸에 트리거가 여러 개일 때(숙소 출발/복귀) 올바른 인덱스 선택 */
 function trigAt(x, y, loose = false) {
   const hit = [];
   for (let i = 0; i < TRIG.length; i++) {
+    if (!TRIG[i]) continue; // 다른 마을의 스팟
     const [tx, ty] = TRIG[i];
     const d = Math.abs(tx - x) + Math.abs(ty - y);
     if (loose ? d <= 1 : d === 0) hit.push(i);
@@ -2466,13 +2950,31 @@ function stopDialog(i) {
     s.note + dist,
     { tip: (TIPS_BY_DAY[dayIdx] || [])[i], via: s.via, maps: true, stop: i, showOk: true }
   );
+  // 수동 플레이: 건물 종류가 있으면 「들어가기」
+  const kind = !auto && !interior ? interiorKind(s.name) : null;
+  if (kind) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.dataset.enterIn = String(i);
+    btn.textContent = '🚪 들어가기';
+    btn.addEventListener('pointerdown', e => {
+      e.stopPropagation();
+      sfx('confirm');
+      clearHubButtons();
+      dlg.style.display = 'none'; dlgOpen = false; dlgStop = -1;
+      enterInterior(i);
+    });
+    dlgActs.insertBefore(btn, dlgOk);
+    dlgActs.hidden = false;
+  }
   refreshList();
 }
 
 function onDialogClosed() {
   if (pendingWarp != null) {
+    // 역에서 탑승 확정 → 지하철/버스 컷신 (포탈이 아님)
     const i = pendingWarp; pendingWarp = null;
-    startRide(i);
+    if (!startHop(i, { forceRide: true })) { if (auto) routeToTarget(); else travelInMap(i); }
     return;
   }
   if (!auto) return;
@@ -2507,21 +3009,27 @@ function openBoardDialog(i) {
   const s = DAY.stops[i];
   pendingWarp = i;
   boardPending = null;
-  const kind = rideKind(s.via);
-  const names = extractStations(s.via);
+  const via = hopViaFor(i);
+  // 역에서 연 탑승 대화는 항상 교통 연출
+  const kind = via ? rideKind(via) : 'metro';
+  const names = extractStations(via);
   const hub = STATIONS[0];
-  const from = hub ? `${hub.name}${hub.vKind === 'bus' ? '' : '역'}` : (names[0] ? names[0] + '역' : stationLabel(s.via, '출발'));
-  const to = names.length > 1 ? names[names.length - 1] + '역' : (s.jp ? s.jp : s.name);
-  const line = extractLine(s.via);
+  const here = AREAS[areaIdx]?.name || '';
+  const there = AREAS[areaOf(i)]?.name || shortStationFallback(s.name);
+  const from = names[0] ? names[0] + '역' : (hub ? `${hub.name}${hub.vKind === 'bus' ? '' : '역'}` : stationLabel(via, '출발'));
+  const to = names.length > 1 ? names[names.length - 1] + '역' : there;
+  const line = extractLine(via);
+  const km = hopKm(i);
+  const kmTxt = km >= 0.3 ? ` · ${km.toFixed(1)}km` : '';
   const title = kind === 'taxi' ? '🚕 택시 탑승' : kind === 'bus' ? `🚌 ${from}` : `🚇 ${from}`;
   const ok = kind === 'taxi' ? '🚕 출발' : kind === 'bus' ? '🚌 출발' : '🚇 출발';
   const body = kind === 'metro'
-    ? `${line} · ${from} → ${s.time} ${shortName(s)}`
-    : (s.via || '다음 장소로 이동');
+    ? `${line} · ${from} → ${to}${kmTxt} · ${s.time} ${shortName(s)}`
+    : `${via || '다음 마을로 이동'}${kmTxt}`;
   openDialog(title, body, {
     showOk: true, okLabel: ok, cancelable: !auto,
     tip: `다음 일정: ${s.time} ${s.name}`,
-    via: kind === 'metro' ? s.via : undefined
+    via: kind === 'metro' ? via : undefined
   });
 }
 
@@ -2536,8 +3044,9 @@ function openHubMenu(st) {
   routes.sort((a, b) => a.toStop - b.toStop);
 
   if (auto) {
-    const r = routes.find(x => x.toStop === target) || routes[0];
+    const r = routes.find(x => x.toStop === target);
     if (r) openBoardDialog(r.toStop);
+    else if (DAY.stops[target]) routeToTarget();
     else openDialog(`🚇 ${st.name}`, '이 역에서 갈 수 있는 일정이 없어요.', { showOk: true });
     return;
   }
@@ -2548,7 +3057,7 @@ function openHubMenu(st) {
   }
 
   const icon0 = st.vKind === 'taxi' ? '🚕' : st.vKind === 'bus' ? '🚌' : '🚇';
-  openDialog(`${icon0} ${st.name}${st.vKind === 'metro' ? '역' : ''}`, '어디로 갈까요?', {
+  openDialog(`${icon0} ${st.name}${st.vKind === 'metro' ? '역' : ''}`, '어느 마을로 갈까요?', {
     showOk: false, cancelable: true
   });
   dlgOk.style.display = 'none';
@@ -2561,11 +3070,66 @@ function openHubMenu(st) {
     btn.type = 'button';
     btn.dataset.hubTo = String(r.toStop);
     const kind = r.kind || vehicleKind(r.line);
-    const icon = kind === 'taxi' ? '🚕' : kind === 'bus' ? '🚌' : '🚇';
-    btn.textContent = `${icon} ${s.time} ${shortName(s)}`;
+    const icon = kind === 'walk' ? '🚪' : kind === 'taxi' ? '🚕' : kind === 'bus' ? '🚌' : '🚇';
+    const there = AREAS[areaOf(r.toStop)]?.name;
+    btn.textContent = `${icon} ${s.time} ${shortName(s)}${there ? ` (${there})` : ''}`;
     btn.addEventListener('pointerdown', e => {
       e.stopPropagation();
-      openBoardDialog(r.toStop);
+      sfx('confirm');
+      // 포탈 이동 vs 탑승 선택
+      if (kind === 'walk' || !hopViaFor(r.toStop)) {
+        clearHubButtons();
+        dlg.style.display = 'none'; dlgOpen = false; dlgStop = -1;
+        walkToPortal(r.toStop);
+      } else {
+        openBoardDialog(r.toStop);
+      }
+    });
+    dlgActs.insertBefore(btn, dlgCancel);
+  }
+  dlgNext.hidden = true;
+}
+
+/** 포탈(마을 출구) 메뉴 — 다른 마을 스팟으로 맵 이동 */
+function openPortalMenu() {
+  const dests = [];
+  const seenArea = new Set([areaIdx]);
+  DAY.stops.forEach((s, i) => {
+    const ai = areaOf(i);
+    if (ai === areaIdx || seenArea.has(ai)) return;
+    seenArea.add(ai);
+    // 그 마을의 대표 스팟(첫 스팟)으로 이동
+    dests.push({ i: AREAS[ai].stops[0], name: AREAS[ai].name, stopName: s.name, time: DAY.stops[AREAS[ai].stops[0]].time });
+  });
+  // 일정 순서로도: 아직 안 본 다음 스팟이 다른 마을이면 맨 위에
+  const next = DAY.stops.findIndex((_, i) => i > (lastTrig < 0 ? -1 : lastTrig) && areaOf(i) !== areaIdx);
+  if (next >= 0) {
+    const ai = areaOf(next);
+    const idx = dests.findIndex(d => areaOf(d.i) === ai);
+    if (idx > 0) { const [d] = dests.splice(idx, 1); dests.unshift(d); }
+    else if (idx < 0) dests.unshift({ i: next, name: AREAS[ai].name, stopName: DAY.stops[next].name, time: DAY.stops[next].time });
+  }
+
+  if (!dests.length) {
+    openDialog('🚪 마을 출구', '지금은 갈 수 있는 다른 마을이 없어요.', { showOk: true, cancelable: true });
+    return;
+  }
+  const here = AREAS[areaIdx]?.name || '마을';
+  openDialog(`🚪 ${here} 출구`, '어느 마을로 갈까요?', { showOk: false, cancelable: true });
+  dlgOk.style.display = 'none';
+  dlgActs.hidden = false;
+  dlgCancel.hidden = false;
+  for (const d of dests) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.dataset.hubTo = String(d.i);
+    btn.textContent = `→ ${d.name}  (${d.time} ${shortName(DAY.stops[d.i])})`;
+    btn.addEventListener('pointerdown', e => {
+      e.stopPropagation();
+      sfx('confirm');
+      clearHubButtons();
+      dlg.style.display = 'none'; dlgOpen = false; dlgStop = -1;
+      startHop(d.i);
     });
     dlgActs.insertBefore(btn, dlgCancel);
   }
@@ -2578,24 +3142,109 @@ function rideKind(via) {
   return 'metro';
 }
 
-function startRide(destIdx) {
+/* ═══ 마을 간 이동 (맵 이동) ═══
+ * 기본: 마을 아래 포탈(GATE) → 도로 컷신 → 다음 마을 입구 (포켓몬 루트 이동)
+ * 선택: 마을 역에서 A → 지하철/버스/택시 탑승 컷신 (forceRide)
+ * 같은 마을 스팟 → 맵 안 findPath 걷기
+ */
+function atGate() { return me.x === GATE[0] && me.y === GATE[1]; }
+/** 현재 마을(중심) → 목적지 스팟 실제 km (좌표 없으면 0) */
+function hopKm(destIdx) {
+  const to = DAY.stops[destIdx], from = AREAS[areaIdx];
+  if (!to || !from || !from.n || to.lat == null) return 0;
+  return haversineKm(from, to);
+}
+/** via 문자열에서 소요 분 추출 ("약 20분", "15분") */
+function viaMinutes(via) {
+  const m = /(\d+)\s*분/.exec(via || '');
+  return m ? +m[1] : 0;
+}
+/** 이동 방식: 'walk'(같은 마을) | 'routeWalk'(다른 마을·포탈) | 'ride'(역에서 선택 탑승만) */
+function hopMode(destIdx, opts = {}) {
+  if (!DAY.stops[destIdx]) return 'walk';
+  if (areaOf(destIdx) === areaIdx) return 'walk';
+  if (opts.forceRide) return 'ride';
+  return 'routeWalk'; // 기본은 포탈 — 지하철 강제 아님
+}
+/** 다른 마을이면 컷신 시작 후 true, 같은 마을이면 false */
+function startHop(destIdx, opts = {}) {
+  const m = hopMode(destIdx, opts);
+  if (m === 'routeWalk') { startRouteWalk(destIdx); return true; }
+  if (m === 'ride') { startRide(destIdx, hopViaFor(destIdx) || null); return true; }
+  return false;
+}
+/** 포탈로 걸어가 맵 이동 시작 (이미 포탈 위면 바로 컷신) */
+function walkToPortal(destIdx) {
+  if (areaOf(destIdx) === areaIdx) { travelInMap(destIdx); return; }
+  if (atGate()) { startHop(destIdx); return; }
+  const p = findPath(me.x, me.y, GATE[0], GATE[1]);
+  boardPending = destIdx;
+  if (p.length) { manualQueue = auto ? [] : p; if (auto) queue = p; clickTarget = [...GATE]; }
+  else startHop(destIdx);
+}
+/** 컷신 방향: 지오 기준 (남쪽=아래) */
+function hopDir(destIdx) {
+  const from = AREAS[areaIdx], to = DAY.stops[destIdx];
+  if (!from || !from.n || !to || to.lat == null) return { vertical: true, dirSign: 1 };
+  const dLat = to.lat - from.lat;
+  const dLng = (to.lng - from.lng) * Math.cos(from.lat * Math.PI / 180);
+  const vertical = Math.abs(dLat) >= Math.abs(dLng);
+  return { vertical, dirSign: vertical ? (dLat < 0 ? 1 : -1) : (dLng >= 0 ? 1 : -1) };
+}
+
+/** 포탈 컷신: 암전 → 도로/루트 위를 몇 걸음 → 암전 → 다음 마을 입구 */
+function startRouteWalk(destIdx) {
   const s = DAY.stops[destIdx];
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const names = extractStations(s.via);
-  const from = names[0] ? names[0] + '역' : stationLabel(s.via, '출발');
-  const to = names.length > 1 ? names[names.length - 1] + '역' : stationLabel(s.via, shortStationFallback(s.name));
+  const km = hopKm(destIdx);
+  const here = AREAS[areaIdx]?.name || '';
+  const there = AREAS[areaOf(destIdx)]?.name || shortStationFallback(s.name);
+  const dur = reduced ? 500 : Math.round(Math.max(1200, Math.min(2800, Math.max(km, 0.4) * 700)) + 400);
   ride = {
     dest: destIdx,
     via: s.via || '',
     name: s.name,
     time: s.time,
-    kind: rideKind(s.via),
-    line: extractLine(s.via),
+    kind: 'walk',
+    fromTown: here,
+    toTown: there,
+    km: km > 0.05 ? km : 0.5,
+    ...hopDir(destIdx),
+    t: 0,
+    dur
+  };
+  queue = []; manualQueue = []; clickTarget = null; boardPending = null;
+  sfx('tick');
+  resizeRide();
+  rideEl.classList.add('show');
+}
+
+function startRide(destIdx, viaOverride) {
+  const s = DAY.stops[destIdx];
+  const via = viaOverride || s.via || '';
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const kind = rideKind(via);
+  const suffix = kind === 'metro' ? '역' : '';
+  const names = extractStations(via);
+  const here = AREAS[areaIdx]?.name || '';
+  const there = AREAS[areaOf(destIdx)]?.name || shortStationFallback(s.name);
+  const from = names[0] ? names[0] + '역' : (here ? here + suffix : stationLabel(via, '출발'));
+  const to = names.length > 1 ? names[names.length - 1] + '역' : there + suffix;
+  ride = {
+    dest: destIdx,
+    via,
+    name: s.name,
+    time: s.time,
+    kind,
+    line: extractLine(via),
     fromStn: from,
     toStn: to,
+    km: hopKm(destIdx),
+    mins: viaMinutes(via),
     t: 0,
     dur: reduced ? 900 : 4800
   };
+  queue = []; manualQueue = []; clickTarget = null; boardPending = null;
   resizeRide();
   rideEl.classList.add('show');
 }
@@ -2605,8 +3254,25 @@ function finishRide() {
   const i = ride.dest;
   ride = null;
   rideEl.classList.remove('show');
-  teleport(...TRIG[i]);
-  stopDialog(i);
+  arriveAt(i);
+}
+
+/** 컷신 뒤 도착 처리: 다른 마을이면 맵 로드(입구 스폰) → 스팟까지 걸어가서 대화 */
+function arriveAt(i) {
+  const ai = areaOf(i);
+  if (ai !== areaIdx) loadArea(ai);
+  sfx('confirm');
+  if (!TRIG[i]) { stopDialog(i); return; }
+  if (auto) { routeToTarget(); return; }
+  travelInMap(i);
+}
+/** 같은 마을 안에서 스팟 i로 걷기 (도착하면 대화창) */
+function travelInMap(i) {
+  const [tx, ty] = TRIG[i];
+  if (me.x === tx && me.y === ty) { stopDialog(i); return; }
+  const p = findPath(me.x, me.y, tx, ty);
+  if (!p.length) { teleport(tx, ty); stopDialog(i); return; }
+  manualQueue = p; clickTarget = [tx, ty]; arriveStop = i;
 }
 
 function resizeRide() {
@@ -2625,8 +3291,111 @@ function clamp01(t) { return Math.max(0, Math.min(1, t)); }
 function updateRide(dt) {
   if (!ride) return;
   ride.t += dt;
-  drawRide();
+  if (ride.kind === 'walk') drawRouteWalk(); else drawRide();
   if (ride.t >= ride.dur) finishRide();
+}
+
+/** 도보 장거리 컷신 그리기: 도로 스트립(잔디·나무 양옆) 위를 세 명이 걷는다 */
+function drawRouteWalk() {
+  if (!ride) return;
+  const ctx = rideCtx;
+  const W = rideCv.width, H = rideCv.height;
+  const p = clamp01(ride.t / ride.dur);
+  const FADE = 350 / ride.dur;                   // 페이드 비율
+  const walkT = clamp01((p - FADE) / (1 - FADE * 2));
+  const u = Math.max(2, Math.round(Math.min(W, H) / 160)); // 타일 확대 배율
+  const T = 16 * u;
+  const vertical = ride.vertical;
+  const scroll = (ride.t * 0.09 * u) % T;       // 스크롤 오프셋(px)
+
+  ctx.imageSmoothingEnabled = false;
+  ctx.fillStyle = PAL.grassLight;
+  ctx.fillRect(0, 0, W, H);
+
+  // 잔디 타일 (아틀라스 0번, 프레임 waterF)
+  const cols = Math.ceil(W / T) + 2, rows = Math.ceil(H / T) + 2;
+  const off = ride.dirSign > 0 ? -scroll : scroll - T;
+  for (let gy = -1; gy < rows; gy++) for (let gx = -1; gx < cols; gx++) {
+    const dx = gx * T + (vertical ? 0 : off), dy = gy * T + (vertical ? off : 0);
+    ctx.drawImage(atlas, 0, waterF * 16, 16, 16, dx, dy, T, T);
+  }
+  // 도로 스트립 (3타일 폭, 포장길 1번)
+  const roadTiles = 3;
+  const roadW = roadTiles * T;
+  const rx = vertical ? ((W - roadW) / 2) | 0 : 0;
+  const ry = vertical ? 0 : ((H - roadW) / 2) | 0;
+  for (let i = -1; i < (vertical ? rows : cols); i++) for (let k = 0; k < roadTiles; k++) {
+    const dx = vertical ? rx + k * T : i * T + off;
+    const dy = vertical ? i * T + off : ry + k * T;
+    ctx.drawImage(atlas, 16, waterF * 16, 16, 16, dx, dy, T, T);
+  }
+  // 도로 양옆 나무 줄 (한 칸 띄워서)
+  const treeLine = (side) => {
+    for (let i = -1; i < (vertical ? rows : cols); i += 2) {
+      const v = Math.abs(i * 7 + side * 3) % 10;
+      const spr = treeSprites[v];
+      if (!spr) continue;
+      const dx = vertical ? (side < 0 ? rx - T * 1.5 : rx + roadW + T * 0.5) : i * T + off;
+      const dy = vertical ? i * T + off : (side < 0 ? ry - T * 1.5 : ry + roadW + T * 0.5);
+      ctx.drawImage(spr, dx | 0, dy | 0, T, T);
+    }
+  };
+  treeLine(-1); treeLine(1);
+
+  // 걷는 세 명 — 도로 중앙, 진행 방향 바라보기
+  const frame = ((ride.t / 180) | 0) % 2;
+  const dir = vertical ? (ride.dirSign > 0 ? 'down' : 'up') : (ride.dirSign > 0 ? 'right' : 'left');
+  const cu = Math.max(4, SCALE + 1);              // drawChar 내부 유닛
+  const cw = 16 * cu, ch = 17 * cu;
+  const cx = (W - cw) / 2, cy = (H - ch) / 2;
+  const gap = vertical ? [0, 19 * cu] : [17 * cu, 0];
+  const behind = ride.dirSign > 0 ? -1 : 1;
+  const posMe = [cx, cy];
+  const posWife = [cx + gap[0] * behind, cy + gap[1] * behind];
+  const posPet = [cx + gap[0] * behind * 2, cy + gap[1] * behind * 2];
+  const items = [
+    { y: posMe[1], d: () => drawChar(ctx, posMe[0], posMe[1], dir, frame, PAL_ME) },
+    { y: posWife[1], d: () => drawChar(ctx, posWife[0], posWife[1], dir, 1 - frame, PAL_WIFE) },
+    { y: posPet[1], d: () => drawJakae(ctx, posPet[0], posPet[1] + 2 * cu, dir, frame, PAL_JAKAE) }
+  ];
+  items.sort((a, b) => a.y - b.y).forEach(it => it.d());
+
+  // 캡션: 맵 이동 · 마을 → 마을
+  const fu = Math.max(1, (Math.min(W, H) / 240) | 0);
+  const fromT = ride.fromTown || '';
+  const toT = ride.toTown || '';
+  const label = fromT && toT ? `${fromT} → ${toT}` : `맵 이동 · ${(ride.km >= 10 ? Math.round(ride.km) : Math.round(ride.km * 10) / 10)}km`;
+  ctx.fillStyle = 'rgba(24,36,64,.88)';
+  const tw = Math.min(W * 0.8, (label.length + 6) * 9 * fu);
+  ctx.fillRect((W - tw) / 2, H * 0.10, tw, 18 * fu);
+  ctx.fillStyle = PAL.gold;
+  ctx.fillRect((W - tw) / 2, H * 0.10 + 18 * fu, tw, 2 * fu);
+  ctx.fillStyle = '#fcebc4';
+  ctx.font = `bold ${10 * fu}px ${FONT_UI}`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(label, W / 2, H * 0.10 + 9 * fu);
+  const sub = `${ride.time ? ride.time + '  ' : ''}${ride.name}`.slice(0, 22);
+  const sw = Math.min(W * 0.8, (sub.length + 4) * 8 * fu);
+  ctx.fillStyle = 'rgba(24,36,64,.88)';
+  ctx.fillRect((W - sw) / 2, H * 0.90 - 8 * fu, sw, 16 * fu);
+  ctx.fillStyle = '#fcebc4';
+  ctx.font = `bold ${9 * fu}px ${FONT_UI}`;
+  ctx.fillText(sub, W / 2, H * 0.90);
+
+  // 진행 바
+  ctx.fillStyle = 'rgba(0,0,0,.35)';
+  ctx.fillRect(W * 0.2, H * 0.95, W * 0.6, 3 * fu);
+  ctx.fillStyle = PAL.gold;
+  ctx.fillRect(W * 0.2, H * 0.95, W * 0.6 * walkT, 3 * fu);
+
+  // 암전 in/out
+  if (p < FADE) {
+    ctx.fillStyle = `rgba(0,0,0,${1 - p / FADE})`;
+    ctx.fillRect(0, 0, W, H);
+  } else if (p > 1 - FADE) {
+    ctx.fillStyle = `rgba(0,0,0,${(p - (1 - FADE)) / FADE})`;
+    ctx.fillRect(0, 0, W, H);
+  }
 }
 
 function initMetroTrains() {
@@ -2806,7 +3575,7 @@ function drawMapVehicle(ctx, px, py, horiz, kind, waiting) {
 }
 
 function drawWaitTag(ctx, lx, py, label) {
-  ctx.font = `bold ${SCALE * 3.2}px Galmuri11, monospace`;
+  ctx.font = `bold ${SCALE * 3.2}px ${FONT_UI}`;
   ctx.textAlign = 'center';
   const ly = py - SCALE * 4;
   const tw2 = ctx.measureText(label).width;
@@ -2858,7 +3627,7 @@ function drawRide() {
       ctx.fillStyle = 'rgba(40,104,200,.85)';
       ctx.fillRect(W * 0.35, H * 0.16, W * 0.3, 14 * u);
       ctx.fillStyle = '#f8f0d8';
-      ctx.font = `bold ${8 * u}px Galmuri11, monospace`;
+      ctx.font = `bold ${8 * u}px ${FONT_UI}`;
       ctx.textAlign = 'center';
       ctx.fillText(mid + '역', W / 2, H * 0.16 + 7 * u);
     }
@@ -2890,7 +3659,7 @@ function drawRide() {
     const tx = (W - tw) / 2, ty = H * 0.12;
     ctx.fillRect(tx, ty, tw, 18 * u);
     ctx.fillStyle = '#f8f0d8';
-    ctx.font = `bold ${10 * u}px Galmuri11, monospace`;
+    ctx.font = `bold ${10 * u}px ${FONT_UI}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(label.slice(0, 14), W / 2, ty + 9 * u);
@@ -2918,12 +3687,16 @@ function drawRide() {
   // 탑승 안내
   ctx.globalAlpha = fadeIn;
   ctx.fillStyle = '#fcebc4';
-  ctx.font = `bold ${9 * u}px Galmuri11, monospace`;
+  ctx.font = `bold ${9 * u}px ${FONT_UI}`;
   ctx.textAlign = 'center';
   let msg = '';
   if (p < 0.38) msg = kind === 'taxi' ? '택시가 오고 있어요…' : kind === 'bus' ? '버스가 들어와요…' : `${ride.fromStn}에 열차 진입…`;
   else if (p < 0.48) msg = `${ride.fromStn} 탑승!`;
-  else if (p < 0.78) msg = `${ride.line}  ·  ${ride.fromStn} → ${ride.toStn}`;
+  else if (p < 0.78) {
+    const kmTxt = ride.km >= 0.5 ? `  ·  ${ride.km >= 10 ? Math.round(ride.km) : Math.round(ride.km * 10) / 10}km` : '';
+    const minTxt = ride.mins ? `  ·  약 ${ride.mins}분` : '';
+    msg = `${ride.line}  ·  ${ride.fromStn} → ${ride.toStn}${kmTxt}${minTxt}`;
+  }
   else msg = `${ride.toStn} 도착  ·  ${ride.name}`;
   ctx.fillText(msg, W / 2, H * 0.90);
   ctx.globalAlpha = 1;
@@ -3011,33 +3784,19 @@ function drawVehicle(ctx, x, y, w, h, u, kind, doorT, speeding) {
 }
 
 function routeToTarget() {
-  const next = DAY.stops[target];
+  if (!DAY.stops[target]) { setAuto(false); return; }
   boardPending = null;
-  clickTarget = TRIG[target] ? [...TRIG[target]] : null;
 
-  // 교통 구간: 먼저 역까지 걸어간 뒤 탑승(순간이동은 탑승 후에만)
-  // 택시 승차 일정 스팟 자체는 걸어서 방문 — 중복 탑승 연출 없음
-  if (isTransit(next.via, next) && target > 0 && !isVehicleStop(next)) {
-    if (STATIONS.length) {
-      if (nearStation()) {
-        openBoardDialog(target);
-        return;
-      }
-      const gate = stationApproach();
-      if (gate) {
-        boardPending = target;
-        queue = findPath(me.x, me.y, ...gate);
-        clickTarget = gate;
-        if (!queue.length && me.x === gate[0] && me.y === gate[1]) openBoardDialog(target);
-        refreshList();
-        return;
-      }
-    }
-    // 역이 없거나 진입로를 못 찾으면 바로 탑승 컷신
-    openBoardDialog(target);
+  // 다른 마을 → 포탈(GATE)까지 걸어간 뒤 맵 이동 컷신 (지하철 강제 아님)
+  if (areaOf(target) !== areaIdx) {
+    if (atGate()) { startHop(target); refreshList(); return; }
+    const p = findPath(me.x, me.y, GATE[0], GATE[1]);
+    if (p.length) { boardPending = target; queue = p; clickTarget = [...GATE]; refreshList(); return; }
+    startHop(target); refreshList();
     return;
   }
 
+  clickTarget = [...TRIG[target]];
   queue = findPath(me.x, me.y, ...TRIG[target]);
   if (!queue.length && me.x === TRIG[target][0] && me.y === TRIG[target][1]) stopDialog(target);
   refreshList();
@@ -3054,7 +3813,7 @@ function setAuto(v) {
   } else { queue = []; pendingWarp = null; boardPending = null; }
   refreshList();
 }
-autoBtn.onclick = () => { hideToast(); setAuto(!auto); };
+autoBtn.onclick = () => { hideToast(); sfx('confirm'); setAuto(!auto); };
 
 /* ═══ 수면 → 다음 날 ═══ */
 const sleepEl = document.getElementById('sleep');
@@ -3145,7 +3904,14 @@ function openNpcDialog(npc) {
 
 function interactA() {
   hideToast();
-  // 허브 역 — 갈 수 있는 일정 목록
+  // 건물 안 출구 → 밖으로 / 야외 포탈 → 마을 선택
+  if (atGate()) {
+    if (interior) { exitInterior(); return; }
+    openPortalMenu();
+    return;
+  }
+  if (interior) return; // 실내에서는 역·야외 스팟 상호작용 없음
+  // 허브 역 — 갈 수 있는 일정 목록 (지하철/버스 선택)
   const st = stationHere();
   if (st) {
     openHubMenu(st);
@@ -3171,7 +3937,7 @@ addEventListener('keydown', e => {
     return;
   }
   if (ride) return;
-  if (KEYMAP[e.code]) { e.preventDefault(); held.add(e.code); if (auto) setAuto(false); manualQueue = []; clickTarget = null; hideToast(); }
+  if (KEYMAP[e.code]) { e.preventDefault(); held.add(e.code); if (auto) setAuto(false); manualQueue = []; clickTarget = null; arriveStop = -1; hideToast(); }
 });
 addEventListener('keyup', e => held.delete(e.code));
 
@@ -3187,7 +3953,7 @@ document.getElementById('cv').addEventListener('pointerdown', e => {
     if (walkable(tx + dx, ty + dy)) { goal = [tx + dx, ty + dy]; break; }
   if (!goal) return;
   const p = findPath(me.x, me.y, goal[0], goal[1]);
-  if (p.length || (goal[0] === me.x && goal[1] === me.y)) { manualQueue = p; clickTarget = goal; }
+  if (p.length || (goal[0] === me.x && goal[1] === me.y)) { manualQueue = p; clickTarget = goal; arriveStop = -1; }
 });
 
 const toast = document.getElementById('toast');
@@ -3197,7 +3963,7 @@ function hideToast() { if (!toastGone) { toastGone = true; toast.style.display =
 document.querySelectorAll('#dpad button').forEach(b => {
   const key = 'pad' + b.dataset.d;
   KEYMAP[key] = b.dataset.d.split(',').map(Number);
-  const down = e => { e.preventDefault(); e.stopPropagation(); held.add(key); if (auto) setAuto(false); manualQueue = []; clickTarget = null; hideToast(); };
+  const down = e => { e.preventDefault(); e.stopPropagation(); held.add(key); if (auto) setAuto(false); manualQueue = []; clickTarget = null; arriveStop = -1; hideToast(); };
   const up = e => { e.preventDefault(); held.delete(key); };
   b.addEventListener('pointerdown', down);
   ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => b.addEventListener(ev, up));
@@ -3212,14 +3978,116 @@ document.body.addEventListener('touchmove', e => {
   if (e.target.closest('#pad,#dlg,.acts')) e.preventDefault();
 }, { passive: false });
 
+/* ═══ 건물 내부 ═══ */
+const INTERIOR_KIND_KO = {
+  hotel: '숙소', airport: '공항', museum: '미술관', temple: '사원',
+  restaurant: '식당', shop: '상점', tower: '전망대', arcade: '오락관'
+};
+
+/** 맵 데이터(야외/실내 공통)를 현재 월드에 적용 */
+function applyWorldMap(M, opts = {}) {
+  W = M.W; H = M.H; g = M.g; BLD = M.BLD; TRIG = M.TRIG; GATE = M.gate || M.spawn;
+  ZONES = M.ZONES; STN_LABELS = M.STN_LABELS; STATIONS = M.STATIONS || []; RAILS = M.RAILS || [];
+  waterTiles = M.waterTiles || [];
+  waterTileLookup = new Map(waterTiles.map(tile => [tile.y * W + tile.x, tile]));
+  initMetroTrains();
+  trees = [];
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    if (!interior && g[y][x] === 4) trees.push({ x, y, variant: Math.floor(Math.random() * 10) });
+  }
+  blocked = new Set();
+  BLD.forEach(b => { for (let j = b.y; j < b.y + b.h; j++) for (let x = b.x; x < b.x + b.w; x++) blocked.add(j * W + x); });
+  bldCache = new Map();
+  BLD.forEach(b => bldCache.set(b, renderBld(b)));
+
+  lastTrig = -1; queue = []; manualQueue = []; clickTarget = null; pendingWarp = null; boardPending = null; arriveStop = -1;
+  portalLatch = false;
+  if (ride) { ride = null; rideEl.classList.remove('show'); }
+
+  let at = M.spawn;
+  if (opts.spawnStop != null && TRIG[opts.spawnStop]) {
+    const [tx, ty] = TRIG[opts.spawnStop];
+    at = walkable(tx, ty + 1) ? [tx, ty + 1] : [tx, ty];
+  } else if (opts.spawn) {
+    at = opts.spawn;
+  }
+  teleport(...at);
+}
+
+function enterInterior(stopIdx) {
+  const s = DAY.stops[stopIdx];
+  if (!s || interior) return;
+  const kind = interiorKind(s.name);
+  if (!kind) return;
+  if (dlgOpen) {
+    clearInterval(typing); typing = null;
+    clearHubButtons();
+    dlg.style.display = 'none'; dlgOpen = false; dlgStop = -1; npcDialog = false;
+    talkingNpc = null;
+  }
+  outdoorsReturn = stopIdx;
+  interior = { stopIdx, kind, theme: interiorTheme(s.name), title: s.name };
+  if (auto) setAuto(false);
+  npcs = []; npcBlocked = new Set();
+  const M = buildInteriorMap(kind, s);
+  applyWorldMap(M);
+  // 이 스팟에 묶인 NPC만 실내에 (있으면)
+  const residents = (NPC_BY_DAY[dayIdx + 1] || []).filter(d => d.stop === stopIdx);
+  const roomLabels = M.STN_LABELS.map(l => l[2]);
+  placeNpcs([...residents, { stop: stopIdx, name: '공간 안내원', pal: 2,
+    anchor: [6, 6], bags: [{ kind: '안내', lines: [
+      `${roomLabels.slice(0, 3).join(' · ')} 공간을 둘러보세요.`,
+      '가구 사이 통로로 한 바퀴 걸어볼 수 있어요. 남쪽 문은 나가는 길이에요.'
+    ] }] }]);
+  const label = INTERIOR_KIND_KO[kind] || '건물';
+  document.getElementById('hudTitle').textContent = `${shortName(s)} · ${label}`;
+  refreshList();
+}
+
+function exitInterior() {
+  if (!interior) return;
+  const stop = outdoorsReturn ?? interior.stopIdx;
+  const ai = areaOf(stop);
+  interior = null;
+  outdoorsReturn = null;
+  loadArea(ai, { spawnStop: stop });
+}
+
 /* ═══ 일차 로드 ═══ */
 function goStop(i) {
   hideToast();
   if (auto) setAuto(false);
-  const [tx, ty] = TRIG[i];
-  if (me.x === tx && me.y === ty) { stopDialog(i); return; }
-  manualQueue = findPath(me.x, me.y, tx, ty);
-  clickTarget = [tx, ty];
+  if (interior) {
+    const ret = outdoorsReturn ?? interior.stopIdx;
+    interior = null;
+    outdoorsReturn = null;
+    loadArea(areaOf(ret), { spawnStop: ret });
+  }
+  // 다른 마을 → 포탈까지 걸어가 맵 이동 / 같은 마을 → 바로 걷기
+  if (areaOf(i) !== areaIdx) { walkToPortal(i); return; }
+  travelInMap(i);
+}
+
+/** 마을(에리어) 로드 — 하루 안에서 맵 이동. 자동여행/목표는 유지 */
+function loadArea(ai, opts = {}) {
+  if (dlgOpen) {
+    clearInterval(typing); typing = null;
+    clearHubButtons();
+    dlg.style.display = 'none'; dlgOpen = false; dlgStop = -1; npcDialog = false;
+    talkingNpc = null;
+  }
+  // 실내 상태 해제 (exitInterior → loadArea 경로 포함)
+  if (!opts.keepInterior) {
+    interior = null;
+    outdoorsReturn = null;
+  }
+  npcs = []; npcBlocked = new Set();
+  areaIdx = ai;
+  const M = buildAreaMap(dayIdx, ai);
+  applyWorldMap(M, opts);
+  placeNpcs((NPC_BY_DAY[dayIdx + 1] || []).filter(d => AREAS[ai].stops.includes(d.stop)));
+  document.getElementById('hudTitle').textContent = `${AREAS[ai].name} · ${DAY.t}`;
+  refreshList();
 }
 
 function loadDay(i) {
@@ -3228,49 +4096,33 @@ function loadDay(i) {
     dlg.style.display = 'none'; dlgOpen = false; dlgStop = -1; npcDialog = false;
     talkingNpc = null;
   }
-  npcs = []; npcBlocked = new Set();
   dayIdx = i; DAY = DAYS[i];
   // 건물 캐시도 현재 시간대의 창문 색으로 생성한다.
   currentTime = START_TIME_BY_DAY[i + 1] ?? 'morning';
-  const M = buildGeoMap(i);
-  W = M.W; H = M.H; g = M.g; BLD = M.BLD; TRIG = M.TRIG;
-  ZONES = M.ZONES; STN_LABELS = M.STN_LABELS; STATIONS = M.STATIONS; RAILS = M.RAILS || [];
-  waterTiles = M.waterTiles;
-  waterTileLookup = new Map(waterTiles.map(tile => [tile.y * W + tile.x, tile]));
-  initMetroTrains();
-  // 최종 맵의 나무 칸을 사용해 길·스폰 위치와 충돌 판정을 그대로 유지한다.
-  trees = [];
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    if (g[y][x] === 4) trees.push({ x, y, variant: Math.floor(Math.random() * 10) });
-  }
-  blocked = new Set();
-  BLD.forEach(b => { for (let j = b.y; j < b.y + b.h; j++) for (let x = b.x; x < b.x + b.w; x++) blocked.add(j * W + x); });
-  bldCache = new Map();
-  BLD.forEach(b => bldCache.set(b, renderBld(b)));
+  AREAS = buildAreas(DAY);
 
   visited = new Set(); // 방문 시스템 제거 — 호환용 빈 셋만 유지
   target = 0;
-  lastTrig = -1; queue = []; manualQueue = []; clickTarget = null; pendingWarp = null; boardPending = null;
-  if (ride) { ride = null; rideEl.classList.remove('show'); }
   if (auto) { auto = false; autoBtn.classList.remove('on'); autoBtn.textContent = '▶ 자동 여행'; }
-
-  teleport(...M.spawn);
-  placeNpcs(NPC_BY_DAY[i + 1] || []);
+  loadArea(areaOf(0), { spawnStop: 0 });
 
   document.getElementById('hudDay').textContent = `DAY ${DAY.no} · ${DAY.d}`;
-  document.getElementById('hudTitle').textContent = DAY.t;
+  // 소지 창(Party) 슬롯: 왼쪽 도트 아이콘 · 오른쪽 시간+이름 · 한 줄 평(note)
   listEl.innerHTML = DAY.stops.map((s, k) =>
-    `<li data-i="${k}"><span class="tm">${s.time}</span><span class="nm">${s.name}</span></li>`).join('');
-  listEl.querySelectorAll('li').forEach(li => li.addEventListener('click', () => goStop(+li.dataset.i)));
+    `<li data-i="${k}"><span class="ic ${stopKind(s)}"></span>` +
+    `<span class="hd"><span class="tm">${s.time}</span><span class="nm">${s.name}</span></span>` +
+    `<span class="sub">[${AREAS[areaOf(k)]?.name || ''}] ${(s.note || s.why || '').replace(/</g, '&lt;')}</span></li>`).join('');
+  listEl.querySelectorAll('li').forEach(li => li.addEventListener('click', () => { sfx('confirm'); goStop(+li.dataset.i); }));
   mStops.innerHTML = DAY.stops.map((s, k) =>
     `<button type="button" data-i="${k}">${s.time} ${shortName(s)}</button>`).join('');
-  mStops.querySelectorAll('button').forEach(b => b.addEventListener('click', () => goStop(+b.dataset.i)));
+  mStops.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { sfx('confirm'); goStop(+b.dataset.i); }));
 
   save.day = i; persist();
   refreshDays();
   refreshList();
 }
 progEl.addEventListener('click', () => {
+  sfx('tick');
   goStop(Math.min(target, DAY.stops.length - 1));
 });
 
@@ -3341,10 +4193,24 @@ function loop(now) {
 
   if (wasMoving && !me.moving) {
     const ti = trigAt(me.x, me.y);
-    if (auto && queue.length === 0 && boardPending != null && nearStation()) {
-      openBoardDialog(boardPending);
-    } else if (auto && queue.length === 0 && ti === target) stopDialog(ti);
-    // 수동: 발판에 올라가도 자동 방문 안 함 — A로 확인/탑승
+    // 포탈(GATE)에 올라오면: 실내→나가기 / 예약 목적지→맵 이동 / 아니면 마을 선택
+    if (atGate() && !dlgOpen && !ride) {
+      if (interior) {
+        if (!portalLatch) { portalLatch = true; exitInterior(); }
+      } else if (boardPending != null) {
+        const bp = boardPending; boardPending = null; portalLatch = true;
+        startHop(bp);
+      } else if (!auto && !portalLatch) {
+        portalLatch = true;
+        openPortalMenu();
+      }
+    } else if (!atGate()) {
+      portalLatch = false;
+    }
+    if (auto && queue.length === 0 && ti === target) stopDialog(ti);
+    else if (!auto && arriveStop >= 0 && manualQueue.length === 0 && ti === arriveStop) {
+      const k = arriveStop; arriveStop = -1; stopDialog(k);
+    }
     if (ti < 0) lastTrig = -1;
   }
 
@@ -3385,6 +4251,36 @@ function drawWaterSparkle(q, tile, t, camX, camY) {
   q.globalAlpha = previousAlpha;
 }
 
+// Original pixel-only room materials; outdoor atlas and palettes stay untouched.
+function drawInteriorTile(t, x, y, sx, sy) {
+  const theme = interior.theme;
+  const dark = ['planets', 'joypolis', 'yakiniku'].includes(theme);
+  const wood = ['sectionL', 'ryokan', 'monja', 'sushi', 'afuri', 'gajoen', 'sensoji'].includes(theme);
+  const accent = ({haneda:'#a85860',sectionL:'#bc7868',sensoji:'#b85848',planets:'#486080',
+    joypolis:'#685090',lawson:'#5888b0',matcha:'#809858',gajoen:'#ad8050',ryokan:'#989060',
+    sushi:'#879ca0',afuri:'#b8a258',yakiniku:'#805b48',ropeway:'#688fa0'})[theme] || '#9c8068';
+  const pixel = (a,b,w,h,c) => {ctx.fillStyle=c;ctx.fillRect(sx+a*SCALE,sy+b*SCALE,w*SCALE,h*SCALE);};
+  if (t === 4 || t === 9) {
+    pixel(0,0,16,16,dark?'#343248':'#85735e');
+    pixel(1,1,14,11,dark?'#55536b':'#dbceb2');
+    pixel(1,2,14,1,dark?'#73738b':'#f2e8d0');
+    pixel(0,12,16,2,accent); pixel(0,15,16,1,'#50483d');
+  } else if (t === 1 || t === 8) {
+    pixel(0,0,16,16,accent); pixel(1,1,14,1,'#c7af87');
+    pixel(1,2,1,13,'#c7af87'); pixel(5,7,2,2,dark?'#8a80a8':'#d4bb96');
+    pixel(12,12,1,1,'#705c50');
+  } else if (t === 5 || t === 7 || (t === 2 && wood)) {
+    pixel(0,0,16,16,t===5?'#b3b47e':'#c8a97b');
+    for(let row=3;row<16;row+=4) pixel(0,row,16,1,t===5?'#a0a171':'#ac895f');
+    pixel((y%2)*8,0,1,16,t===5?'#647957':'#95734f');
+  } else {
+    pixel(0,0,16,16,dark||t===0?'#34374e':'#e2dbc6');
+    pixel(0,15,16,1,dark||t===0?'#494b65':'#c2bba8');
+    pixel(15,0,1,16,dark||t===0?'#494b65':'#c2bba8');
+    pixel(1,1,14,1,dark||t===0?'#41465f':'#f1ead5');
+  }
+}
+
 function draw() {
   const vw = cv.width, vh = cv.height;
   let camX = me.px + TS / 2 - vw / 2, camY = me.py + TS / 2 - vh / 2;
@@ -3401,8 +4297,9 @@ function draw() {
   for (let y = y0; y < y1; y++)
     for (let x = x0; x < x1; x++) {
       const t = g[y][x];
-      const f = (t === 0 || t === 3 || t === 5) ? waterF : 0;
-      ctx.drawImage(atlas, (t === 4 ? 0 : t) * 16, f * 16, 16, 16, (x * TS - camX) | 0, (y * TS - camY) | 0, TS, TS);
+      const f = (t === 0 || t === 3 || t === 5 || t === 8) ? waterF : 0;
+      if (interior && t !== 3 && t < 10) drawInteriorTile(t, x, y, (x * TS - camX) | 0, (y * TS - camY) | 0);
+      else ctx.drawImage(atlas, (t === 4 ? 0 : t) * 16, f * 16, 16, 16, (x * TS - camX) | 0, (y * TS - camY) | 0, TS, TS);
       // 카메라 범위의 물만 계산. 건물·캐릭터·시간대 틴트보다 아래에 그린다.
       if (t === 3) {
         const tile = waterTileLookup.get(y * W + x);
@@ -3424,28 +4321,6 @@ function draw() {
     }
   }
 
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.font = `bold ${SCALE * 6}px Galmuri11, monospace`;
-  ZONES.forEach(([nm, zx, zy]) => {
-    const ax = zx * TS - camX, ay = zy * TS - camY;
-    ctx.fillStyle = 'rgba(252,235,196,.7)';
-    ctx.fillText(nm, ax + SCALE, ay + SCALE);
-    ctx.fillStyle = 'rgba(92,52,24,.88)';
-    ctx.fillText(nm, ax, ay);
-  });
-
-  ctx.font = `bold ${SCALE * 3.8}px Galmuri11, monospace`;
-  STN_LABELS.forEach(([zx, zy, nm]) => {
-    const ax = zx * TS - camX, ay = zy * TS - camY;
-    const tw = ctx.measureText(nm).width;
-    ctx.fillStyle = 'rgba(92,52,24,.92)';
-    ctx.fillRect(ax - tw / 2 - SCALE * 2, ay - SCALE * 4, tw + SCALE * 4, SCALE * 7);
-    ctx.fillStyle = '#c48a48';
-    ctx.fillRect(ax - tw / 2 - SCALE * 2, ay - SCALE * 4, tw + SCALE * 4, 2);
-    ctx.fillStyle = '#fcebc4';
-    ctx.fillText(nm, ax, ay);
-  });
-
   // y 정렬 (나무 + 건물 + 캐릭터)
   const items = [];
   for (const tree of trees) {
@@ -3462,9 +4337,54 @@ function draw() {
   items.push({ y: me.py + TS + 2, d: () => drawChar(ctx, me.px - camX, me.py - camY, me.dir, me.frame, PAL_ME, '규빈') });
   items.sort((a, b) => a.y - b.y).forEach(it => it.d());
 
+  // 마을 이름·역 라벨 — 건물/나무 위에
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = `bold ${SCALE * 6}px ${FONT_UI}`;
+  ZONES.forEach(([nm, zx, zy]) => {
+    const ax = zx * TS - camX, ay = zy * TS - camY;
+    ctx.fillStyle = 'rgba(252,235,196,.7)';
+    ctx.fillText(nm, ax + SCALE, ay + SCALE);
+    ctx.fillStyle = 'rgba(92,52,24,.88)';
+    ctx.fillText(nm, ax, ay);
+  });
+  ctx.font = `bold ${SCALE * 3.8}px ${FONT_UI}`;
+  STN_LABELS.forEach(([zx, zy, nm]) => {
+    const ax = zx * TS - camX, ay = zy * TS - camY;
+    const tw = ctx.measureText(nm).width;
+    ctx.fillStyle = 'rgba(92,52,24,.92)';
+    ctx.fillRect(ax - tw / 2 - SCALE * 2, ay - SCALE * 4, tw + SCALE * 4, SCALE * 7);
+    ctx.fillStyle = '#c48a48';
+    ctx.fillRect(ax - tw / 2 - SCALE * 2, ay - SCALE * 4, tw + SCALE * 4, 2);
+    ctx.fillStyle = '#fcebc4';
+    ctx.fillText(nm, ax, ay);
+  });
+
+  // 포탈(마을 출구) — 아래쪽 게이트, 깜빡이는 화살표 + 라벨
+  {
+    const [gx, gy] = GATE;
+    const px = gx * TS - camX + TS / 2, py = gy * TS - camY + TS * 0.15;
+    const pulse = 0.55 + 0.45 * Math.sin(bounce / 200);
+    ctx.globalAlpha = pulse;
+    ctx.fillStyle = '#2858c8';
+    ctx.beginPath();
+    ctx.moveTo(px - SCALE * 5, py); ctx.lineTo(px + SCALE * 5, py); ctx.lineTo(px, py + SCALE * 6);
+    ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.font = `bold ${SCALE * 3.6}px ${FONT_UI}`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const pl = interior ? '나가기' : '출구';
+    const ptw = ctx.measureText(pl).width;
+    ctx.fillStyle = interior ? 'rgba(200,64,64,.9)' : 'rgba(40,88,200,.9)';
+    ctx.fillRect(px - ptw / 2 - SCALE * 2, py - SCALE * 10, ptw + SCALE * 4, SCALE * 7);
+    ctx.fillStyle = '#fcebc4';
+    ctx.fillText(pl, px, py - SCALE * 6.5);
+  }
+
   // 순서표·이름표 — 건물 위에 그리기 (가려지지 않게)
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  TRIG.forEach(([x, y], i) => {
+  TRIG.forEach((t, i) => {
+    if (!t) return; // 다른 마을의 스팟은 이 맵에 없음
+    const [x, y] = t;
     const sx = x * TS - camX + TS * .55, sy = y * TS - camY - TS * .4;
     ctx.fillStyle = '#5c3418'; ctx.fillRect(sx + SCALE * 3, sy + SCALE * 8, SCALE * 3, SCALE * 6);
     ctx.fillStyle = (auto && i === target) ? '#f0c060' : '#fcebc4';
@@ -3475,10 +4395,10 @@ function draw() {
     ctx.fillStyle = '#c48a48';
     ctx.fillRect(sx + 2, sy + 2, SCALE * 9 - 4, 1);
     ctx.fillStyle = '#3d2914';
-    ctx.font = `bold ${SCALE * 5}px Galmuri11, monospace`;
+    ctx.font = `bold ${SCALE * 5}px ${FONT_UI}`;
     ctx.fillText(i + 1, sx + SCALE * 4.5, sy + SCALE * 4.4);
     const label = `${DAY.stops[i].time} ${shortName(DAY.stops[i])}`;
-    ctx.font = `bold ${SCALE * 4}px Galmuri11, monospace`;
+    ctx.font = `bold ${SCALE * 4}px ${FONT_UI}`;
     const tw = ctx.measureText(label).width;
     const bx = sx + SCALE * 4.5 - tw / 2 - SCALE * 3, by = sy - SCALE * 14;
     ctx.fillStyle = 'rgba(92,52,24,.92)';
@@ -3500,13 +4420,13 @@ function draw() {
   }
 
   // 낙엽도 같은 시간대의 빛을 받도록 틴트 바로 아래에 그린다.
-  for (const leaf of leaves) {
+  for (const leaf of (interior ? [] : leaves)) {
     ctx.fillStyle = leaf.color;
     ctx.fillRect(leaf.x | 0, leaf.y | 0, leaf.size, leaf.size);
   }
 
   // 캐릭터·이름표까지 그린 뒤 전체 장면에 시간대 틴트를 적용한다.
-  ctx.fillStyle = TIME_TINTS[currentTime].overlay;
+  ctx.fillStyle = interior ? 'rgba(0,0,0,0)' : TIME_TINTS[currentTime].overlay;
   ctx.fillRect(0, 0, cv.width, cv.height);
 }
 
@@ -3634,20 +4554,54 @@ function bgmLoop() {
   bgmTimer = setTimeout(bgmLoop, advanced * beat * 1000 - 30);
 }
 
+/** 오디오 컨텍스트 1회 생성 (BGM·효과음 공용) — 사용자 제스처 안에서만 호출 */
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0.85;
+  // 아주 약한 로우패스로 귀 피로↓ (목가 톤)
+  const lp = audioCtx.createBiquadFilter();
+  lp.type = 'lowpass'; lp.frequency.value = 5200;
+  masterGain.connect(lp); lp.connect(audioCtx.destination);
+}
+
+/* ═══ 8비트 메뉴 효과음 (GB 펄스파 · 외부 파일 없음) ═══ */
+function blip(freq, t0, dur, gain = 0.11) {
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = 'square';
+  o.frequency.setValueAtTime(freq, t0);
+  g.gain.setValueAtTime(gain, t0);
+  g.gain.setValueAtTime(gain, t0 + dur * 0.6);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.connect(g); g.connect(masterGain);
+  o.start(t0); o.stop(t0 + dur + 0.02);
+}
+/**
+ * 'tick'    → 띡-  : 커서 이동·창 넘김 (짧은 고음 1발)
+ * 'confirm' → 삑!  : 선택 확정 (낮은음→높은음 2단)
+ */
+function sfx(kind = 'tick') {
+  try {
+    initAudio();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  } catch { return; }
+  const t = audioCtx.currentTime + 0.004;
+  if (kind === 'confirm') {
+    blip(1046.5, t, 0.05);           // C6
+    blip(2093.0, t + 0.05, 0.10);    // C7
+  } else {
+    blip(1760, t, 0.045);            // A6
+  }
+}
+
 async function setBgm(on) {
   bgmOn = on;
   bgmBtn.classList.toggle('off', !on);
   bgmBtn.textContent = on ? '♪ BGM' : '♪ OFF';
   if (on) {
-    if (!audioCtx) {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      masterGain = audioCtx.createGain();
-      masterGain.gain.value = 0.85;
-      // 아주 약한 로우패스로 귀 피로↓ (목가 톤)
-      const lp = audioCtx.createBiquadFilter();
-      lp.type = 'lowpass'; lp.frequency.value = 5200;
-      masterGain.connect(lp); lp.connect(audioCtx.destination);
-    }
+    initAudio();
     if (audioCtx.state === 'suspended') await audioCtx.resume();
     bgmStep = 0;
     clearTimeout(bgmTimer);
@@ -3656,7 +4610,7 @@ async function setBgm(on) {
     clearTimeout(bgmTimer); bgmTimer = null;
   }
 }
-bgmBtn.onclick = () => { hideToast(); setBgm(!bgmOn); };
+bgmBtn.onclick = () => { hideToast(); sfx('tick'); setBgm(!bgmOn); };
 function tryAutoBgm() {
   if (bgmOn) return;
   setBgm(true);

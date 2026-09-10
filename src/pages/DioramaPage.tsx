@@ -1071,6 +1071,7 @@ export default function DioramaPage() {
       <div className="dio-alts">
         <Link to="/map">실제 지도</Link>
         <a href="/pokemon.html">픽셀</a>
+        <a href="/pokemon2.html">골드</a>
         <Link to="/">메인 디오라마</Link>
       </div>
 
