@@ -339,9 +339,10 @@ const PAL = {
   martBot:    '#204880',
   winGlass:   '#4870a0',
   winHilite:  '#a8c8e0',
-  fujiSnow:   '#f0f4f0',
-  fujiMid:    '#8090a8',
-  fujiBase:   '#506070',
+  fujiSnow:   '#f8faf8',
+  fujiMid:    '#8898b0',
+  fujiBase:   '#4a5868',
+  fujiShade:  '#3a4858',
   sky:        '#88b0d0',
 };
 
@@ -362,7 +363,7 @@ const START_TIME_BY_DAY = {
   2: 'morning',
   3: 'morning',
   4: 'dawn', // 황거 새벽 러닝
-  5: 'noon',
+  5: 'sunset', // 카와구치코 · 후지 석양
   6: 'dawn', // 후지산 새벽 조망
 };
 
@@ -475,8 +476,9 @@ function styleFor(name) {
   if (/호토/.test(name)) return { s: 'hotspring', w: 4, h: 3 };
   if (/로손/.test(name)) return { s: 'lawson', w: 3, h: 2 };
   if (/로프웨이/.test(name)) return { s: 'ropeway', w: 3, h: 4 };
+  if (/일출/.test(name)) return { s: 'lookout', w: 4, h: 3 };
+  if (/후지산/.test(name) && !/로손|로프|편의/.test(name)) return { s: 'fuji', w: 12, h: 7 };
   if (/버스|→/.test(name)) return { s: 'bus', w: 4, h: 2 };
-  if (/후지산|일출/.test(name)) return { s: 'fuji', w: 8, h: 5 };
   if (/Section|숙소/.test(name)) return { s: 'hotel', w: 4, h: 4 };
   if (/료칸|온천|가이세키/.test(name)) return { s: 'hotspring', w: 5, h: 3 };
   if (/신주쿠 쇼핑/.test(name)) return { s: 'mall', w: 5, h: 4 };
@@ -583,8 +585,8 @@ function buildAreaMap(di, ai) {
   const medX = xs.slice().sort((a, b) => a - b)[xs.length >> 1];
   const fujiHere = day.theme === 'fuji' && area.lat < 35.6;
   const w = 34, gx = w >> 1;
-  const maxH = Math.max(...idxs.map(i => styleFor(all[i].name).h));
-  const yTop = Math.max(fujiHere ? 12 : 7, maxH + 3); // 후지산 자리(위쪽 2~6행)·높은 건물 여유
+  const maxH = Math.max(...idxs.map(i => styleFor(all[i].name).h), fujiHere ? 7 : 0);
+  const yTop = Math.max(fujiHere ? 14 : 7, maxH + 3); // 큰 후지산 실루엣 자리
   const rowGap = Math.max(6, maxH + 3);
   const h = yTop + (n - 1) * rowGap + 12; // 마지막 스팟 아래 역·광장·게이트·울타리
   const spots = new Array(n);
@@ -681,7 +683,14 @@ function buildAreaMap(di, ai) {
   const stopNames = idxs.map(i => all[i].name).join(' ');
 
   // ── 랜드마크 (자리가 비어 있을 때만) ──
-  if (fujiHere && !bld.some(b => b.s === 'fuji')) placeBld(gx - 4, 2, 8, 5, 'fuji');
+  if (fujiHere && !bld.some(b => b.s === 'fuji')) {
+    placeBld(gx - 6, 1, 12, 7, 'fuji');
+    // 산기슭 숲 느낌 (작은 나무 타일)
+    for (let i = gx - 5; i <= gx + 5; i++) {
+      if (gr[8] && gr[8][i] === 0) gr[8][i] = 4;
+      if (i % 2 === 0 && gr[9] && gr[9][i] === 0) gr[9][i] = 4;
+    }
+  }
   if (day.theme === 'odaiba' && /오다이바|조이폴리스|아쿠아시티/.test(stopNames)) {
     for (const [wx, wy] of [[w - 11, 3], [w - 8, plazaY - 8], [3, plazaY - 8], [3, 3]]) {
       if (blockedAt(wx, wy, 5, 6)) continue;
@@ -693,8 +702,17 @@ function buildAreaMap(di, ai) {
     if (t && !blockedAt(t.x - 3, t.y, 3, 4)) placeBld(t.x - 3, t.y, 3, 4, 'pagoda');
   }
   if (day.landmark === 'tower' && /모리|시티뷰|히로키야/.test(stopNames) && !bld.some(b => b.s === 'tower') && !blockedAt(3, 2, 3, 6)) placeBld(3, 2, 3, 6, 'tower');
-  // 물: 후지 호수(오른쪽) · 오다이바 바다 / 아사쿠사 스미다강 (오른쪽 띠) — 길·발판은 덮지 않음
-  if (fujiHere) paintWater(w - 6, plazaY - 8, 4, 6);
+  // 물: 카와구치코(오른쪽 넓은 호수) · 오다이바 바다 / 아사쿠사 스미다강
+  if (fujiHere) {
+    paintWater(w - 9, 4, 7, plazaY - 8);
+    // 호숫가 산책로 + 꽃
+    mkRect(gr, w - 10, 5, 1, plazaY - 10, 1);
+    for (let j = 6; j < plazaY - 6; j += 2) {
+      if (gr[j] && gr[j][w - 11] === 0) gr[j][w - 11] = 5;
+      if (gr[j + 1] && gr[j + 1][w - 10] === 0) gr[j + 1][w - 10] = 5;
+    }
+    zones.push(['카와구치코', w - 5, plazaY - 10]);
+  }
   if (day.theme === 'odaiba' && /오다이바|조이폴리스|아쿠아시티/.test(stopNames)) paintWater(w - 5, 3, 3, plazaY - 8);
   if (day.theme === 'asakusa' && /센소지|몬자|스즈키/.test(stopNames)) paintWater(w - 5, 3, 3, plazaY - 8);
 
@@ -2173,27 +2191,85 @@ function renderBld(b) {
     r(4, HPX - 6, 6, 4, '#282828'); r(WPX - 10, HPX - 6, 6, 4, '#282828');
     r(WPX - 8, 8, 4, 4, PAL.gold); // 방향등
   } else if (b.s === 'fuji') {
-    // GBC식 3단 색 밴드 (눈 → 산허리 → 기슭)
+    // 우키요에식 실루엣: 가파른 눈모자 + 넓은 기슭 + 시간대 알펜글로우
     q.clearRect(0, 0, WPX, HPX);
-    const bands = [
-      { t0: 0, t1: .28, col: PAL.fujiSnow },
-      { t0: .28, t1: .62, col: PAL.fujiMid },
-      { t0: .62, t1: 1, col: PAL.fujiBase },
-    ];
+    const dawn = currentTime === 'dawn';
+    const eve = currentTime === 'evening' || currentTime === 'sunset';
+    const snow = dawn ? '#ffe8d0' : eve ? '#f8d8e8' : PAL.fujiSnow;
+    const snowShade = dawn ? '#f0c0a8' : eve ? '#e0b0c8' : '#d8e0e8';
+    const mid = dawn ? '#c89890' : eve ? '#7880a8' : PAL.fujiMid;
+    const midShade = dawn ? '#a07068' : eve ? '#585f88' : '#687888';
+    const base = dawn ? '#685858' : eve ? '#3a4060' : PAL.fujiBase;
+    const baseShade = dawn ? '#504040' : eve ? '#282840' : PAL.fujiShade;
+    const ridge = dawn ? '#906858' : eve ? '#504868' : '#485868';
     for (let y = 0; y < HPX; y++) {
-      const t = y / HPX;
-      const half = (WPX / 2) * Math.max(t, 0.04);
-      const band = bands.find(bd => t >= bd.t0 && t < bd.t1) || bands[2];
-      q.fillStyle = band.col;
-      q.fillRect(WPX / 2 - half, y, half * 2, 1);
+      const t = y / (HPX - 1);
+      // 정상은 좁고, 중하단에서 확 넓어지는 후지식 곡선
+      const curve = t < 0.22 ? Math.pow(t / 0.22, 1.15) * 0.28 : 0.28 + Math.pow((t - 0.22) / 0.78, 0.82) * 0.72;
+      const half = Math.max(1, (WPX / 2 - 1) * Math.max(curve, 0.035));
+      const cx = WPX / 2;
+      let col = t < 0.26 ? snow : t < 0.55 ? mid : base;
+      const shadeCol = t < 0.26 ? snowShade : t < 0.55 ? midShade : baseShade;
+      // 왼쪽 밝 / 오른쪽 그늘
+      const split = half * 0.55;
+      q.fillStyle = col;
+      q.fillRect(cx - half, y, half + split, 1);
+      q.fillStyle = shadeCol;
+      q.fillRect(cx + split - 1, y, half - split + 1, 1);
     }
-    for (const edge of [.28, .62]) {
+    // 눈모자·분화구 느낌
+    const capY = (HPX * 0.12) | 0;
+    r(WPX / 2 - 6, 0, 12, Math.max(3, capY), snow);
+    r(WPX / 2 - 3, 0, 6, 2, snowShade);
+    r(WPX / 2 - 1, 1, 2, 2, midShade); // 작은 분화구 홈
+    // 눈선(지그재그)
+    const snowLine = (HPX * 0.28) | 0;
+    for (let x = 2; x < WPX - 2; x++) {
+      const t = Math.abs(x - WPX / 2) / (WPX / 2);
+      if (t > 0.32) continue;
+      const jy = snowLine + ((x * 3 + 5) % 4) - ((x * 5) % 3);
+      const half = (WPX / 2) * Math.max(jy / HPX, 0.04);
+      if (Math.abs(x - WPX / 2) <= half) {
+        q.fillStyle = snow;
+        q.fillRect(x, jy, 1, 1);
+        q.fillStyle = ridge;
+        q.fillRect(x, jy + 1, 1, 1);
+      }
+    }
+    // 중턱 능선
+    for (const edge of [0.42, 0.62]) {
       const y = (edge * HPX) | 0;
-      const half = (WPX / 2) * edge;
-      q.fillStyle = '#485868';
+      const half = (WPX / 2) * Math.max(edge, 0.1);
+      q.fillStyle = ridge;
       q.fillRect(WPX / 2 - half, y, half * 2, 1);
     }
-    r(WPX / 2 - 4, 0, 8, 3, PAL.fujiSnow);
+    // 기슭 숲 점묘
+    for (let x = 4; x < WPX - 4; x += 3) {
+      const t = 0.88 + (x % 5) * 0.01;
+      const y = (t * HPX) | 0;
+      const half = (WPX / 2) * t;
+      if (Math.abs(x - WPX / 2) < half - 2) {
+        r(x, y - 2, 2, 3, eve ? '#284030' : '#386848');
+        r(x, y - 3, 1, 1, eve ? '#386048' : '#58a068');
+      }
+    }
+    // 얇은 구름 띠 (석양/새벽)
+    if (dawn || eve) {
+      q.globalAlpha = 0.55;
+      r(2, (HPX * 0.38) | 0, 10, 2, '#fff8f0');
+      r(WPX - 14, (HPX * 0.48) | 0, 12, 2, '#fff0e8');
+      q.globalAlpha = 1;
+    }
+  } else if (b.s === 'lookout') {
+    // 후지 조망 덱: 난간 + 망원 느낌 기둥
+    wallFace(2, 10, WPX - 4, HPX - 10, '#d8dce0', '#a8acb0');
+    roofBand(0, 4, WPX, 8, '#687888', '#8898a8', '#485058');
+    r(4, 14, WPX - 8, 2, PAL.wood);
+    for (let x = 5; x < WPX - 6; x += 5) r(x, 12, 2, 4, PAL.woodDark);
+    r(WPX / 2 - 3, 0, 6, 6, '#707880');
+    r(WPX / 2 - 2, 1, 4, 3, PAL.winGlass);
+    sign(4, 6, WPX - 8, 3, PAL.gold);
+    door(WPX / 2 - 5, HPX - 8, 10, 8, '#384048');
   } else if (['chair', 'sofa', 'bench', 'lamp', 'lantern', 'vending', 'vendingMachine', 'vending machine', 'neon', 'window', 'grill', 'sushiCase', 'sink'].includes(b.s)) {
     q.save(); q.scale(WPX / 16, HPX / 16);
     if (['chair', 'sofa', 'bench'].includes(b.s)) {
@@ -2629,15 +2705,19 @@ function placeNpcs(definitions) {
     }) || candidates[npcs.length % Math.max(1, candidates.length)] || candidates[0];
     if (!pick) continue;
     const pal = NPC_PALS[(definition.pal ?? npcs.length) % NPC_PALS.length];
+    // 실내·가게 점원도 움직임. roam:true = 마을 배회, 그 외/실내 = 집 근처 서성임
+    const staffish = /주인|점원|상인|직원|알바|웨이터|스태프|안내|정원사|해설|안내원/.test(definition.name || '');
+    const roamRadius = interior ? 5 : (definition.roam ? 40 : staffish ? 4 : 3);
     npcs.push({
       ...makeEnt(pick.x, pick.y),
       ...definition,
       lastLineIndex: -1,
       homeX: pick.x,
       homeY: pick.y,
-      roam: !interior && !!definition.roam,
+      roam: true,
+      roamRadius,
       path: [],
-      wait: 600 + Math.random() * 1600,
+      wait: 400 + Math.random() * (roamRadius < 10 ? 900 : 1600),
       moveDur: NPC_DUR,
       pal
     });
@@ -2650,6 +2730,9 @@ function stepNpc(npc, nx, ny) {
   if ([me, wife, pet].some(e => e.x === nx && e.y === ny)) return false;
   if (npcs.some(o => o !== npc && o.x === nx && o.y === ny)) return false;
   if (TRIG.some(t => t && t[0] === nx && t[1] === ny)) return false;
+  // 서성임 모드: 집(홈)에서 너무 멀리 못 감
+  const rad = npc.roamRadius ?? 40;
+  if (rad < 30 && Math.abs(nx - npc.homeX) + Math.abs(ny - npc.homeY) > rad) return false;
   npcBlocked.delete(npc.y * W + npc.x);
   const ok = walkable(nx, ny);
   if (!ok) {
@@ -2665,31 +2748,47 @@ function stepNpc(npc, nx, ny) {
 }
 
 function pickNpcWanderTarget(npc) {
-  // 일정 스팟·허브·빈 길 중 먼 곳을 골라 맵 전체를 오가게 함
+  const rad = npc.roamRadius ?? 40;
+  const pace = rad < 30;
   const goals = [];
-  for (const t of TRIG) {
-    if (!t) continue;
-    const [tx, ty] = t;
-    for (const [dx, dy] of [[0, 2], [0, -2], [2, 0], [-2, 0], [1, 1], [-1, 1]]) {
-      const x = tx + dx, y = ty + dy;
-      if (walkable(x, y) || (g[y] && (g[y][x] === 0 || g[y][x] === 1))) goals.push([x, y]);
+  if (pace) {
+    // 가게 앞·실내: 홈 주변만 서성임
+    for (let dy = -rad; dy <= rad; dy++) {
+      for (let dx = -rad; dx <= rad; dx++) {
+        const manh = Math.abs(dx) + Math.abs(dy);
+        if (manh < 1 || manh > rad) continue;
+        goals.push([npc.homeX + dx, npc.homeY + dy]);
+      }
     }
-  }
-  for (let t = 0; t < 12; t++) {
-    const x = 2 + ((Math.random() * (W - 4)) | 0);
-    const y = 2 + ((Math.random() * (H - 4)) | 0);
-    goals.push([x, y]);
+  } else {
+    // 마을 전체 배회
+    for (const t of TRIG) {
+      if (!t) continue;
+      const [tx, ty] = t;
+      for (const [dx, dy] of [[0, 2], [0, -2], [2, 0], [-2, 0], [1, 1], [-1, 1]]) {
+        const x = tx + dx, y = ty + dy;
+        if (walkable(x, y) || (g[y] && (g[y][x] === 0 || g[y][x] === 1))) goals.push([x, y]);
+      }
+    }
+    for (let t = 0; t < 12; t++) {
+      const x = 2 + ((Math.random() * (W - 4)) | 0);
+      const y = 2 + ((Math.random() * (H - 4)) | 0);
+      goals.push([x, y]);
+    }
   }
   // 자기 칸을 잠깐 열어 길찾기
   npcBlocked.delete(npc.y * W + npc.x);
   let best = null, bestLen = 0;
-  for (let i = 0; i < goals.length; i++) {
+  const minDist = pace ? 1 : 6;
+  const tries = pace ? Math.min(goals.length, 24) : 16;
+  for (let i = 0; i < tries; i++) {
     const [gx, gy] = goals[(Math.random() * goals.length) | 0];
     if (!walkable(gx, gy)) continue;
-    if (Math.abs(gx - npc.x) + Math.abs(gy - npc.y) < 6) continue;
+    if (Math.abs(gx - npc.x) + Math.abs(gy - npc.y) < minDist) continue;
+    if (pace && Math.abs(gx - npc.homeX) + Math.abs(gy - npc.homeY) > rad) continue;
     const p = findPath(npc.x, npc.y, gx, gy);
     if (p.length > bestLen) { bestLen = p.length; best = p; }
-    if (bestLen >= 8) break;
+    if (bestLen >= (pace ? 3 : 8)) break;
   }
   npcBlocked.add(npc.y * W + npc.x);
   return best || [];
@@ -2699,22 +2798,25 @@ function updateNpcs(dt) {
   for (const npc of npcs) {
     updateEnt(npc, dt);
     if (!npc.roam || npc.moving || dlgOpen || ride) continue;
+    if (talkingNpc === npc) continue;
 
     if (npc.path && npc.path.length) {
       const [nx, ny] = npc.path.shift();
       if (!stepNpc(npc, nx, ny)) npc.path = [];
-      else npc.wait = 220 + Math.random() * 280; // 칸 사이 여유
+      else npc.wait = 200 + Math.random() * 260;
       continue;
     }
 
     npc.wait -= dt;
     if (npc.wait > 0) continue;
-    npc.wait = 1400 + Math.random() * 2200; // 다시 출발하기 전 한숨
+    const pace = (npc.roamRadius ?? 40) < 30;
+    npc.wait = (pace ? 700 : 1400) + Math.random() * (pace ? 1400 : 2200);
 
-    if (Math.random() < 0.65) {
+    // 서성임은 거의 항상 한두 칸, 배회는 65% 확률로 긴 경로
+    if (pace || Math.random() < 0.65) {
       const path = pickNpcWanderTarget(npc);
       if (path.length) {
-        npc.path = path.slice(0, 14);
+        npc.path = path.slice(0, pace ? 5 : 14);
         continue;
       }
     }
@@ -3910,6 +4012,9 @@ function interactA() {
     openPortalMenu();
     return;
   }
+  // NPC는 실내·야외 모두 대화 가능 (실내 early-return 때문에 막히던 것 수정)
+  const npc = nearbyNpc();
+  if (npc) { openNpcDialog(npc); return; }
   if (interior) return; // 실내에서는 역·야외 스팟 상호작용 없음
   // 허브 역 — 갈 수 있는 일정 목록 (지하철/버스 선택)
   const st = stationHere();
@@ -3919,8 +4024,6 @@ function interactA() {
   }
   const near = trigAt(me.x, me.y, true);
   if (near >= 0) { stopDialog(near); return; }
-  const npc = nearbyNpc();
-  if (npc) openNpcDialog(npc);
 }
 
 /* ═══ 입력 ═══ */
@@ -4430,50 +4533,47 @@ function draw() {
   ctx.fillRect(0, 0, cv.width, cv.height);
 }
 
-/* ═══ BGM: 포켓몬칩튠 × 스타듀 목가 (원곡 · 저작권 원곡 미사용) ═══ */
+/* ═══ BGM: GBA 포켓몬 마을풍 원곡 칩튠 (닌텐도 원곡·음원 미사용) ═══ */
 const bgmBtn = document.getElementById('bgmBtn');
 let audioCtx = null, bgmOn = false, bgmTimer = null, masterGain = null;
 
-// 노트: C=0 … (null=쉼표). 길이는 16분음표 단위
-// A파트: 아침 산책 (스타듀풍 서정) / B파트: 가벼운 모험 (GBC풍)
+// 16분음표 단위. null=쉼. 밝은 장조·빠른 템포·펄스 멜로디 (루트마을 느낌의 "장르"만 오마주)
 const SONG = {
-  tempo: 96, // BPM
-  // 리드 (멜로디)
+  tempo: 132,
+  // 리드: 짧은 모티프 반복 + 한 옥타브 점프 (GB 펄스 채널 감성)
   lead: [
-    // bars 1-4 봄 아침
-    7,null,12,14, 16,14,12,9, 7,9,12,7, 5,7,9,5,
-    4,5,7,9, 12,9,7,5, 4,7,12,16, 14,12,9,7,
-    // bars 5-8 언덕 너머
-    9,12,16,19, 17,16,14,12, 9,12,14,16, 12,9,7,5,
-    4,7,12,11, 12,14,16,19, 17,16,14,12, 9,7,5,4,
-    // bars 9-12 가벼운 모험
-    12,12,null,14, 16,16,null,19, 17,16,14,12, 14,12,9,7,
-    5,7,9,12, 11,12,14,16, 12,9,7,5, 7,9,12,16,
-    // bars 13-16 귀가
-    19,16,14,12, 14,12,9,7, 9,12,14,16, 12,9,7,4,
-    5,7,9,12, 7,5,4,0, 4,7,12,9, 7,5,4,null,
+    // A — 마을 아침
+    0,null,4,7, 12,null,7,4, 0,4,7,12, 11,9,7,4,
+    5,null,9,12, 16,null,12,9, 5,9,12,16, 14,12,9,5,
+    7,null,11,14, 19,null,14,11, 7,11,14,19, 17,16,14,11,
+    12,11,9,7, 9,7,5,4, 5,4,2,0, 4,7,12,null,
+    // B — 모험 한 스푼
+    12,12,16,19, 16,12,7,4, 5,9,12,16, 14,12,9,7,
+    0,4,7,12, 11,12,14,16, 12,9,7,5, 7,9,12,16,
+    19,16,14,12, 16,14,12,9, 14,12,9,7, 12,9,7,4,
+    5,7,9,12, 7,5,4,0, 4,7,12,16, 12,7,4,null,
   ],
-  // 하모니 (3도 위 · 여린 패드)
+  // 하모니: 3도/5도 아르페지오 (2번 펄스 채널)
   harm: [
-    4,null,9,11, 12,11,9,5, 4,5,9,4, 2,4,5,2,
-    0,2,4,5, 9,5,4,2, 0,4,9,12, 11,9,5,4,
-    5,9,12,16, 14,12,11,9, 5,9,11,12, 9,5,4,2,
-    0,4,9,7, 9,11,12,16, 14,12,11,9, 5,4,2,0,
-    9,9,null,11, 12,12,null,16, 14,12,11,9, 11,9,5,4,
-    2,4,5,9, 7,9,11,12, 9,5,4,2, 4,5,9,12,
-    16,12,11,9, 11,9,5,4, 5,9,11,12, 9,5,4,0,
-    2,4,5,9, 4,2,0,-5, 0,4,9,5, 4,2,0,null,
+    4,7,12,7, 4,7,12,7, 4,7,12,7, 2,5,9,5,
+    9,12,16,12, 9,12,16,12, 9,12,16,12, 7,11,14,11,
+    11,14,19,14, 11,14,19,14, 11,14,19,14, 9,12,16,12,
+    7,12,16,12, 5,9,12,9, 4,7,12,7, 0,4,7,null,
+    7,12,16,12, 4,7,12,7, 9,12,16,12, 5,9,12,9,
+    4,7,12,7, 7,11,14,11, 5,9,12,9, 7,12,16,12,
+    12,16,19,16, 9,12,16,12, 7,11,14,11, 4,7,12,7,
+    5,9,12,9, 0,4,7,4, 4,7,12,16, 7,4,0,null,
   ],
-  // 베이스 (루트 진행 I–V–vi–IV 느낌)
+  // 베이스: I–V–vi–IV / I–IV–V–I 루프 (웨이브채널풍 낮은 펄스)
   bass: [
-    0,0,0,0, 7,7,7,7, 9,9,9,9, 5,5,5,5,
-    0,0,0,0, 7,7,7,7, 5,5,5,5, 7,7,7,7,
-    9,9,9,9, 5,5,5,5, 0,0,0,0, 7,7,7,7,
-    0,0,0,0, 5,5,5,5, 7,7,7,7, 0,0,0,0,
-    0,0,0,0, 7,7,7,7, 9,9,9,9, 5,5,5,5,
-    0,0,0,0, 7,7,7,7, 5,5,5,5, 7,7,7,7,
-    9,9,9,9, 5,5,5,5, 0,0,0,0, 7,7,7,7,
-    5,5,5,5, 0,0,0,0, 7,7,7,7, 0,0,0,null,
+    0,0,7,0, 0,0,7,0, 0,0,7,0, -5,-5,2,-5,
+    5,5,12,5, 5,5,12,5, 5,5,12,5, 0,0,7,0,
+    7,7,14,7, 7,7,14,7, 7,7,14,7, 5,5,12,5,
+    0,0,7,0, -5,-5,2,-5, 0,0,7,0, 0,0,7,null,
+    0,0,7,0, 0,0,7,0, 5,5,12,5, 5,5,12,5,
+    0,0,7,0, 7,7,14,7, 5,5,12,5, 0,0,7,0,
+    9,9,16,9, 5,5,12,5, 7,7,14,7, 0,0,7,0,
+    5,5,12,5, 0,0,7,0, 7,7,14,7, 0,0,7,null,
   ],
 };
 
@@ -4489,15 +4589,17 @@ function tone(freq, t0, dur, type, gain, detune = 0) {
   o.type = type;
   o.frequency.value = freq;
   o.detune.value = detune;
-  const atk = Math.min(0.02, dur * 0.15);
+  const atk = Math.min(0.012, dur * 0.12);
   g.gain.setValueAtTime(0.0001, t0);
   g.gain.exponentialRampToValueAtTime(gain, t0 + atk);
+  // GB 펄스처럼 빨리 감쇠
+  g.gain.exponentialRampToValueAtTime(gain * 0.55, t0 + dur * 0.45);
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
   o.connect(g); g.connect(masterGain);
-  o.start(t0); o.stop(t0 + dur + 0.03);
+  o.start(t0); o.stop(t0 + dur + 0.02);
 }
 
-/** 부드러운 노이즈 틱 (낙엽·바람 텍스처) */
+/** GB 노이즈 채널풍 하이햇 */
 function softNoise(t0, dur, gain) {
   if (!audioCtx || !masterGain) return;
   const n = Math.max(1, (audioCtx.sampleRate * dur) | 0);
@@ -4507,7 +4609,7 @@ function softNoise(t0, dur, gain) {
   const src = audioCtx.createBufferSource();
   const g = audioCtx.createGain();
   const f = audioCtx.createBiquadFilter();
-  f.type = 'bandpass'; f.frequency.value = 2400; f.Q.value = 0.6;
+  f.type = 'highpass'; f.frequency.value = 3500; f.Q.value = 0.7;
   src.buffer = buf;
   g.gain.setValueAtTime(gain, t0);
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
@@ -4518,7 +4620,6 @@ function softNoise(t0, dur, gain) {
 function scheduleBar(startStep, when) {
   const beat = 60 / SONG.tempo / 4; // 16분음표
   const len = SONG.lead.length;
-  // 한 번에 16스텝(1마디×4) 스케줄
   const chunk = 16;
   for (let s = 0; s < chunk; s++) {
     const i = (startStep + s) % len;
@@ -4526,20 +4627,25 @@ function scheduleBar(startStep, when) {
     const lead = SONG.lead[i];
     const harm = SONG.harm[i];
     const bass = SONG.bass[i];
-    // 리드: GBC 스퀘어 (밝고 짧게)
-    if (lead != null) tone(noteHz(lead, 5), t0, beat * 0.92, 'square', 0.045);
-    // 하모니: 부드러운 삼각파 (스타듀 패드)
-    if (harm != null && s % 2 === 0) tone(noteHz(harm, 5), t0, beat * 1.6, 'triangle', 0.028, -6);
-    // 베이스: 따뜻한 사인/삼각
-    if (bass != null && s % 4 === 0) {
-      tone(noteHz(bass, 3), t0, beat * 3.6, 'triangle', 0.07);
-      tone(noteHz(bass, 2), t0, beat * 3.6, 'sine', 0.035);
+    // 리드: 스퀘어 + 살짝 디튠 (펄스 두껍게)
+    if (lead != null) {
+      tone(noteHz(lead, 5), t0, beat * 0.88, 'square', 0.055);
+      tone(noteHz(lead, 5), t0, beat * 0.88, 'square', 0.022, 7);
+      // 짧은 에코 (포켓몬 멜로디 잔향감)
+      tone(noteHz(lead, 5), t0 + beat * 0.5, beat * 0.55, 'square', 0.016);
     }
-    // 약한 오프비트 틱
-    if (s % 4 === 2) softNoise(t0, 0.04, 0.012);
-    // 마디 시작 새소리 비슷한 짧은 하이 톤
-    if (s === 0 && (startStep / chunk) % 4 === 0)
-      tone(noteHz(19, 6), t0 + beat * 0.5, beat * 0.3, 'sine', 0.018);
+    // 하모니: 아르페지오 펄스 (여리게)
+    if (harm != null) tone(noteHz(harm, 5), t0, beat * 0.75, 'square', 0.018);
+    // 베이스: 옥타브 아래 삼각+스퀘어
+    if (bass != null && s % 2 === 0) {
+      tone(noteHz(bass, 3), t0, beat * 1.85, 'triangle', 0.08);
+      tone(noteHz(bass, 2), t0, beat * 1.85, 'square', 0.025);
+    }
+    // 킥 비슷한 낮은 틱 (매 박)
+    if (s % 4 === 0) tone(noteHz(-12, 2), t0, beat * 0.35, 'triangle', 0.05);
+    // 하이햇 8분음
+    if (s % 2 === 1) softNoise(t0, 0.035, 0.02);
+    else if (s % 4 === 2) softNoise(t0, 0.028, 0.014);
   }
   return chunk;
 }
@@ -4559,10 +4665,10 @@ function initAudio() {
   if (audioCtx) return;
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   masterGain = audioCtx.createGain();
-  masterGain.gain.value = 0.85;
-  // 아주 약한 로우패스로 귀 피로↓ (목가 톤)
+  masterGain.gain.value = 0.8;
+  // GBA처럼 조금 밝게 (너무 먹먹하지 않게)
   const lp = audioCtx.createBiquadFilter();
-  lp.type = 'lowpass'; lp.frequency.value = 5200;
+  lp.type = 'lowpass'; lp.frequency.value = 7800;
   masterGain.connect(lp); lp.connect(audioCtx.destination);
 }
 
