@@ -225,7 +225,7 @@ export function createEngine(host: HTMLDivElement, labelsEl: HTMLDivElement, onP
     cone: new THREE.ConeGeometry(1, 1, 10),
     sph: new THREE.SphereGeometry(1, 12, 10),
     plane: new THREE.PlaneGeometry(1, 1),
-    wing: new THREE.CylinderGeometry(1, 1, 1, 3),
+    // wing 지오메트리 제거 — 비행기 주익은 box 사용 (3각 기둥은 날개가 깨져 보임)
     templeRoof: (() => {
       const templePositions: number[] = [], templeIndices: number[] = []
       const levels = [[0.5, 0.12], [0.4, 0], [0.24, 0.3], [0.05, 0.7]]
@@ -1321,17 +1321,26 @@ export function createEngine(host: HTMLDivElement, labelsEl: HTMLDivElement, onP
     const nose = M(G.cone, mat(0xf2f4f7), 0.3, 0.75, 0.3, 2.15, 0, 0)
     nose.rotation.z = -Math.PI / 2
     plane.add(nose)
-    plane.add(M(G.wing, mat(0xdde4ec), 1.1, 0.07, 2.1, -0.15, 0, 0))
-    plane.add(M(G.box, mat(0xe07a5f), 0.5, 0.75, 0.1, -1.55, 0.38, 0))
-    plane.add(M(G.box, mat(0xdde4ec), 0.4, 0.06, 1.1, -1.4, 0.05, 0))
-    plane.add(M(G.cyl, mat(0xb0b4b8), 0.12, 0.4, 0.12, 0.25, -0.15, 0.95))
-    plane.add(M(G.cyl, mat(0xb0b4b8), 0.12, 0.4, 0.12, 0.25, -0.15, -0.95))
+    // 주익: 좌우 대칭 박스 (예전 3각 기둥 wing 지오메트리는 한쪽만 날개처럼 보임)
+    plane.add(M(G.box, mat(0xdde4ec), 0.85, 0.08, 3.8, 0.15, 0.02, 0))
+    // 날개 끝 살짝 접힌 느낌
+    plane.add(M(G.box, mat(0xc8d0da), 0.28, 0.06, 0.35, 0.05, 0.08, 1.85))
+    plane.add(M(G.box, mat(0xc8d0da), 0.28, 0.06, 0.35, 0.05, 0.08, -1.85))
+    // 수직·수평 미익
+    plane.add(M(G.box, mat(0xe07a5f), 0.55, 0.85, 0.1, -1.65, 0.42, 0))
+    plane.add(M(G.box, mat(0xdde4ec), 0.45, 0.07, 1.35, -1.55, 0.08, 0))
+    // 엔진 (동체와 같은 축)
+    const engL = M(G.cyl, mat(0xb0b4b8), 0.13, 0.48, 0.13, 0.35, -0.18, 0.95)
+    engL.rotation.z = Math.PI / 2
+    const engR = M(G.cyl, mat(0xb0b4b8), 0.13, 0.48, 0.13, 0.35, -0.18, -0.95)
+    engR.rotation.z = Math.PI / 2
+    plane.add(engL, engR)
     for (let i = 0; i < 4; i++) plane.add(M(G.sph, mat(0x4a90b8, { basic: true }), 0.06, 0.06, 0.06, 0.7 - i * 0.4, 0.12, 0.22))
     plane.position.set(1.8, 0.55, 0)
     g.add(plane)
     plane.name = 'departing-aircraft'
-    const red = M(G.sph, mat(0xe86d64, { basic: true }), 0.055, 0.055, 0.055, -0.65, 0.05, 1.65)
-    const green = M(G.sph, mat(0x7abf9b, { basic: true }), 0.055, 0.055, 0.055, -0.65, 0.05, -1.65)
+    const red = M(G.sph, mat(0xe86d64, { basic: true }), 0.055, 0.055, 0.055, 0.05, 0.05, 1.95)
+    const green = M(G.sph, mat(0x7abf9b, { basic: true }), 0.055, 0.055, 0.055, 0.05, 0.05, -1.95)
     plane.add(red, green)
     plane.traverse((o) => { o.castShadow = false })
     animations.push((t) => {

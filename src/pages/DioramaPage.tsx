@@ -709,14 +709,17 @@ function createEngine(
     const nose = mesh(G.cone, mat(0xf4f4f0), 0.28, 0.55, 0.28, 1.7, 0, 0)
     nose.rotation.z = -Math.PI / 2
     plane.add(nose)
-    // 주익
-    plane.add(mesh(G.box, mat(0xe4e2da), 0.55, 0.06, 3.4, 0.1, 0, 0))
+    // 주익 (좌우 대칭)
+    plane.add(mesh(G.box, mat(0xe4e2da), 0.7, 0.07, 3.6, 0.1, 0.02, 0))
     // 미익
-    plane.add(mesh(G.box, mat(0xd9714f), 0.45, 0.7, 0.08, -1.3, 0.35, 0))
-    plane.add(mesh(G.box, mat(0xe4e2da), 0.35, 0.05, 1.0, -1.25, 0.05, 0))
+    plane.add(mesh(G.box, mat(0xd9714f), 0.45, 0.75, 0.08, -1.35, 0.38, 0))
+    plane.add(mesh(G.box, mat(0xe4e2da), 0.4, 0.06, 1.2, -1.3, 0.06, 0))
     // 엔진
-    plane.add(mesh(G.cyl, mat(0xb0b4b8), 0.12, 0.4, 0.12, 0.2, -0.15, 0.9))
-    plane.add(mesh(G.cyl, mat(0xb0b4b8), 0.12, 0.4, 0.12, 0.2, -0.15, -0.9))
+    const engL = mesh(G.cyl, mat(0xb0b4b8), 0.12, 0.42, 0.12, 0.25, -0.15, 0.95)
+    engL.rotation.z = Math.PI / 2
+    const engR = mesh(G.cyl, mat(0xb0b4b8), 0.12, 0.42, 0.12, 0.25, -0.15, -0.95)
+    engR.rotation.z = Math.PI / 2
+    plane.add(engL, engR)
     // 창문 줄
     for (let i = 0; i < 5; i++) {
       plane.add(mesh(G.sph, mat(0x4a76a8, { basic: true }), 0.06, 0.06, 0.06, 0.6 - i * 0.35, 0.12, 0.22))

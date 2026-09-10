@@ -2896,7 +2896,7 @@ let pendingSleep = false, npcDialog = false;
 let talkingNpc = null;
 
 function clearHubButtons() {
-  dlgActs.querySelectorAll('[data-hub-to],[data-enter-in],[data-exit-out]').forEach(el => el.remove());
+  dlgActs.querySelectorAll('[data-hub-to],[data-enter-in],[data-exit-out],[data-sleep]').forEach(el => el.remove());
   dlgOk.style.display = '';
 }
 
@@ -3042,6 +3042,70 @@ function trigAt(x, y, loose = false) {
   return hit[hit.length - 1];
 }
 
+/** 이 스팟에서 잠들기(다음날) 가능 — 숙소·하루 마지막 */
+function isSleepStop(i) {
+  const s = DAY.stops[i];
+  if (!s) return false;
+  if (s.stay) return true;
+  if (i !== DAY.stops.length - 1) return false;
+  // 마지막 날 하네다 출발도 "여행 마치기"로 잠들기 취급
+  return true;
+}
+
+function beginSleep() {
+  if (dlgOpen) {
+    clearInterval(typing); typing = null;
+    clearHubButtons();
+    dlg.style.display = 'none'; dlgOpen = false; dlgStop = -1;
+    npcDialog = false; talkingNpc = null;
+  }
+  pendingSleep = false;
+  setAuto(false);
+  queue = []; manualQueue = []; clickTarget = null;
+  if (interior) {
+    interior = null;
+    outdoorsReturn = null;
+  }
+  sleepAndNext();
+}
+
+function openSleepConfirm(i) {
+  const lastDay = dayIdx >= LAST_DAY;
+  pendingSleep = true;
+  openDialog(
+    lastDay ? '🛫 여행의 끝' : '💤 숙소',
+    lastDay
+      ? '오늘로 일정이 끝났어요. 여행을 마칠까요?'
+      : `DAY ${DAY.no} 일정을 마치고 쉴까요?\n내일은 DAY ${DAYS[dayIdx + 1]?.no || ''} · ${DAYS[dayIdx + 1]?.t || ''}`,
+    {
+      showOk: true,
+      okLabel: lastDay ? '🛫 마치기' : '💤 잠들기',
+      cancelable: true,
+      tip: lastDay ? '일차 버튼으로 언제든 다시 볼 수 있어요' : '잠들면 다음 날 아침으로 넘어갑니다'
+    }
+  );
+  // OK는 advanceDialog → pendingSleep → sleepAndNext
+  // 추가로 명시 버튼도 두면 더 분명함
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.dataset.sleep = '1';
+  btn.textContent = lastDay ? '🛫 여행 마치기' : '💤 잠들기';
+  btn.addEventListener('pointerdown', e => {
+    e.stopPropagation();
+    sfx('confirm');
+    beginSleep();
+  });
+  dlgActs.insertBefore(btn, dlgOk);
+  dlgActs.hidden = false;
+  dlgOk.style.display = 'none';
+}
+
+function nearHotelProp(...styles) {
+  return BLD.some(b => styles.includes(b.s) &&
+    me.x >= b.x - 1 && me.x < b.x + b.w + 1 &&
+    me.y >= b.y - 1 && me.y < b.y + b.h + 1);
+}
+
 function stopDialog(i) {
   const s = DAY.stops[i];
   lastTrig = i;
@@ -3065,6 +3129,21 @@ function stopDialog(i) {
       clearHubButtons();
       dlg.style.display = 'none'; dlgOpen = false; dlgStop = -1;
       enterInterior(i);
+    });
+    dlgActs.insertBefore(btn, dlgOk);
+    dlgActs.hidden = false;
+  }
+  // 숙소·하루 끝 → 잠들기
+  if (!auto && isSleepStop(i)) {
+    const lastDay = dayIdx >= LAST_DAY;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.dataset.sleep = '1';
+    btn.textContent = lastDay ? '🛫 여행 마치기' : '💤 잠들기';
+    btn.addEventListener('pointerdown', e => {
+      e.stopPropagation();
+      sfx('confirm');
+      beginSleep();
     });
     dlgActs.insertBefore(btn, dlgOk);
     dlgActs.hidden = false;
@@ -3920,6 +3999,8 @@ autoBtn.onclick = () => { hideToast(); sfx('confirm'); setAuto(!auto); };
 /* ═══ 수면 → 다음 날 ═══ */
 const sleepEl = document.getElementById('sleep');
 function sleepAndNext() {
+  pendingSleep = false;
+  if (interior) { interior = null; outdoorsReturn = null; }
   const nx = dayIdx + 1;
   sleepEl.classList.add('show');
   if (nx > LAST_DAY) {
@@ -4012,7 +4093,14 @@ function interactA() {
     openPortalMenu();
     return;
   }
-  // NPC는 실내·야외 모두 대화 가능 (실내 early-return 때문에 막히던 것 수정)
+  // 숙소 실내: 침대·프런트 옆에서 잠들기
+  if (interior && (interior.kind === 'hotel') && isSleepStop(interior.stopIdx)) {
+    if (nearHotelProp('bed', 'reception')) {
+      openSleepConfirm(interior.stopIdx);
+      return;
+    }
+  }
+  // NPC는 실내·야외 모두 대화 가능
   const npc = nearbyNpc();
   if (npc) { openNpcDialog(npc); return; }
   if (interior) return; // 실내에서는 역·야외 스팟 상호작용 없음
@@ -4137,11 +4225,18 @@ function enterInterior(stopIdx) {
   // 이 스팟에 묶인 NPC만 실내에 (있으면)
   const residents = (NPC_BY_DAY[dayIdx + 1] || []).filter(d => d.stop === stopIdx);
   const roomLabels = M.STN_LABELS.map(l => l[2]);
-  placeNpcs([...residents, { stop: stopIdx, name: '공간 안내원', pal: 2,
-    anchor: [6, 6], bags: [{ kind: '안내', lines: [
-      `${roomLabels.slice(0, 3).join(' · ')} 공간을 둘러보세요.`,
-      '가구 사이 통로로 한 바퀴 걸어볼 수 있어요. 남쪽 문은 나가는 길이에요.'
-    ] }] }]);
+  const canSleepHere = kind === 'hotel' && isSleepStop(stopIdx);
+  const guideLines = canSleepHere
+    ? [
+        `${roomLabels.slice(0, 3).join(' · ')} 이에요. 침대나 프런트 옆에서 A를 누르면 잠들 수 있어요.`,
+        '오늘 일정을 마쳤다면 침대 앞에서 쉬어 보세요. 남쪽 문은 나가는 길이에요.'
+      ]
+    : [
+        `${roomLabels.slice(0, 3).join(' · ')} 공간을 둘러보세요.`,
+        '가구 사이 통로로 한 바퀴 걸어볼 수 있어요. 남쪽 문은 나가는 길이에요.'
+      ];
+  placeNpcs([...residents, { stop: stopIdx, name: canSleepHere ? '프런트 직원' : '공간 안내원', pal: 2,
+    anchor: [6, 6], bags: [{ kind: '안내', lines: guideLines }] }]);
   const label = INTERIOR_KIND_KO[kind] || '건물';
   document.getElementById('hudTitle').textContent = `${shortName(s)} · ${label}`;
   refreshList();
